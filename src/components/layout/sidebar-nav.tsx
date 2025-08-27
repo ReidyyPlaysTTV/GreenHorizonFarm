@@ -20,22 +20,44 @@ import { BugReportForm } from "./bug-report-form";
 import { SuggestionForm } from "./suggestion-form";
 import { UserProfile } from "./user-profile";
 
-const menuItems = [
+const mainMenuItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/roster", label: "Roster", icon: Users },
   { href: "/users", label: "Users", icon: User },
   { href: "/callsigns", label: "Callsigns", icon: Contact },
   { href: "/sops", label: "DOC SOPs", icon: BookMarked },
-  { href: "/archive", label: "Fired/Resigned", icon: Archive },
-  { href: "/command", label: "DOC Command", icon: ShieldAlert },
-  { href: "/applications", label: "Application Center", icon: FileText },
-  { href: "/admin", label: "Admin Panel", icon: ShieldCheck },
-  { href: "/logs", label: "DOC Logs", icon: History },
 ];
+
+const commandMenuItems = [
+    { href: "/archive", label: "Fired/Resigned", icon: Archive },
+    { href: "/command", label: "DOC Command", icon: ShieldAlert },
+    { href: "/applications", label: "Application Center", icon: FileText },
+    { href: "/logs", label: "DOC Logs", icon: History },
+];
+
+const adminMenuItems = [
+    { href: "/admin", label: "Admin Panel", icon: ShieldCheck },
+];
+
 
 export function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
+
+  const renderMenuItems = (items: typeof mainMenuItems) => {
+    return items.map((item) => (
+        <SidebarMenuItem key={item.href}>
+            <SidebarMenuButton
+            isActive={pathname === item.href}
+            onClick={() => router.push(item.href)}
+            tooltip={item.label}
+            >
+            <item.icon />
+            <span>{item.label}</span>
+            </SidebarMenuButton>
+        </SidebarMenuItem>
+    ));
+  }
 
   return (
     <Sidebar collapsible="icon" className="border-r">
@@ -47,19 +69,19 @@ export function SidebarNav() {
             <span className="text-lg font-semibold">DOC Roster</span>
         </div>
       </SidebarHeader>
-      <SidebarMenu className="flex-1 p-2">
-        {menuItems.map((item) => (
-          <SidebarMenuItem key={item.href}>
-            <SidebarMenuButton
-              isActive={pathname === item.href}
-              onClick={() => router.push(item.href)}
-              tooltip={item.label}
-            >
-              <item.icon />
-              <span>{item.label}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        ))}
+      <SidebarMenu className="flex-1 p-2 space-y-4">
+        <div>
+            <p className="text-xs font-semibold text-muted-foreground px-2 pb-1 group-data-[collapsible=icon]:hidden">Main</p>
+            {renderMenuItems(mainMenuItems)}
+        </div>
+        <div>
+            <p className="text-xs font-semibold text-muted-foreground px-2 pb-1 group-data-[collapsible=icon]:hidden">NCOs and Command+</p>
+            {renderMenuItems(commandMenuItems)}
+        </div>
+        <div>
+            <p className="text-xs font-semibold text-muted-foreground px-2 pb-1 group-data-[collapsible=icon]:hidden">Admin</p>
+            {renderMenuItems(adminMenuItems)}
+        </div>
       </SidebarMenu>
        <Separator className="my-2" />
       <div className="p-2 space-y-2 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center">
