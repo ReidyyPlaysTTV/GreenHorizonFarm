@@ -36,7 +36,7 @@ function buildZodSchema(fields: FormFieldData[]) {
         if (field.required) {
           fieldSchema = fieldSchema.min(1, requiredError);
         } else {
-          fieldSchema = fieldSchema.optional();
+          fieldSchema = fieldSchema.optional().or(z.literal(''));
         }
         break;
       case 'textarea':
@@ -44,7 +44,7 @@ function buildZodSchema(fields: FormFieldData[]) {
         if (field.required) {
           fieldSchema = fieldSchema.min(10, `${field.label} requires at least 10 characters.`);
         } else {
-          fieldSchema = fieldSchema.optional();
+          fieldSchema = fieldSchema.optional().or(z.literal(''));
         }
         break;
       case 'select':
@@ -52,7 +52,7 @@ function buildZodSchema(fields: FormFieldData[]) {
         if(field.required) {
             fieldSchema = fieldSchema.refine(value => value, { message: `Please make a selection for ${field.label}.` });
         } else {
-             fieldSchema = fieldSchema.optional();
+             fieldSchema = fieldSchema.optional().or(z.literal(''));
         }
         break;
       default:
@@ -94,11 +94,13 @@ export function ApplicationForm() {
 
   const form = useForm({
     resolver: zodSchema ? zodResolver(zodSchema) : undefined,
+    defaultValues: formFields.reduce((acc, field) => ({ ...acc, [field.id!]: '' }), {})
   });
   
   useEffect(() => {
       if (zodSchema) {
-          form.reset();
+          const defaultValues = formFields.reduce((acc, field) => ({ ...acc, [field.id!]: '' }), {});
+          form.reset(defaultValues);
       }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zodSchema, form.reset]);
@@ -132,29 +134,44 @@ export function ApplicationForm() {
           key={id}
           control={form.control}
           name={id!}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                {label}
-                {required && <span className="text-destructive"> *</span>}
-              </FormLabel>
-              <FormControl>
-                {type === 'text' && <Input placeholder={`Your ${label.toLowerCase()}`} {...field} />}
-                {type === 'textarea' && <Textarea placeholder="Please provide a detailed response..." className="min-h-[120px]" {...field} />}
-                {type === 'select' && (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectTrigger>
-                        <SelectValue placeholder={`Select an option for ${label}`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {options?.map(opt => <SelectItem key={opt.id} value={opt.value}>{opt.value}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                )}
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          render={({ field }) => {
+            let inputComponent;
+            switch(type) {
+                case 'text':
+                    inputComponent = <Input placeholder={`Your ${label.toLowerCase()}`} {...field} />;
+                    break;
+                case 'textarea':
+                    inputComponent = <Textarea placeholder="Please provide a detailed response..." className="min-h-[120px]" {...field} />;
+                    break;
+                case 'select':
+                     inputComponent = (
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <SelectTrigger>
+                                <SelectValue placeholder={`Select an option for ${label}`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {options?.map(opt => <SelectItem key={opt.id} value={opt.value}>{opt.value}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                     );
+                     break;
+                default:
+                    inputComponent = null;
+            }
+
+            return (
+                <FormItem>
+                <FormLabel>
+                    {label}
+                    {required && <span className="text-destructive"> *</span>}
+                </FormLabel>
+                <FormControl>
+                    {inputComponent}
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )
+          }}
         />
     )
   }
