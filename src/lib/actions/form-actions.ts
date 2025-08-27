@@ -5,18 +5,7 @@ import { z } from 'zod';
 import db from '../db';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
-
-export interface FormFieldOption {
-    id?: string;
-    value: string;
-}
-
-export interface FormFieldData {
-    id?: string;
-    type: 'text' | 'textarea' | 'select';
-    label: string;
-    options?: FormFieldOption[];
-}
+import type { FormFieldData } from '../types';
 
 // Schema for validating fields from the client
 const formFieldSchema = z.object({

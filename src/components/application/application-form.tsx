@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getApplicationFormFields, submitApplication } from "@/lib/actions";
-import type { FormFieldData } from "@/lib/actions/form-actions";
+import type { FormFieldData } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -162,4 +162,3 @@ export function ApplicationForm() {
     </Form>
   );
 }
-

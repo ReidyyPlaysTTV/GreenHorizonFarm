@@ -4,5 +4,27 @@
 
 'use server';
 
-export * from './actions/personnel-actions';
-export * from './actions/form-actions';
+import { 
+    promotePersonnel, 
+    demotePersonnel, 
+    firePersonnel, 
+    updatePersonnel 
+} from './actions/personnel-actions';
+
+import { 
+    getApplicationFormFields, 
+    saveApplicationFormFields, 
+    submitApplication, 
+    updateApplicationStatus 
+} from './actions/form-actions';
+
+export {
+    promotePersonnel,
+    demotePersonnel,
+    firePersonnel,
+    updatePersonnel,
+    getApplicationFormFields,
+    saveApplicationFormFields,
+    submitApplication,
+    updateApplicationStatus
+};

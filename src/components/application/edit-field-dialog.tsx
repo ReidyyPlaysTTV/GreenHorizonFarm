@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Trash2, PlusCircle } from "lucide-react";
-import type { FormFieldData } from "@/lib/actions/form-actions";
+import type { FormFieldData } from "@/lib/types";
 
 const fieldSchema = z.object({
   id: z.string().optional(),

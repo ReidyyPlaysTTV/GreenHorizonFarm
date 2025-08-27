@@ -18,7 +18,7 @@ import {
   getApplicationFormFields,
   saveApplicationFormFields,
 } from "@/lib/actions";
-import type { FormFieldData } from "@/lib/actions/form-actions";
+import type { FormFieldData } from "@/lib/types";
 import { EditFieldDialog } from "./edit-field-dialog";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";

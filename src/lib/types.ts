@@ -35,3 +35,15 @@ export interface Application {
   submittedAt: Date;
   responses: any; // JSON column
 }
+
+export interface FormFieldOption {
+    id?: string;
+    value: string;
+}
+
+export interface FormFieldData {
+    id?: string;
+    type: 'text' | 'textarea' | 'select';
+    label: string;
+    options?: FormFieldOption[];
+}
