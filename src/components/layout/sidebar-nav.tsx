@@ -1,3 +1,4 @@
+
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
@@ -10,12 +11,13 @@ import {
   SidebarFooter,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home, Users, Archive, ShieldAlert, FileText, LogOut, ShieldCheck, MessageSquarePlus, Bug } from "lucide-react";
+import { Home, Users, Archive, ShieldAlert, FileText, LogOut, ShieldCheck, User } from "lucide-react";
 import { Button } from "../ui/button";
 import Image from "next/image";
 import { Separator } from "../ui/separator";
 import { BugReportForm } from "./bug-report-form";
 import { SuggestionForm } from "./suggestion-form";
+import { UserProfile } from "./user-profile";
 
 const menuItems = [
   { href: "/", label: "Home", icon: Home },
@@ -59,7 +61,9 @@ export function SidebarNav() {
         <SuggestionForm />
         <BugReportForm />
       </div>
+       <Separator className="my-2" />
       <SidebarFooter className="p-2 mt-auto">
+        <UserProfile />
         <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => router.push('/login')}>
             <LogOut className="h-4 w-4"/>
             <span className="group-data-[collapsible=icon]:hidden">Logout</span>
