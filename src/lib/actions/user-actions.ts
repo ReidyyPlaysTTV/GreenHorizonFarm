@@ -63,17 +63,21 @@ export async function getUsers(): Promise<AppUser[]> {
                 return [];
             }
 
-            const [personnel] = await connection.query('SELECT name, avatarUrl, rank, department FROM personnel');
+            const [personnel] = await connection.query('SELECT name, avatarUrl, rank, department, userId FROM personnel');
             const personnelMap = new Map<string, Partial<Personnel>>();
             if (Array.isArray(personnel)) {
-                personnel.forEach((p: any) => personnelMap.set(p.name, {
-                    ...p,
-                    avatarUrl: p.avatarUrl || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"
-                }));
+                personnel.forEach((p: any) => {
+                    if (p.userId) {
+                        personnelMap.set(p.userId, {
+                            ...p,
+                            avatarUrl: p.avatarUrl || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"
+                        });
+                    }
+                });
             }
 
             return (users as any[]).map((u: any) => {
-                const pRecord = personnelMap.get(u.username);
+                const pRecord = personnelMap.get(u.id);
                 return {
                     ...u,
                     createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined,
@@ -423,3 +427,6 @@ export async function updateProfilePicture(data: unknown) {
         connection.release();
     }
 }
+
+
+    
