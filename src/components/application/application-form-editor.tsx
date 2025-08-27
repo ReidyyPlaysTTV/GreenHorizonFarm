@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { randomUUID } from 'crypto';
 
 import { Loader2, GripVertical, PlusCircle, Trash2, Edit, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -104,7 +105,7 @@ export function ApplicationFormEditor() {
   });
 
   const { fields, control, reset } = form;
-  const { append, remove, move } = useFieldArray({
+  const { append, remove, move, update } = useFieldArray({
     control,
     name: "fields",
   });
@@ -161,12 +162,13 @@ export function ApplicationFormEditor() {
   );
 
   const handleAddNewField = () => {
-     append({ label: "New Question", type: 'text', options: [] }, { shouldFocus: false });
+     // Use a temporary client-side ID for the key, the server will assign a permanent one.
+     append({ id: `new-${Date.now()}`, label: "New Question", type: 'text', options: [] }, { shouldFocus: false });
      setEditDialogIndex(form.getValues('fields').length);
   };
 
   const handleSaveField = (index: number, data: FormFieldSchema) => {
-    form.setValue(`fields.${index}`, data, { shouldDirty: true });
+    update(index, data);
     setEditDialogIndex(null);
   }
 
@@ -233,7 +235,7 @@ export function ApplicationFormEditor() {
         </Form>
       </CardContent>
 
-      {editDialogIndex !== null && (
+      {editDialogIndex !== null && currentFields[editDialogIndex] && (
         <EditFieldDialog
             isOpen={editDialogIndex !== null}
             onClose={() => setEditDialogIndex(null)}
@@ -248,4 +250,3 @@ export function ApplicationFormEditor() {
     </Card>
   );
 }
-

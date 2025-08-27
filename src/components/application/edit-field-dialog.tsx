@@ -47,7 +47,7 @@ interface EditFieldDialogProps {
   onClose: () => void;
   onSave: (data: FieldSchema) => void;
   onDelete: () => void;
-  fieldData?: FormFieldData;
+  fieldData: FormFieldData;
 }
 
 export function EditFieldDialog({
@@ -74,7 +74,8 @@ export function EditFieldDialog({
   const fieldType = form.watch("type");
 
   const handleSave = (values: FieldSchema) => {
-    onSave(values);
+    // Ensure the ID from the original data is preserved
+    onSave({ ...values, id: fieldData.id });
     onClose();
   };
 
@@ -82,7 +83,7 @@ export function EditFieldDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>{fieldData ? "Edit Field" : "Add New Field"}</DialogTitle>
+          <DialogTitle>{fieldData.label !== "New Question" ? "Edit Field" : "Add New Field"}</DialogTitle>
           <DialogDescription>
             Configure the properties for this form field.
           </DialogDescription>
@@ -108,7 +109,12 @@ export function EditFieldDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Field Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={(value) => {
+                      field.onChange(value);
+                      if (value !== 'select') {
+                          form.setValue('options', []);
+                      }
+                  }} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a field type" />
@@ -127,7 +133,18 @@ export function EditFieldDialog({
             
             {fieldType === 'select' && (
               <div className="space-y-2 rounded-md border p-4">
-                  <FormLabel>Options</FormLabel>
+                  <div className="flex justify-between items-center mb-2">
+                    <FormLabel>Options</FormLabel>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => append({ id: `new-opt-${Date.now()}`, value: "" })}
+                    >
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Option
+                    </Button>
+                  </div>
                   <div className="space-y-2">
                     {fields.map((item, index) => (
                       <div key={item.id} className="flex items-center gap-2">
@@ -153,16 +170,8 @@ export function EditFieldDialog({
                         </Button>
                       </div>
                     ))}
+                    {fields.length === 0 && <p className="text-xs text-muted-foreground text-center">No options added yet.</p>}
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => append({ value: "" })}
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Option
-                  </Button>
               </div>
             )}
 
