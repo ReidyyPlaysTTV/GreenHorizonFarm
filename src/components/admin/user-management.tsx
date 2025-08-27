@@ -10,18 +10,19 @@ import { assignUserRole } from "@/lib/actions";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { AddUserForm } from "./add-user-form";
+import { usePermissions } from "@/hooks/use-permissions";
+import { roles } from "@/lib/data";
 
 interface UserManagementProps {
     users: AppUser[];
 }
 
-// In a real app, these roles would be fetched from the database.
-const roles = ["Developer", "Administrator", "Commissioners Office", "High Command", "Command", "NCOs", "User"];
-
 export function UserManagement({ users }: UserManagementProps) {
     const { toast } = useToast();
     const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
     const [currentUser, setCurrentUser] = useState("System");
+    const { hasPermission } = usePermissions();
+    const canManageUsers = hasPermission('MANAGE_USERS');
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -59,7 +60,7 @@ export function UserManagement({ users }: UserManagementProps) {
                 <CardTitle>User Management</CardTitle>
                 <CardDescription>Assign roles to registered application users.</CardDescription>
               </div>
-              <AddUserForm />
+              {canManageUsers && <AddUserForm />}
             </CardHeader>
             <CardContent>
                 <Table>
@@ -79,7 +80,7 @@ export function UserManagement({ users }: UserManagementProps) {
                                         <Select 
                                             defaultValue={user.role} 
                                             onValueChange={(value) => handleRoleChange(user.id, value)}
-                                            disabled={isUpdating[user.id]}
+                                            disabled={isUpdating[user.id] || !canManageUsers}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select role" />

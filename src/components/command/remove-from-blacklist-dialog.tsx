@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { removeBlacklistedPersonnel } from "@/lib/actions";
 import type { BlacklistedPersonnel } from "@/lib/types";
@@ -20,6 +19,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Loader2, Trash2 } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
 
 interface RemoveFromBlacklistDialogProps {
     personnel: BlacklistedPersonnel;
@@ -29,6 +29,7 @@ export function RemoveFromBlacklistDialog({ personnel }: RemoveFromBlacklistDial
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState("System");
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -57,6 +58,10 @@ export function RemoveFromBlacklistDialog({ personnel }: RemoveFromBlacklistDial
       });
     }
     setIsLoading(false);
+  }
+  
+  if (!hasPermission('MANAGE_BLACKLIST')) {
+    return null;
   }
 
   return (

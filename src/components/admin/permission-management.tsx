@@ -6,23 +6,34 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Save } from "lucide-react";
-
-// In a real app, these would be fetched from the database.
-const roles = ["Developer", "Administrator", "Commissioners Office", "High Command", "Command", "NCOs", "User"];
-const permissions = [
-  { id: "view_roster", label: "View Roster" },
-  { id: "manage_personnel", label: "Manage Personnel (Promote, Demote, Fire)" },
-  { id: "manage_applications", label: "Manage Applications" },
-  { id: "edit_application_form", label: "Edit Application Form" },
-  { id: "view_archive", label: "View Fired/Resigned Archive" },
-  { id: "manage_blacklist", label: "Manage DOC Blacklist" },
-  { id: "access_admin_panel", label: "Access Admin Panel" },
-  { id: "manage_roles_permissions", label: "Manage Roles & Permissions" },
-];
+import { AlertCircle, Save } from "lucide-react";
+import { roles, permissionsMap, permissionDescriptions } from "@/lib/data";
+import { usePermissions } from "@/hooks/use-permissions";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 
 export function PermissionManagement() {
+  const { hasPermission } = usePermissions();
+
+  if (!hasPermission('MANAGE_ROLES_PERMISSIONS')) {
+    return (
+       <Card>
+        <CardHeader>
+            <CardTitle>Permission Groups</CardTitle>
+        </CardHeader>
+        <CardContent>
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Access Denied</AlertTitle>
+                <AlertDescription>
+                    You do not have permission to manage roles and permissions.
+                </AlertDescription>
+            </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -30,27 +41,31 @@ export function PermissionManagement() {
             <div>
                 <CardTitle>Permission Groups</CardTitle>
                 <CardDescription>
-                Define what each role can see and do within the application.
+                Define what each role can see and do within the application. Permissions are code-based and cannot be edited here.
                 </CardDescription>
             </div>
-             <Button>
+             <Button disabled>
                 <Save className="mr-2 h-4 w-4"/>
-                Save Changes
+                Save Changes (Disabled)
             </Button>
         </div>
       </CardHeader>
       <CardContent>
-        <Accordion type="multiple" className="w-full">
+        <Accordion type="multiple" className="w-full" defaultValue={roles}>
             {roles.map(role => (
                  <AccordionItem value={role} key={role}>
                     <AccordionTrigger className="text-lg font-medium">{role}</AccordionTrigger>
                     <AccordionContent>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
-                            {permissions.map(permission => (
-                                <div key={permission.id} className="flex items-center space-x-2">
-                                    <Checkbox id={`${role}-${permission.id}`} />
-                                    <Label htmlFor={`${role}-${permission.id}`} className="font-normal">
-                                        {permission.label}
+                            {Object.entries(permissionDescriptions).map(([permissionId, label]) => (
+                                <div key={permissionId} className="flex items-center space-x-2">
+                                    <Checkbox 
+                                        id={`${role}-${permissionId}`} 
+                                        checked={permissionsMap[role as keyof typeof permissionsMap]?.includes(permissionId as any)}
+                                        disabled
+                                    />
+                                    <Label htmlFor={`${role}-${permissionId}`} className="font-normal">
+                                        {label}
                                     </Label>
                                 </div>
                             ))}

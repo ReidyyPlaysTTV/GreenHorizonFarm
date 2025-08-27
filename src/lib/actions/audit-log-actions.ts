@@ -6,6 +6,7 @@ import db from '../db';
 import { revalidatePath } from 'next/cache';
 import type { AuditLog, BlacklistedPersonnel } from '../types';
 import { z } from 'zod';
+import { checkPermissions } from '../permissions';
 
 async function createAuditLogTableIfNeeded(connection: any) {
     await connection.query(`
@@ -91,6 +92,11 @@ export async function addBlacklistedPersonnel(data: unknown) {
     return { success: false, message: 'Invalid data provided.' };
   }
   const { name, discordUsername, reason, user } = validation.data;
+  
+  const hasPermission = await checkPermissions(user, 'MANAGE_BLACKLIST');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
 
   const connection = await db.getConnection();
   try {
@@ -134,6 +140,11 @@ export async function removeBlacklistedPersonnel(data: unknown) {
   }
   const { personnelId, user, name } = validation.data;
   
+  const hasPermission = await checkPermissions(user, 'MANAGE_BLACKLIST');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
+
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();

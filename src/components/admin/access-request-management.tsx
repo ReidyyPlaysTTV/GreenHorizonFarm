@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ApproveRequestDialog } from "./approve-request-dialog";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
 
 interface AccessRequestManagementProps {
     requests: AccessRequest[];
@@ -21,6 +22,9 @@ export function AccessRequestManagement({ requests }: AccessRequestManagementPro
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
   const [currentUser, setCurrentUser] = useState("System");
+  const { hasPermission } = usePermissions();
+  const canManageRequests = hasPermission('MANAGE_ACCESS_REQUESTS');
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -70,7 +74,7 @@ export function AccessRequestManagement({ requests }: AccessRequestManagementPro
                     <Badge variant={request.status === 'Pending' ? 'secondary' : 'default'}>{request.status}</Badge>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    {request.status === 'Pending' && (
+                    {request.status === 'Pending' && canManageRequests && (
                         isProcessing[request.id] ? <Loader2 className="h-4 w-4 animate-spin inline-block" /> :
                         <>
                             <Button variant="destructive" size="sm" onClick={() => handleDeny(request.id, request.requested_username)}>Deny</Button>

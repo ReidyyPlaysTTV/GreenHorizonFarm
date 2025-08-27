@@ -14,6 +14,7 @@ import { Label } from "../ui/label";
 import { updateApplicationStatus } from "@/lib/actions";
 import { useState, useEffect } from "react";
 import { ApproveApplicationDialog } from "./approve-application-dialog";
+import { usePermissions } from "@/hooks/use-permissions";
 
 interface ApplicationReviewCardProps {
   application: Application;
@@ -23,6 +24,8 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
   const [currentUser, setCurrentUser] = useState("System");
+  const { hasPermission } = usePermissions();
+  const canManageApplications = hasPermission('MANAGE_APPLICATIONS');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -103,7 +106,7 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
         <p className="text-xs text-muted-foreground mt-4">
           Submitted {formatDistanceToNow(new Date(application.submittedAt), { addSuffix: true })}
         </p>
-        {application.status === "Pending" && (
+        {application.status === "Pending" && canManageApplications && (
             <div className="flex justify-end gap-2">
                 <Button size="sm" variant="outline" className="gap-1" onClick={() => handleStatusUpdate('Rejected')} disabled={isUpdating}>
                     {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><X className="h-4 w-4" /> Reject</>}

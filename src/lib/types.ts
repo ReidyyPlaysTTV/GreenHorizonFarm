@@ -1,4 +1,33 @@
 
+
+export const roles = ["Developer", "Administrator", "Commissioners Office", "High Command", "Command", "NCOs", "User"] as const;
+export type Role = typeof roles[number];
+
+export const permissions = [
+    // Page Access
+    'ACCESS_DASHBOARD',
+    'VIEW_ROSTER',
+    'VIEW_USERS',
+    'VIEW_CALLSIGNS',
+    'VIEW_SOPS',
+    'VIEW_ARCHIVE',
+    'ACCESS_COMMAND_CENTER',
+    'VIEW_APPLICATIONS',
+    'VIEW_LOGS',
+    'ACCESS_ADMIN_PANEL',
+    
+    // Actions
+    'MANAGE_PERSONNEL', // Promote, Demote, Fire, Edit Status
+    'HIRE_PERSONNEL', // Add new personnel from roster or rehire
+    'MANAGE_APPLICATIONS', // Approve, Deny
+    'EDIT_APPLICATION_FORM',
+    'MANAGE_BLACKLIST',
+    'MANAGE_USERS', // Create users, assign roles
+    'MANAGE_ROLES_PERMISSIONS',
+    'MANAGE_ACCESS_REQUESTS',
+] as const;
+export type Permission = typeof permissions[number];
+
 export type Department = "Commissioners Office" | "High Command" | "Command" | "NCOS" | "Corrections" | "Training";
 export type PersonnelStatus = 'Active' | 'LOA' | 'Inactive' | 'Low Activity' | 'Medical Leave' | 'Suspended';
 
@@ -91,7 +120,7 @@ export interface Suggestion {
 export interface AppUser {
   id: string;
   username: string;
-  role: string;
+  role: Role;
   createdAt?: string;
   personnel?: Personnel | null;
 }

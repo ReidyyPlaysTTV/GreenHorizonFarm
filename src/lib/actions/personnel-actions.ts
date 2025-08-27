@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { z } from 'zod';
@@ -11,6 +10,7 @@ import { randomUUID } from 'crypto';
 import { logCallsignChange } from './callsign-log-actions';
 import { logUserAction } from './audit-log-actions';
 import { updateApplicationStatus } from './form-actions';
+import { checkPermissions } from '../permissions';
 
 async function getPersonnelById(id: string): Promise<Personnel | null> {
   const [rows] = await db.query('SELECT * FROM personnel WHERE id = ?', [id]);
@@ -38,6 +38,11 @@ async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'P
 }
 
 export async function promotePersonnel(personnelId: string, user: string) {
+  const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
+  if (!hasPermission) {
+    return { success: false, message: 'You do not have permission to perform this action.' };
+  }
+
   const personnel = await getPersonnelById(personnelId);
   if (!personnel) {
     return { success: false, message: 'Personnel not found.' };
@@ -74,6 +79,11 @@ export async function promotePersonnel(personnelId: string, user: string) {
 }
 
 export async function demotePersonnel(personnelId: string, user: string) {
+  const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
+  if (!hasPermission) {
+    return { success: false, message: 'You do not have permission to perform this action.' };
+  }
+
   const personnel = await getPersonnelById(personnelId);
   if (!personnel) {
     return { success: false, message: 'Personnel not found.' };
@@ -110,6 +120,11 @@ export async function demotePersonnel(personnelId: string, user: string) {
 }
 
 export async function firePersonnel(personnelId: string, reason: string, user: string) {
+  const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
+  if (!hasPermission) {
+    return { success: false, message: 'You do not have permission to perform this action.' };
+  }
+  
   const personnel = await getPersonnelById(personnelId);
   if (!personnel) {
     return { success: false, message: 'Personnel not found.' };
@@ -163,6 +178,11 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
   }
   const { name, badgeNumber, rank, discordUsername, user } = validation.data;
   
+  const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
+  if (!hasPermission) {
+    return { success: false, message: 'You do not have permission to perform this action.' };
+  }
+
   const originalPersonnel = await getPersonnelById(personnelId);
   if (!originalPersonnel) {
     return { success: false, message: 'Personnel not found.' };
@@ -215,6 +235,11 @@ export async function addPersonnel(data: unknown) {
     }
     const { name, rank, callsign, discordUsername, user, applicationId } = validation.data;
     
+    const hasPermission = await checkPermissions(user, 'HIRE_PERSONNEL');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
+
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -273,6 +298,11 @@ export async function rehirePersonnel(data: unknown) {
     return { success: false, message: 'Invalid data provided.' };
   }
   const { archivedId, name, rank, discordUsername, callsign, user } = validation.data;
+  
+  const hasPermission = await checkPermissions(user, 'HIRE_PERSONNEL');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
 
   const connection = await db.getConnection();
   try {

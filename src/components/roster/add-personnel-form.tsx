@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { addPersonnel } from "@/lib/actions";
 import { rankOrder } from "@/lib/data";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const formSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters."),
@@ -53,6 +54,7 @@ export function AddPersonnelForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState("System");
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -86,6 +88,10 @@ export function AddPersonnelForm() {
       });
     }
     setIsLoading(false);
+  }
+
+  if (!hasPermission('HIRE_PERSONNEL')) {
+    return null;
   }
 
   return (

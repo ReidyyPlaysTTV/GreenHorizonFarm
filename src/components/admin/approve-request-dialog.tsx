@@ -8,6 +8,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { approveAccessRequest } from "@/lib/actions";
 import type { AccessRequest } from "@/lib/types";
+import { roles } from "@/lib/data";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,8 +37,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-
-const roles = ["Developer", "Administrator", "Commissioners Office", "High Command", "Command", "NCOs", "User"];
 
 const formSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters."),

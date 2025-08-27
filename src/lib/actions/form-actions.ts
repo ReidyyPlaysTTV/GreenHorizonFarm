@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import type { FormFieldData, BlacklistedPersonnel } from '../types';
 import { logUserAction } from './audit-log-actions';
+import { checkPermissions } from '../permissions';
 
 // Schema for validating fields from the client
 const formFieldSchema = z.object({
@@ -48,6 +49,11 @@ export async function getApplicationFormFields(): Promise<FormFieldData[]> {
 
 
 export async function saveApplicationFormFields(fields: FormFieldData[], user: string) {
+    const hasPermission = await checkPermissions(user, 'EDIT_APPLICATION_FORM');
+    if (!hasPermission) {
+        throw new Error('You do not have permission to perform this action.');
+    }
+
     const validatedFields = formFieldsSchema.parse(fields);
     
     const connection = await db.getConnection();
@@ -150,6 +156,11 @@ export async function submitApplication(responses: Record<string, any>) {
 const applicationStatusSchema = z.enum(['Approved', 'Rejected']);
 
 export async function updateApplicationStatus(applicationId: string, status: 'Approved' | 'Rejected', user: string) {
+  const hasPermission = await checkPermissions(user, 'MANAGE_APPLICATIONS');
+  if (!hasPermission) {
+    throw new Error('You do not have permission to perform this action.');
+  }
+
   const validatedStatus = applicationStatusSchema.parse(status);
 
   const connection = await db.getConnection();

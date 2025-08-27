@@ -29,8 +29,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Loader2, PlusCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-
-const roles = ["Developer", "Administrator", "Commissioners Office", "High Command", "Command", "NCOs", "User"];
+import { usePermissions } from "@/hooks/use-permissions";
+import { roles } from "@/lib/data";
 
 const formSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters."),
@@ -43,6 +43,7 @@ export function AddUserForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState("System");
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -77,6 +78,10 @@ export function AddUserForm() {
       });
     }
     setIsLoading(false);
+  }
+
+  if (!hasPermission('MANAGE_USERS')) {
+    return null;
   }
 
   return (

@@ -43,6 +43,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "../ui/form";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/hooks/use-permissions";
 
 
 interface PersonnelActionsProps {
@@ -73,6 +74,7 @@ const statusOptions: PersonnelStatus[] = ['Active', 'LOA', 'Inactive', 'Low Acti
 
 export function PersonnelActions({ personnel }: PersonnelActionsProps) {
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
   const [isPromoting, setIsPromoting] = useState(false);
   const [isDemoting, setIsDemoting] = useState(false);
   const [isFiring, setIsFiring] = useState(false);
@@ -182,7 +184,13 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
   const canPromote = currentRankIndex > 0;
   const canDemote = currentRankIndex < rankOrder.length - 1;
 
+  const canManagePersonnel = hasPermission('MANAGE_PERSONNEL');
+
   const watchedStatus = statusForm.watch('status');
+
+  if (!canManagePersonnel) {
+    return null;
+  }
 
   return (
     <div className="flex items-center justify-end gap-1">

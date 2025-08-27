@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2, PlusCircle } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const formSchema = z.object({
   name: z.string().min(3, "Name is required."),
@@ -40,6 +41,7 @@ export function AddToBlacklistForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState("System");
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -74,6 +76,10 @@ export function AddToBlacklistForm() {
       });
     }
     setIsLoading(false);
+  }
+
+  if (!hasPermission('MANAGE_BLACKLIST')) {
+    return null;
   }
 
   return (

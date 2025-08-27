@@ -8,6 +8,8 @@ import { revalidatePath } from 'next/cache';
 import { logUserAction } from './audit-log-actions';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
+import { checkPermissions } from '../permissions';
+import { roles } from '../data';
 
 async function createUsersTableIfNeeded() {
     try {
@@ -67,6 +69,12 @@ export async function assignUserRole(userId: string, data: { role: string, user:
         return { success: false, message: 'Invalid role specified.' };
     }
     const { role, user } = validation.data;
+    
+    const hasPermission = await checkPermissions(user, 'MANAGE_USERS');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
+
     const connection = await db.getConnection();
 
     try {
@@ -169,6 +177,11 @@ export async function approveAccessRequest(data: unknown) {
         return { success: false, message: "Invalid data provided." };
     }
     const { requestId, username, role, adminUser } = validation.data;
+
+    const hasPermission = await checkPermissions(adminUser, 'MANAGE_ACCESS_REQUESTS');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
     
     const connection = await db.getConnection();
     try {
@@ -211,6 +224,11 @@ export async function approveAccessRequest(data: unknown) {
 }
 
 export async function denyAccessRequest(requestId: string, username: string, adminUser: string) {
+    const hasPermission = await checkPermissions(adminUser, 'MANAGE_ACCESS_REQUESTS');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
+
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -243,6 +261,11 @@ export async function createUser(data: unknown) {
     return { success: false, message: 'Invalid data provided.' };
   }
   const { username, password, role, adminUser } = validation.data;
+  
+  const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
+  if (!hasPermission) {
+    return { success: false, message: 'You do not have permission to perform this action.' };
+  }
   
   const connection = await db.getConnection();
   try {

@@ -19,45 +19,56 @@ import { Separator } from "../ui/separator";
 import { BugReportForm } from "./bug-report-form";
 import { SuggestionForm } from "./suggestion-form";
 import { UserProfile } from "./user-profile";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const mainMenuItems = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/roster", label: "Roster", icon: Users },
-  { href: "/users", label: "Users", icon: User },
-  { href: "/callsigns", label: "Callsigns", icon: Contact },
-  { href: "/sops", label: "DOC SOPs", icon: BookMarked },
+  { href: "/", label: "Home", icon: Home, permission: 'ACCESS_DASHBOARD' },
+  { href: "/roster", label: "Roster", icon: Users, permission: 'VIEW_ROSTER' },
+  { href: "/users", label: "Users", icon: User, permission: 'VIEW_USERS' },
+  { href: "/callsigns", label: "Callsigns", icon: Contact, permission: 'VIEW_CALLSIGNS' },
+  { href: "/sops", label: "DOC SOPs", icon: BookMarked, permission: 'VIEW_SOPS' },
 ];
 
 const commandMenuItems = [
-    { href: "/archive", label: "Fired/Resigned", icon: Archive },
-    { href: "/command", label: "DOC Command", icon: ShieldAlert },
-    { href: "/applications", label: "Application Center", icon: FileText },
-    { href: "/logs", label: "DOC Logs", icon: History },
+    { href: "/archive", label: "Fired/Resigned", icon: Archive, permission: 'VIEW_ARCHIVE' },
+    { href: "/command", label: "DOC Command", icon: ShieldAlert, permission: 'ACCESS_COMMAND_CENTER' },
+    { href: "/applications", label: "Application Center", icon: FileText, permission: 'VIEW_APPLICATIONS' },
+    { href: "/logs", label: "DOC Logs", icon: History, permission: 'VIEW_LOGS' },
 ];
 
 const adminMenuItems = [
-    { href: "/admin", label: "Admin Panel", icon: ShieldCheck },
+    { href: "/admin", label: "Admin Panel", icon: ShieldCheck, permission: 'ACCESS_ADMIN_PANEL' },
 ];
 
 
 export function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { hasPermission } = usePermissions();
+
 
   const renderMenuItems = (items: typeof mainMenuItems) => {
-    return items.map((item) => (
-        <SidebarMenuItem key={item.href}>
-            <SidebarMenuButton
-            isActive={pathname === item.href}
-            onClick={() => router.push(item.href)}
-            tooltip={item.label}
-            >
-            <item.icon />
-            <span>{item.label}</span>
-            </SidebarMenuButton>
-        </SidebarMenuItem>
-    ));
+    return items.map((item) => {
+        if (!hasPermission(item.permission as any)) return null;
+        return (
+            <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                isActive={pathname === item.href}
+                onClick={() => router.push(item.href)}
+                tooltip={item.label}
+                >
+                <item.icon />
+                <span>{item.label}</span>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+        )
+    }).filter(Boolean); // Filter out null items
   }
+
+  const renderedMain = renderMenuItems(mainMenuItems);
+  const renderedCommand = renderMenuItems(commandMenuItems);
+  const renderedAdmin = renderMenuItems(adminMenuItems);
+
 
   return (
     <Sidebar collapsible="icon" className="border-r">
@@ -70,18 +81,24 @@ export function SidebarNav() {
         </div>
       </SidebarHeader>
       <SidebarMenu className="flex-1 p-2 space-y-4">
-        <div>
-            <p className="text-xs font-semibold text-muted-foreground px-2 pb-1 group-data-[collapsible=icon]:hidden">Main</p>
-            {renderMenuItems(mainMenuItems)}
-        </div>
-        <div>
-            <p className="text-xs font-semibold text-muted-foreground px-2 pb-1 group-data-[collapsible=icon]:hidden">NCOs and Command+</p>
-            {renderMenuItems(commandMenuItems)}
-        </div>
-        <div>
-            <p className="text-xs font-semibold text-muted-foreground px-2 pb-1 group-data-[collapsible=icon]:hidden">Admin</p>
-            {renderMenuItems(adminMenuItems)}
-        </div>
+        {renderedMain.length > 0 && (
+            <div>
+                <p className="text-xs font-semibold text-muted-foreground px-2 pb-1 group-data-[collapsible=icon]:hidden">Main</p>
+                {renderedMain}
+            </div>
+        )}
+        {renderedCommand.length > 0 && (
+            <div>
+                <p className="text-xs font-semibold text-muted-foreground px-2 pb-1 group-data-[collapsible=icon]:hidden">NCOs and Command+</p>
+                {renderedCommand}
+            </div>
+        )}
+        {renderedAdmin.length > 0 && (
+            <div>
+                <p className="text-xs font-semibold text-muted-foreground px-2 pb-1 group-data-[collapsible=icon]:hidden">Admin</p>
+                {renderedAdmin}
+            </div>
+        )}
       </SidebarMenu>
        <Separator className="my-2" />
       <div className="p-2 space-y-2 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center">

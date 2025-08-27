@@ -1,5 +1,6 @@
 
-import type { Department } from "./types";
+
+import type { Department, Permission, Role } from "./types";
 
 export const departments: Department[] = ["Commissioners Office", "High Command", "Command", "NCOS", "Corrections", "Training"];
 
@@ -44,3 +45,125 @@ export const rankOrder = [
     "Correctional Officer",
     "Probationary Correctional Officer",
 ];
+
+export const roles: Role[] = ["Developer", "Administrator", "Commissioners Office", "High Command", "Command", "NCOs", "User"];
+
+export const permissions: Permission[] = [
+    // Page Access
+    'ACCESS_DASHBOARD',
+    'VIEW_ROSTER',
+    'VIEW_USERS',
+    'VIEW_CALLSIGNS',
+    'VIEW_SOPS',
+    'VIEW_ARCHIVE',
+    'ACCESS_COMMAND_CENTER',
+    'VIEW_APPLICATIONS',
+    'VIEW_LOGS',
+    'ACCESS_ADMIN_PANEL',
+    
+    // Actions
+    'MANAGE_PERSONNEL', // Promote, Demote, Fire, Edit Status
+    'HIRE_PERSONNEL', // Add new personnel from roster or rehire
+    'MANAGE_APPLICATIONS', // Approve, Deny
+    'EDIT_APPLICATION_FORM',
+    'MANAGE_BLACKLIST',
+    'MANAGE_USERS', // Create users, assign roles
+    'MANAGE_ROLES_PERMISSIONS',
+    'MANAGE_ACCESS_REQUESTS',
+];
+
+export const permissionDescriptions: Record<Permission, string> = {
+    ACCESS_DASHBOARD: "Access Dashboard Page",
+    VIEW_ROSTER: "View Roster Page",
+    VIEW_USERS: "View Users Page",
+    VIEW_CALLSIGNS: "View Callsigns Page",
+    VIEW_SOPS: "View SOPs Page",
+    VIEW_ARCHIVE: "View Fired/Resigned Archive",
+    ACCESS_COMMAND_CENTER: "Access Command Center",
+    VIEW_APPLICATIONS: "View Application Center",
+    VIEW_LOGS: "View DOC Logs",
+    ACCESS_ADMIN_PANEL: "Access Admin Panel",
+    MANAGE_PERSONNEL: "Manage Personnel (Promote, Demote, Fire, Status)",
+    HIRE_PERSONNEL: "Hire & Rehire Personnel",
+    MANAGE_APPLICATIONS: "Manage Applications (Approve/Deny)",
+    EDIT_APPLICATION_FORM: "Edit Application Form",
+    MANAGE_BLACKLIST: "Manage DOC Blacklist",
+    MANAGE_USERS: "Manage Users & Roles",
+    MANAGE_ROLES_PERMISSIONS: "Manage Permission Groups",
+    MANAGE_ACCESS_REQUESTS: "Manage Access Requests",
+};
+
+
+// Assign permissions to roles.
+// Higher roles inherit permissions from lower roles.
+export const permissionsMap: Record<Role, Permission[]> = {
+    User: [
+        'ACCESS_DASHBOARD',
+        'VIEW_ROSTER',
+        'VIEW_USERS',
+        'VIEW_CALLSIGNS',
+        'VIEW_SOPS',
+    ],
+    NCOs: [
+        'ACCESS_DASHBOARD',
+        'VIEW_ROSTER',
+        'VIEW_USERS',
+        'VIEW_CALLSIGNS',
+        'VIEW_SOPS',
+        'VIEW_LOGS',
+        'VIEW_APPLICATIONS',
+    ],
+    Command: [
+        'ACCESS_DASHBOARD',
+        'VIEW_ROSTER',
+        'VIEW_USERS',
+        'VIEW_CALLSIGNS',
+        'VIEW_SOPS',
+        'VIEW_LOGS',
+        'VIEW_APPLICATIONS',
+        'MANAGE_APPLICATIONS',
+        'MANAGE_PERSONNEL',
+        'HIRE_PERSONNEL',
+        'ACCESS_COMMAND_CENTER',
+        'MANAGE_BLACKLIST',
+        'VIEW_ARCHIVE',
+    ],
+    "High Command": [
+        'ACCESS_DASHBOARD',
+        'VIEW_ROSTER',
+        'VIEW_USERS',
+        'VIEW_CALLSIGNS',
+        'VIEW_SOPS',
+        'VIEW_LOGS',
+        'VIEW_APPLICATIONS',
+        'MANAGE_APPLICATIONS',
+        'EDIT_APPLICATION_FORM',
+        'MANAGE_PERSONNEL',
+        'HIRE_PERSONNEL',
+        'ACCESS_COMMAND_CENTER',
+        'MANAGE_BLACKLIST',
+        'VIEW_ARCHIVE',
+    ],
+    "Commissioners Office": [
+        'ACCESS_DASHBOARD',
+        'VIEW_ROSTER',
+        'VIEW_USERS',
+        'VIEW_CALLSIGNS',
+        'VIEW_SOPS',
+        'VIEW_LOGS',
+        'VIEW_APPLICATIONS',
+        'MANAGE_APPLICATIONS',
+        'EDIT_APPLICATION_FORM',
+        'MANAGE_PERSONNEL',
+        'HIRE_PERSONNEL',
+        'ACCESS_COMMAND_CENTER',
+        'MANAGE_BLACKLIST',
+        'VIEW_ARCHIVE',
+        'ACCESS_ADMIN_PANEL',
+        'MANAGE_USERS',
+        'MANAGE_ACCESS_REQUESTS',
+    ],
+    // Administrator and Developer have all permissions, handled separately.
+    Administrator: [...permissions],
+    Developer: [...permissions],
+};

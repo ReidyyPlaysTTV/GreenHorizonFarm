@@ -30,6 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, ShieldX } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const formSchema = z.object({
   reason: z.string().min(10, "A detailed reason is required."),
@@ -44,6 +45,7 @@ export function BlacklistDialog({ personnel }: BlacklistDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState("System");
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -81,6 +83,10 @@ export function BlacklistDialog({ personnel }: BlacklistDialogProps) {
       });
     }
     setIsLoading(false);
+  }
+  
+  if (!hasPermission('MANAGE_BLACKLIST')) {
+    return null;
   }
 
   return (
