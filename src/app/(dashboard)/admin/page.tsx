@@ -1,12 +1,15 @@
 import { UserManagement } from "@/components/admin/user-management";
 import { PermissionManagement } from "@/components/admin/permission-management";
+import { DeveloperPanel } from "@/components/admin/developer-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getPersonnel } from "@/lib/actions";
+import { getPersonnel, getBugReports, getSuggestions } from "@/lib/actions";
 
 export default async function AdminPage() {
   // Note: In a real application, you would protect this page to ensure
   // only users with an 'Admin' or 'Developer' role can access it.
   const personnel = await getPersonnel();
+  const bugReports = await getBugReports();
+  const suggestions = await getSuggestions();
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -18,15 +21,19 @@ export default async function AdminPage() {
       </div>
 
        <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="users">Users & Roles</TabsTrigger>
           <TabsTrigger value="permissions">Permission Groups</TabsTrigger>
+          <TabsTrigger value="developer">Developer</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="mt-6">
            <UserManagement personnel={personnel} />
         </TabsContent>
         <TabsContent value="permissions" className="mt-6">
             <PermissionManagement />
+        </TabsContent>
+        <TabsContent value="developer" className="mt-6">
+            <DeveloperPanel bugReports={bugReports} suggestions={suggestions} />
         </TabsContent>
       </Tabs>
     </div>

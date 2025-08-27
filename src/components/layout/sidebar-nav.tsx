@@ -10,9 +10,12 @@ import {
   SidebarFooter,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home, Users, Archive, ShieldAlert, FileText, LogOut, ShieldCheck } from "lucide-react";
+import { Home, Users, Archive, ShieldAlert, FileText, LogOut, ShieldCheck, MessageSquarePlus, Bug } from "lucide-react";
 import { Button } from "../ui/button";
 import Image from "next/image";
+import { Separator } from "../ui/separator";
+import { BugReportForm } from "./bug-report-form";
+import { SuggestionForm } from "./suggestion-form";
 
 const menuItems = [
   { href: "/", label: "Home", icon: Home },
@@ -51,7 +54,12 @@ export function SidebarNav() {
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
-      <SidebarFooter className="p-2">
+       <Separator className="my-2" />
+      <div className="p-2 space-y-2 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center">
+        <SuggestionForm />
+        <BugReportForm />
+      </div>
+      <SidebarFooter className="p-2 mt-auto">
         <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => router.push('/login')}>
             <LogOut className="h-4 w-4"/>
             <span className="group-data-[collapsible=icon]:hidden">Logout</span>

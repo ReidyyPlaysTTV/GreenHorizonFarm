@@ -110,7 +110,7 @@ export async function getRecentActivity(): Promise<PersonnelEvent[]> {
          console.error("Failed to fetch recent activity:", error);
         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
             await db.query(`
-                CREATE TABLE personnel_events (
+                CREATE TABLE IF NOT EXISTS personnel_events (
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     personnel_name VARCHAR(255) NOT NULL,
                     event_type ENUM('Hired', 'Fired', 'Promoted', 'Demoted') NOT NULL,

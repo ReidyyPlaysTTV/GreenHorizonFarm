@@ -55,3 +55,21 @@ export interface PersonnelEvent {
     description: string;
     date: Date;
 }
+
+export type ReportStatus = "Pending" | "In Progress" | "Completed" | "Rejected";
+
+export interface BugReport {
+    id: string;
+    title: string;
+    description: string;
+    status: ReportStatus;
+    submittedAt: Date;
+}
+
+export interface Suggestion {
+    id: string;
+    title: string;
+    description: string;
+    status: ReportStatus;
+    submittedAt: Date;
+}
