@@ -2,26 +2,23 @@ import { getPersonnel, departments } from "@/lib/data";
 import type { Department, Personnel } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const RosterTable = ({ department, personnel }: { department: Department, personnel: Personnel[] }) => {
-  const departmentPersonnel = personnel.filter(p => p.department === department);
-
+const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[80px]">Avatar</TableHead>
+          <TableHead className="w-[80px]">Insignia</TableHead>
           <TableHead>Name</TableHead>
           <TableHead>Rank</TableHead>
-          <TableHead>Badge Number</TableHead>
+          <TableHead>Callsign</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {departmentPersonnel.length > 0 ? (
-          departmentPersonnel.map((p) => (
+        {personnel.length > 0 ? (
+          personnel.map((p) => (
             <TableRow key={p.id}>
               <TableCell>
                 <Avatar>
@@ -60,24 +57,18 @@ export default async function RosterPage() {
         </p>
       </div>
       
-      <Card>
-        <CardContent className="p-0">
-           <Tabs defaultValue={departments[0]} className="w-full">
-            <div className="p-4 border-b">
-              <TabsList className="grid w-full grid-cols-2 h-auto md:grid-cols-3 lg:grid-cols-6">
-                {departments.map(dep => (
-                  <TabsTrigger key={dep} value={dep}>{dep}</TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
-            {departments.map(dep => (
-              <TabsContent key={dep} value={dep} className="p-0">
-                <RosterTable department={dep} personnel={personnel} />
-              </TabsContent>
-            ))}
-          </Tabs>
-        </CardContent>
-      </Card>
+      <div className="space-y-8">
+        {departments.map(dep => (
+          <Card key={dep}>
+            <CardHeader>
+              <CardTitle>{dep}</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+                <RosterTable personnel={personnel.filter(p => p.department === dep)} />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
