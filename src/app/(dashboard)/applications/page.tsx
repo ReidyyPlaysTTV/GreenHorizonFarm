@@ -1,10 +1,29 @@
 import { getApplications } from "@/lib/data";
 import { ApplicationReviewCard } from "@/components/application/application-review-card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default async function ApplicationsPage() {
   const applications = await getApplications();
   const pendingApplications = applications.filter(a => a.status === "Pending");
-  const reviewedApplications = applications.filter(a => a.status !== "Pending");
+  const approvedApplications = applications.filter(a => a.status === "Approved");
+  const rejectedApplications = applications.filter(a => a.status === "Rejected");
+
+  const ApplicationList = ({ applications }: { applications: (typeof applications) }) => (
+    <>
+      {applications.length > 0 ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {applications.map((app) => (
+            <ApplicationReviewCard key={app.id} application={app} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex items-center justify-center h-40 rounded-lg border border-dashed">
+          <p className="text-muted-foreground">No applications found in this category.</p>
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -15,35 +34,22 @@ export default async function ApplicationsPage() {
         </p>
       </div>
 
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight mb-4">Pending Review ({pendingApplications.length})</h2>
-        {pendingApplications.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {pendingApplications.map((app) => (
-              <ApplicationReviewCard key={app.id} application={app} />
-            ))}
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-40 rounded-lg border border-dashed">
-            <p className="text-muted-foreground">No pending applications.</p>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-12">
-        <h2 className="text-xl font-semibold tracking-tight mb-4">Reviewed Applications ({reviewedApplications.length})</h2>
-        {reviewedApplications.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {reviewedApplications.map((app) => (
-              <ApplicationReviewCard key={app.id} application={app} />
-            ))}
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-40 rounded-lg border border-dashed">
-            <p className="text-muted-foreground">No reviewed applications found.</p>
-          </div>
-        )}
-      </div>
+      <Tabs defaultValue="pending" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="pending">Pending ({pendingApplications.length})</TabsTrigger>
+          <TabsTrigger value="approved">Approved ({approvedApplications.length})</TabsTrigger>
+          <TabsTrigger value="denied">Denied ({rejectedApplications.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="pending" className="mt-6">
+            <ApplicationList applications={pendingApplications} />
+        </TabsContent>
+        <TabsContent value="approved" className="mt-6">
+            <ApplicationList applications={approvedApplications} />
+        </TabsContent>
+        <TabsContent value="denied" className="mt-6">
+            <ApplicationList applications={rejectedApplications} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
