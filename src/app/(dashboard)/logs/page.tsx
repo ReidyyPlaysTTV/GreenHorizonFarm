@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { Shield, User, FileText, UserPlus, UserMinus, ArrowUp, ArrowDown, UserX } from "lucide-react";
+import { RefreshButton } from "@/components/layout/refresh-button";
 
 const actionTypeIcons: Record<string, React.ReactNode> = {
     "Login": <User className="h-4 w-4" />,
@@ -24,11 +25,14 @@ export default async function AuditLogPage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Audit Logs</h1>
-        <p className="text-muted-foreground">
-          A chronological record of all actions performed in the system.
-        </p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight">Audit Logs</h1>
+            <p className="text-muted-foreground">
+            A chronological record of all actions performed in the system.
+            </p>
+        </div>
+        <RefreshButton />
       </div>
 
       <Card>

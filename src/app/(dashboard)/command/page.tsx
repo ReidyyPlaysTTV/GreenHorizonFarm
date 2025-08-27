@@ -1,5 +1,4 @@
 
-
 import { getBlacklistedPersonnel, getCallsignLogs, addBlacklistedPersonnel } from "@/lib/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PlusCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { AddToBlacklistForm } from "@/components/command/add-to-blacklist-form";
+import { RefreshButton } from "@/components/layout/refresh-button";
 
 export default async function CommandPage() {
   const blacklistedPersonnel = await getBlacklistedPersonnel();
@@ -26,11 +26,14 @@ export default async function CommandPage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">DOC Command Center</h1>
-        <p className="text-muted-foreground">
-          High-level management and security tools.
-        </p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight">DOC Command Center</h1>
+            <p className="text-muted-foreground">
+            High-level management and security tools.
+            </p>
+        </div>
+        <RefreshButton />
       </div>
 
       <Card>

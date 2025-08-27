@@ -4,6 +4,7 @@ import { PermissionManagement } from "@/components/admin/permission-management";
 import { DeveloperPanel } from "@/components/admin/developer-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getUsers, getBugReports, getSuggestions } from "@/lib/actions";
+import { RefreshButton } from "@/components/layout/refresh-button";
 
 export default async function AdminPage() {
   // Note: In a real application, you would protect this page to ensure
@@ -14,11 +15,14 @@ export default async function AdminPage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Admin Panel</h1>
-        <p className="text-muted-foreground">
-          Manage users, roles, and application-wide settings.
-        </p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Admin Panel</h1>
+          <p className="text-muted-foreground">
+            Manage users, roles, and application-wide settings.
+          </p>
+        </div>
+        <RefreshButton />
       </div>
 
        <Tabs defaultValue="users" className="w-full">

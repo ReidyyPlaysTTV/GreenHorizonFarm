@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { User, Check, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { RefreshButton } from "@/components/layout/refresh-button";
 
 const usePersonnelData = () => {
     const [personnel, setPersonnel] = useState<Awaited<ReturnType<typeof getPersonnel>>>([]);
@@ -67,13 +68,14 @@ export default function CallsignsPage() {
             Overview of assigned and available callsigns (1000-9999).
           </p>
         </div>
-        <div className="mt-4 md:mt-0 w-full md:w-auto">
+        <div className="flex items-center gap-2 mt-4 md:mt-0">
           <Input 
             placeholder="Search by callsign or name..."
             value={searchTerm}
             onChange={handleSearchChange}
             className="md:w-[250px]"
           />
+          <RefreshButton />
         </div>
       </div>
 

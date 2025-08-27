@@ -1,5 +1,4 @@
 
-
 import { getPersonnel } from "@/lib/actions";
 import { departments } from "@/lib/data";
 import type { Personnel } from "@/lib/types";
@@ -9,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AddPersonnelForm } from "@/components/roster/add-personnel-form";
 import { PersonnelActions } from "@/components/roster/personnel-actions";
 import Image from "next/image";
+import { RefreshButton } from "@/components/layout/refresh-button";
 
 const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
   return (
@@ -67,7 +67,10 @@ export default async function RosterPage() {
             Browse active personnel across all departments.
             </p>
         </div>
-        <AddPersonnelForm />
+        <div className="flex items-center gap-2">
+            <AddPersonnelForm />
+            <RefreshButton />
+        </div>
       </div>
       
       <div className="space-y-8">

@@ -1,5 +1,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
+import { RefreshButton } from "@/components/layout/refresh-button";
 
 export default function SOPsPage() {
   // IMPORTANT: Replace this with your own Google Slides embed URL.
@@ -11,11 +12,14 @@ export default function SOPsPage() {
   return (
     <div className="flex flex-col h-full">
         <div className="container mx-auto p-4 md:p-8">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold tracking-tight">DOC Standard Operating Procedures</h1>
-                <p className="text-muted-foreground">
-                Official guidelines and procedures for all personnel.
-                </p>
+            <div className="flex items-center justify-between mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">DOC Standard Operating Procedures</h1>
+                    <p className="text-muted-foreground">
+                    Official guidelines and procedures for all personnel.
+                    </p>
+                </div>
+                <RefreshButton />
             </div>
         </div>
 

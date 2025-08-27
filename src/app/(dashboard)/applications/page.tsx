@@ -1,7 +1,9 @@
+
 import { getApplications } from "@/lib/actions";
 import { ApplicationReviewCard } from "@/components/application/application-review-card";
 import { ApplicationFormEditor } from "@/components/application/application-form-editor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RefreshButton } from "@/components/layout/refresh-button";
 
 export default async function ApplicationsPage() {
   const applications = await getApplications();
@@ -27,11 +29,14 @@ export default async function ApplicationsPage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Application Center</h1>
-        <p className="text-muted-foreground">
-          Review and manage incoming applications and the application form itself.
-        </p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Application Center</h1>
+          <p className="text-muted-foreground">
+            Review and manage incoming applications and the application form itself.
+          </p>
+        </div>
+        <RefreshButton />
       </div>
 
       <Tabs defaultValue="pending" className="w-full">

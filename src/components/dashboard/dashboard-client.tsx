@@ -8,6 +8,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Users, FileText, UserCheck, UserX, ArrowUp, ArrowDown, UserPlus, UserMinus, ShieldAlert } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "../ui/badge";
+import { RefreshButton } from "../layout/refresh-button";
 
 const chartConfig = {
   total: {
@@ -48,9 +49,12 @@ export function DashboardClient({ personnel, applications, recentActivity }: Das
 
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome to the Department of Corrections Roster.</p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground">Welcome to the Department of Corrections Roster.</p>
+        </div>
+        <RefreshButton />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
