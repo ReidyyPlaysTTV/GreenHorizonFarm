@@ -47,7 +47,7 @@ import {
 
 import { getCallsignLogs } from './actions/callsign-log-actions';
 
-import { getAuditLogs, logUserAction, addBlacklistedPersonnel } from './actions/audit-log-actions';
+import { getAuditLogs, logUserAction, addBlacklistedPersonnel, removeBlacklistedPersonnel } from './actions/audit-log-actions';
 
 import { updatePersonnelStatus } from './actions/status-actions';
 
@@ -82,5 +82,6 @@ export {
     getAuditLogs,
     logUserAction,
     addBlacklistedPersonnel,
+    removeBlacklistedPersonnel,
     updatePersonnelStatus,
 };

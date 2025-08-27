@@ -1,24 +1,12 @@
 
-import { getBlacklistedPersonnel, getCallsignLogs, addBlacklistedPersonnel } from "@/lib/actions";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { getBlacklistedPersonnel, getCallsignLogs } from "@/lib/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PlusCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { AddToBlacklistForm } from "@/components/command/add-to-blacklist-form";
 import { RefreshButton } from "@/components/layout/refresh-button";
+import { RemoveFromBlacklistDialog } from "@/components/command/remove-from-blacklist-dialog";
+import { Badge } from "@/components/ui/badge";
 
 export default async function CommandPage() {
   const blacklistedPersonnel = await getBlacklistedPersonnel();
@@ -54,6 +42,7 @@ export default async function CommandPage() {
                 <TableHead>Discord</TableHead>
                 <TableHead>Reason for Blacklist</TableHead>
                 <TableHead>Date Added</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -63,11 +52,14 @@ export default async function CommandPage() {
                   <TableCell>{p.discordUsername || 'N/A'}</TableCell>
                   <TableCell>{p.reason}</TableCell>
                   <TableCell>{p.dateAdded}</TableCell>
+                  <TableCell className="text-right">
+                    <RemoveFromBlacklistDialog personnel={p} />
+                  </TableCell>
                 </TableRow>
               ))}
                {blacklistedPersonnel.length === 0 && (
                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={5} className="h-24 text-center">
                         No one is currently blacklisted.
                     </TableCell>
                 </TableRow>

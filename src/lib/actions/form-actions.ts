@@ -5,7 +5,7 @@ import { z } from 'zod';
 import db from '../db';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
-import type { FormFieldData } from '../types';
+import type { FormFieldData, BlacklistedPersonnel } from '../types';
 import { logUserAction } from './audit-log-actions';
 
 // Schema for validating fields from the client
@@ -97,7 +97,7 @@ export async function saveApplicationFormFields(fields: FormFieldData[], user: s
 
 export async function submitApplication(responses: Record<string, any>) {
     const fields = await getApplicationFormFields();
-
+    
     const formattedResponses = fields.map(field => ({
         fieldId: field.id,
         label: field.label,
@@ -105,17 +105,46 @@ export async function submitApplication(responses: Record<string, any>) {
         answer: responses[field.id!] || ''
     }));
 
+    const discordField = fields.find(f => f.label.toLowerCase().includes('discord'));
+    const discordUsername = discordField ? responses[discordField.id!] : null;
+
+    const connection = await db.getConnection();
     try {
-        await db.query(
-            'INSERT INTO applications (id, responses) VALUES (?, ?)',
-            [randomUUID(), JSON.stringify(formattedResponses)]
+        await connection.beginTransaction();
+
+        let status: 'Pending' | 'Rejected' = 'Pending';
+        let logDescription = "A new application was submitted.";
+        const applicantName = fields.find(f => f.label.toLowerCase().includes('name'))?.label || "Unknown Applicant";
+        const applicantNameValue = responses[fields.find(f => f.label.toLowerCase().includes('name'))?.id!] || "Unknown";
+
+
+        if (discordUsername) {
+            const [blacklistRows] = await connection.query('SELECT * FROM blacklisted_personnel WHERE discord_username = ?', [discordUsername]);
+            const blacklistedUser = (blacklistRows as BlacklistedPersonnel[])[0];
+
+            if (blacklistedUser) {
+                status = 'Rejected';
+                logDescription = `Application from '${applicantNameValue}' was auto-denied due to matching blacklisted Discord username. Reason: ${blacklistedUser.reason}`;
+                 await logUserAction('System', 'Application Auto-Denied', logDescription, connection);
+            }
+        }
+
+        await connection.query(
+            'INSERT INTO applications (id, responses, status) VALUES (?, ?, ?)',
+            [randomUUID(), JSON.stringify(formattedResponses), status]
         );
+        
+        await connection.commit();
     } catch(error) {
+        await connection.rollback();
         console.error("Failed to submit application:", error);
         throw new Error("Could not save application to the database.");
+    } finally {
+        connection.release();
     }
 
     revalidatePath('/applications');
+    revalidatePath('/logs');
 }
 
 const applicationStatusSchema = z.enum(['Approved', 'Rejected']);
@@ -132,10 +161,11 @@ export async function updateApplicationStatus(applicationId: string, status: 'Ap
       [validatedStatus, applicationId]
     );
 
-    const [appRows] = await connection.query('SELECT name FROM applications WHERE id = ?', [applicationId]);
-    const appName = (appRows as any)[0]?.name || 'Unknown Applicant';
-
-    await logUserAction(user, 'Update Application Status', `${validatedStatus} application for ${appName}.`, connection);
+    const [appRows]: any[] = await connection.query('SELECT responses FROM applications WHERE id = ?', [applicationId]);
+    const responses = JSON.parse(appRows[0].responses);
+    const applicantName = responses.find((r: any) => r.label.toLowerCase().includes('name'))?.answer || 'Unknown Applicant';
+    
+    await logUserAction(user, 'Update Application Status', `${validatedStatus} application for ${applicantName}.`, connection);
     
     await connection.commit();
 

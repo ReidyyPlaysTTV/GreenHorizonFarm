@@ -4,7 +4,7 @@
 import { randomUUID } from 'crypto';
 import db from '../db';
 import { revalidatePath } from 'next/cache';
-import type { AuditLog } from '../types';
+import type { AuditLog, BlacklistedPersonnel } from '../types';
 import { z } from 'zod';
 
 async function createAuditLogTableIfNeeded(connection: any) {
@@ -102,6 +102,38 @@ export async function addBlacklistedPersonnel(data: unknown) {
   } catch (error) {
     await connection.rollback();
     console.error("Failed to add to blacklist:", error);
+    return { success: false, message: 'Database operation failed.' };
+  } finally {
+    connection.release();
+  }
+}
+
+const removeBlacklistSchema = z.object({
+  personnelId: z.string(),
+  user: z.string(),
+  name: z.string(),
+});
+
+export async function removeBlacklistedPersonnel(data: unknown) {
+  const validation = removeBlacklistSchema.safeParse(data);
+  if (!validation.success) {
+    return { success: false, message: 'Invalid data provided.' };
+  }
+  const { personnelId, user, name } = validation.data;
+  
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+    await connection.query('DELETE FROM blacklisted_personnel WHERE id = ?', [personnelId]);
+    await logUserAction(user, 'Remove from Blacklist', `Removed '${name}' from the blacklist.`, connection);
+    await connection.commit();
+    
+    revalidatePath('/command');
+    revalidatePath('/logs');
+    return { success: true, message: `${name} has been removed from the blacklist.` };
+  } catch (error) {
+    await connection.rollback();
+    console.error("Failed to remove from blacklist:", error);
     return { success: false, message: 'Database operation failed.' };
   } finally {
     connection.release();
