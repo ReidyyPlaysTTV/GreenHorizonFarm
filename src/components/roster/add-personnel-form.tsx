@@ -67,6 +67,8 @@ export function AddPersonnelForm() {
     defaultValues: {
       name: "",
       discordUsername: "",
+      rank: "",
+      callsign: "" as any,
     },
   });
 

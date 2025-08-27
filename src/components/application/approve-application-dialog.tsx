@@ -64,6 +64,8 @@ export function ApproveApplicationDialog({ application, currentUser, children }:
     defaultValues: {
       name: application.name,
       discordUsername: application.discordUsername,
+      rank: "",
+      callsign: "" as any,
     },
   });
 
