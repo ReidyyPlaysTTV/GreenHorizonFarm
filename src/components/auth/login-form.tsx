@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,14 +20,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
 import { logUserAction } from "@/lib/actions";
+import { Checkbox } from "../ui/checkbox";
 
 const formSchema = z.object({
   username: z.string().min(2, {
     message: "Username must be at least 2 characters.",
   }),
-  password: z.string(),
+  password: z.string().min(1, "Password is required."),
+  rememberMe: z.boolean().default(false).optional(),
 });
 
 export function LoginForm() {
@@ -39,8 +41,19 @@ export function LoginForm() {
     defaultValues: {
       username: "",
       password: "",
+      rememberMe: false,
     },
   });
+
+  useEffect(() => {
+    const savedCreds = localStorage.getItem('rememberedCredentials');
+    if (savedCreds) {
+        const { username, password } = JSON.parse(savedCreds);
+        form.setValue('username', username);
+        form.setValue('password', password);
+        form.setValue('rememberMe', true);
+    }
+  }, [form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -49,9 +62,14 @@ export function LoginForm() {
     // For this demo, we'll just log in successfully.
     if (typeof window !== 'undefined') {
         localStorage.setItem('loggedInUser', values.username);
+        
+        if (values.rememberMe) {
+            localStorage.setItem('rememberedCredentials', JSON.stringify({username: values.username, password: values.password}));
+        } else {
+            localStorage.removeItem('rememberedCredentials');
+        }
     }
     
-    // Log the login action
     await logUserAction(values.username, "Login", `User '${values.username}' signed in.`);
 
     toast({
@@ -59,7 +77,7 @@ export function LoginForm() {
         description: `Welcome back, ${values.username}!`,
     });
     
-    router.push("/"); // Navigate to dashboard home
+    router.push("/");
     setIsLoading(false);
   }
 
@@ -89,6 +107,25 @@ export function LoginForm() {
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="rememberMe"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel>
+                  Remember me
+                </FormLabel>
+              </div>
             </FormItem>
           )}
         />
