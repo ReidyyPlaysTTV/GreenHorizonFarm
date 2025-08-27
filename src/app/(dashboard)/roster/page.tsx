@@ -28,7 +28,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
             <TableRow key={p.id}>
               <TableCell>
                 <Avatar>
-                  <AvatarImage src={p.avatarUrl} alt={p.name} />
+                  <AvatarImage src={p.avatarUrl} alt={p.name} className="object-contain" />
                   <AvatarFallback>{p.name.charAt(0)}</AvatarFallback>
                 </Avatar>
               </TableCell>
