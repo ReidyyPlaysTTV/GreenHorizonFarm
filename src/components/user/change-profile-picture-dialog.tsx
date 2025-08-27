@@ -32,7 +32,7 @@ import { Loader2 } from "lucide-react";
 import Image from "next/image";
 
 const formSchema = z.object({
-  avatarUrl: z.string().url({ message: "Please enter a valid URL." }),
+  avatarUrl: z.string().url({ message: "Please enter a valid URL." }).min(1, "URL cannot be empty."),
 });
 
 interface ChangeProfilePictureDialogProps {
