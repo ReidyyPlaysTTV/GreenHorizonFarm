@@ -7,7 +7,7 @@ export default function SOPsPage() {
   // To get the URL: In Google Slides, go to File > Share > Publish to web.
   // Click "Embed", choose your options, and click "Publish".
   // Copy the `src` URL from the generated iframe code.
-  const googleSlidesEmbedUrl = "https://docs.google.com/presentation/d/e/2PACX-1vTOa-M-hBBO6yQakeeYQ_Jt3iS_2b2sX0Cq8i_a-1_AIpB3sH_a-1_AIpB3sH_a-1_AIpB3sH_a-1/embed?start=false&loop=false&delayms=3000";
+  const googleSlidesEmbedUrl = "https://docs.google.com/presentation/d/1jjUe1Jx2odazolqiyGnuCiEVEE3NPrHQVMn3_cw9A2s/embed?start=false&loop=false&delayms=3000";
 
   return (
     <div className="container mx-auto p-4 md:p-8">
