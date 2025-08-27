@@ -1,115 +1,111 @@
+-- Database schema for the DOC Roster Application
 
--- Create the users table for login
-CREATE TABLE IF NOT EXISTS `users` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `username` VARCHAR(255) NOT NULL UNIQUE,
-  `password` VARCHAR(255) NOT NULL -- In a real app, this should be a hashed password
-);
+-- Main table for active personnel
+CREATE TABLE `personnel` (
+  `id` varchar(36) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `rank` varchar(255) NOT NULL,
+  `badgeNumber` varchar(255) NOT NULL,
+  `department` varchar(255) DEFAULT NULL,
+  `avatarUrl` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `badgeNumber_UNIQUE` (`badgeNumber`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Create the personnel table
-CREATE TABLE IF NOT EXISTS `personnel` (
-  `id` VARCHAR(36) NOT NULL PRIMARY KEY,
-  `name` VARCHAR(255) NOT NULL,
-  `rank` ENUM(
-    'Commissioner', 'Deputy Comissioner', 'Warden', 'Deputy Warden', 'Major', 'Captain', 
-    'Corrections Sergeant', 'Senior Corrections Officer', 'Correctional Officer', 'Probationary Correctional Officer'
-  ) NOT NULL,
-  `badgeNumber` VARCHAR(10) NOT NULL,
-  `department` ENUM(
-    'Commissioners Office', 'High Command', 'Command', 'NCOS', 'Corrections', 'Training'
-  ) NOT NULL,
-  `avatarUrl` VARCHAR(255)
-);
+-- Table for users who can log into the application
+CREATE TABLE `users` (
+  `id` varchar(36) NOT NULL,
+  `username` varchar(255) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `role` varchar(50) NOT NULL DEFAULT 'User',
+  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username_UNIQUE` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Create the archived_personnel table
-CREATE TABLE IF NOT EXISTS `archived_personnel` (
-  `id` VARCHAR(36) NOT NULL PRIMARY KEY,
-  `name` VARCHAR(255) NOT NULL,
-  `rank` VARCHAR(255) NOT NULL,
-  `status` ENUM('Fired', 'Resigned') NOT NULL,
-  `date` DATE NOT NULL,
-  `reason` TEXT
-);
+-- Table to store fired or resigned personnel records
+CREATE TABLE `archived_personnel` (
+  `id` varchar(36) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `rank` varchar(255) NOT NULL,
+  `status` enum('Fired','Resigned') NOT NULL,
+  `date` datetime NOT NULL,
+  `reason` text NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf82_general_ci;
 
--- Create the blacklisted_personnel table
-CREATE TABLE IF NOT EXISTS `blacklisted_personnel` (
-  `id` VARCHAR(36) NOT NULL PRIMARY KEY,
-  `name` VARCHAR(255) NOT NULL,
-  `reason` TEXT,
-  `dateAdded` DATE NOT NULL
-);
+-- Table for individuals blacklisted from the department
+CREATE TABLE `blacklisted_personnel` (
+  `id` varchar(36) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `reason` text NOT NULL,
+  `dateAdded` date NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Create the application form fields table
-CREATE TABLE IF NOT EXISTS `application_form_fields` (
-  `id` VARCHAR(36) NOT NULL PRIMARY KEY,
-  `type` ENUM('text', 'textarea', 'select') NOT NULL,
-  `label` VARCHAR(255) NOT NULL,
-  `order` INT NOT NULL
-);
+-- Stores the fields that make up the dynamic application form
+CREATE TABLE `application_form_fields` (
+  `id` varchar(36) NOT NULL,
+  `type` enum('text','textarea','select') NOT NULL,
+  `label` varchar(255) NOT NULL,
+  `order` int NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Create the application field options table (for select/multiple choice)
-CREATE TABLE IF NOT EXISTS `application_field_options` (
-  `id` VARCHAR(36) NOT NULL PRIMARY KEY,
-  `field_id` VARCHAR(36) NOT NULL,
-  `value` VARCHAR(255) NOT NULL,
-  FOREIGN KEY (`field_id`) REFERENCES `application_form_fields`(`id`) ON DELETE CASCADE
-);
+-- Stores the options for 'select' type fields in the application form
+CREATE TABLE `application_field_options` (
+  `id` varchar(36) NOT NULL,
+  `field_id` varchar(36) NOT NULL,
+  `value` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `field_id_fk_idx` (`field_id`),
+  CONSTRAINT `field_id_fk` FOREIGN KEY (`field_id`) REFERENCES `application_form_fields` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Create the applications table
-CREATE TABLE IF NOT EXISTS `applications` (
-  `id` VARCHAR(36) NOT NULL PRIMARY KEY,
-  `status` ENUM('Pending', 'Approved', 'Rejected') NOT NULL DEFAULT 'Pending',
-  `submittedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `responses` JSON
-);
+-- Stores submitted applications
+CREATE TABLE `applications` (
+  `id` varchar(36) NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `age` int DEFAULT NULL,
+  `status` enum('Pending','Approved','Rejected') NOT NULL DEFAULT 'Pending',
+  `submittedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `responses` json DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- ---
--- Seed Data
--- ---
+-- Logs major personnel events like hires, fires, promotions, and demotions
+CREATE TABLE `personnel_events` (
+  `id` varchar(36) NOT NULL,
+  `personnel_name` varchar(255) NOT NULL,
+  `event_type` enum('Hired','Fired','Promoted','Demoted') NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `date` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Clear existing data
-DELETE FROM `personnel`;
-DELETE FROM `archived_personnel`;
-DELETE FROM `blacklisted_personnel`;
-DELETE FROM `applications`;
-DELETE FROM `application_field_options`;
-DELETE FROM `application_form_fields`;
-DELETE FROM `users`;
+-- Table for user-submitted bug reports
+CREATE TABLE `bug_reports` (
+  `id` varchar(36) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text NOT NULL,
+  `status` enum('Pending','In Progress','Completed','Rejected') NOT NULL DEFAULT 'Pending',
+  `submittedAt` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- Table for user-submitted feature suggestions
+CREATE TABLE `suggestions` (
+  `id` varchar(36) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text NOT NULL,
+  `status` enum('Pending','In Progress','Completed','Rejected') NOT NULL DEFAULT 'Pending',
+  `submittedAt` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Seed Users
-INSERT INTO `users` (`username`, `password`) VALUES ('admin', 'password');
-
--- Seed Personnel
-INSERT INTO `personnel` (`id`, `name`, `rank`, `badgeNumber`, `department`, `avatarUrl`) VALUES
-('c7a8b9e0-5d6c-11ee-8c99-0242ac120002', 'John Smith', 'Warden', '1001', 'High Command', 'https://i.pravatar.cc/150?u=c7a8b9e0'),
-('d3a4b5c6-5d6c-11ee-8c99-0242ac120002', 'Jane Doe', 'Captain', '1002', 'Command', 'https://i.pravatar.cc/150?u=d3a4b5c6'),
-('e9f0a1b2-5d6c-11ee-8c99-0242ac120002', 'Mike Johnson', 'Senior Corrections Officer', '2001', 'Corrections', 'https://i.pravatar.cc/150?u=e9f0a1b2'),
-('f5a6b7c8-5d6c-11ee-8c99-0242ac120002', 'Emily White', 'Correctional Officer', '2002', 'Corrections', 'https://i.pravatar.cc/150?u=f5a6b7c8');
-
--- Seed Archived Personnel
-INSERT INTO `archived_personnel` (`id`, `name`, `rank`, `status`, `date`, `reason`) VALUES
-('a1b2c3d4-5d6d-11ee-8c99-0242ac120002', 'Former Officer', 'Correctional Officer', 'Fired', '2023-09-01', 'Breach of conduct.');
-
--- Seed Blacklisted Personnel
-INSERT INTO `blacklisted_personnel` (`id`, `name`, `reason`, `dateAdded`) VALUES
-('b5c6d7e8-5d6d-11ee-8c99-0242ac120002', 'Trouble Maker', 'Repeated security violations.', '2023-08-15');
-
--- Seed Application Form Fields
-INSERT INTO `application_form_fields` (`id`, `type`, `label`, `order`) VALUES
-('field-1', 'text', 'Full Name', 1),
-('field-2', 'text', 'Date of Birth', 2),
-('field-3', 'textarea', 'Why do you want to join the DOC?', 3);
-
--- Seed Applications
-INSERT INTO `applications` (`id`, `status`, `submittedAt`, `responses`) VALUES
-('app-1', 'Pending', '2023-10-01 10:00:00', JSON_ARRAY(
-    JSON_OBJECT('fieldId', 'field-1', 'label', 'Full Name', 'answer', 'Peter Jones', 'type', 'text'),
-    JSON_OBJECT('fieldId', 'field-2', 'label', 'Date of Birth', 'answer', '1995-05-20', 'type', 'text'),
-    JSON_OBJECT('fieldId', 'field-3', 'label', 'Why do you want to join the DOC?', 'answer', 'I am passionate about rehabilitation and maintaining a safe environment for both staff and inmates. I believe my communication skills and calm demeanor make me a good fit for this role.', 'type', 'textarea')
-)),
-('app-2', 'Approved', '2023-09-28 15:30:00', JSON_ARRAY(
-    JSON_OBJECT('fieldId', 'field-1', 'label', 'Full Name', 'answer', 'Maria Garcia', 'type', 'text'),
-    JSON_OBJECT('fieldId', 'field-2', 'label', 'Date of Birth', 'answer', '1992-11-12', 'type', 'text'),
-    JSON_OBJECT('fieldId', 'field-3', 'label', 'Why do you want to join the DOC?', 'answer', 'My goal is to contribute to a structured system that helps individuals on their path to reintegration into society. I have prior experience in a similar field.', 'type', 'textarea')
-));
+-- Table for global application settings, like maintenance mode
+CREATE TABLE `app_settings` (
+  `key` varchar(50) NOT NULL,
+  `value` varchar(255) NOT NULL,
+  PRIMARY KEY (`key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
