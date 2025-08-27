@@ -8,7 +8,8 @@ if (!DATABASE_URL) {
   throw new Error('DATABASE_URL is not set.');
 }
 
-// Create a connection pool
+// Create and export the connection pool directly.
+// Connections will be requested from this pool in the action files.
 const pool = mysql.createPool(DATABASE_URL);
 
 export default pool;
