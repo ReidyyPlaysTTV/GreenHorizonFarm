@@ -9,30 +9,32 @@ export default function SOPsPage() {
   const googleSlidesEmbedUrl = "https://docs.google.com/presentation/d/1jjUe1Jx2odazolqiyGnuCiEVEE3NPrHQVMn3_cw9A2s/embed?start=false&loop=false&delayms=3000";
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">DOC Standard Operating Procedures</h1>
-        <p className="text-muted-foreground">
-          Official guidelines and procedures for all personnel.
-        </p>
-      </div>
+    <div className="flex flex-col h-full">
+        <div className="container mx-auto p-4 md:p-8">
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold tracking-tight">DOC Standard Operating Procedures</h1>
+                <p className="text-muted-foreground">
+                Official guidelines and procedures for all personnel.
+                </p>
+            </div>
+        </div>
 
-      <Card className="overflow-hidden">
-        <CardContent className="p-0">
-          <div className="aspect-video w-full">
+      <div className="flex-1 px-4 md:px-8 pb-8">
+        <Card className="overflow-hidden h-full">
+            <CardContent className="p-0 h-full">
             <iframe
-              src={googleSlidesEmbedUrl}
-              frameBorder="0"
-              width="100%"
-              height="100%"
-              allowFullScreen={true}
-              className="h-full w-full"
+                src={googleSlidesEmbedUrl}
+                frameBorder="0"
+                width="100%"
+                height="100%"
+                allowFullScreen={true}
+                className="h-full w-full"
             >
-              Loading SOPs...
+                Loading SOPs...
             </iframe>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
