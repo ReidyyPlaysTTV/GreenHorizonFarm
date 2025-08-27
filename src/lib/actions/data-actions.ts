@@ -67,16 +67,26 @@ export async function getApplications(): Promise<Application[]> {
         }
 
         return (rows as any[]).map(app => {
+            let parsedResponses = [];
+            if (typeof app.responses === 'string') {
+                try {
+                    parsedResponses = JSON.parse(app.responses);
+                } catch (e) {
+                    console.error(`Failed to parse responses for application ${app.id}:`, e);
+                    // Keep responses as an empty array if parsing fails
+                }
+            } else if (Array.isArray(app.responses)) {
+                // Handle cases where it might already be an object (though DB returns string)
+                parsedResponses = app.responses;
+            }
+
             let reason = 'No reason provided.';
-            // Ensure responses is an array before trying to find something in it.
-            if (app.responses && Array.isArray(app.responses)) {
-                // Find a field that is a textarea to use as the main reason.
-                const reasonField = app.responses.find((r: any) => r.type === 'textarea');
+            if (Array.isArray(parsedResponses)) {
+                const reasonField = parsedResponses.find((r: any) => r.type === 'textarea');
                 if (reasonField && reasonField.answer) {
                     reason = reasonField.answer;
                 } else {
-                    // Fallback to the first answer if no textarea is available
-                    const firstAnswer = app.responses[0]?.answer;
+                    const firstAnswer = parsedResponses[0]?.answer;
                     if(firstAnswer) reason = firstAnswer;
                 }
             }
@@ -87,6 +97,7 @@ export async function getApplications(): Promise<Application[]> {
                 age: app.age || 0,
                 reasonForApplying: reason,
                 submittedAt: new Date(app.submittedAt),
+                responses: parsedResponses, // Return parsed array
             }
         });
     } catch (error) {
