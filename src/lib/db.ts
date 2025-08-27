@@ -1,10 +1,12 @@
 import mysql from 'mysql2/promise';
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL is not set in the environment variables.');
+const DATABASE_URL = "mysql://zap1311701-2:J2IAJKgRfnrCphFq@mysql-mariadb16-lon-101.zap-srv.com/zap1311701-2";
+
+if (!DATABASE_URL) {
+  throw new Error('DATABASE_URL is not set.');
 }
 
 // Create a connection pool
-const pool = mysql.createPool(process.env.DATABASE_URL);
+const pool = mysql.createPool(DATABASE_URL);
 
 export default pool;
