@@ -2,11 +2,16 @@
 'use server';
 import type { AppUser, Role, Permission } from "./types";
 import db from "./db";
-import { permissions, permissionsMap } from './data';
+import { permissionsMap } from './data';
 
 // Server-side permission check
 export async function checkPermissions(username: string, permission: Permission): Promise<boolean> {
     if (!username) return false;
+
+    // Special case: 'admin' user always has all permissions.
+    if (username.toLowerCase() === 'admin') {
+        return true;
+    }
 
     const connection = await db.getConnection();
     try {

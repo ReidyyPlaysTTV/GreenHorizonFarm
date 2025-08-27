@@ -22,6 +22,11 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
              if (typeof window !== 'undefined') {
                 const loggedInUser = localStorage.getItem("loggedInUser");
                 if (loggedInUser) {
+                    // Special case for the 'admin' user
+                    if (loggedInUser.toLowerCase() === 'admin') {
+                        setUserRole("Administrator");
+                        return;
+                    }
                     try {
                         // In a real app, this might come from a context or a dedicated hook
                         const allUsers: AppUser[] = await getUsers();
@@ -32,7 +37,7 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
                         setUserRole("User");
                     }
                 } else {
-                    setUserRole("User"); // Default to lowest permission if not logged in
+                    setUserRole(null); // No user logged in
                 }
             }
         };
@@ -42,8 +47,8 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
     const hasPermission = (permission: Permission) => {
         if (!userRole) return false;
         
-        // Developer role has all permissions implicitly
-        if (userRole === "Developer") {
+        // Developer and Administrator roles have all permissions implicitly
+        if (userRole === "Developer" || userRole === "Administrator") {
             return true;
         }
 
