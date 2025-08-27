@@ -7,6 +7,9 @@ import type { AppUser } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User } from "lucide-react";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default async function UsersPage() {
   const users: AppUser[] = await getUsers();
@@ -61,7 +64,11 @@ export default async function UsersPage() {
                       </AvatarFallback>
                     </Avatar>
                   </TableCell>
-                  <TableCell className="font-medium">{user.username}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link href={`/users/${encodeURIComponent(user.username)}`} className={cn(buttonVariants({ variant: "link" }), "p-0 h-auto text-base")}>
+                      {user.username}
+                    </Link>
+                  </TableCell>
                   <TableCell>
                     <Badge variant="secondary">{user.role}</Badge>
                   </TableCell>
