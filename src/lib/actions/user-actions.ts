@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import db from '../db';
@@ -13,26 +14,31 @@ import { roles } from '../data';
 
 async function createUsersTableIfNeeded() {
     try {
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS users (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                username VARCHAR(255) NOT NULL UNIQUE,
-                password_hash VARCHAR(255) NOT NULL,
-                role VARCHAR(50) NOT NULL DEFAULT 'User',
-                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                avatarUrl VARCHAR(255)
-            );
-        `);
-         // Add avatarUrl column if it doesn't exist, for backwards compatibility
-        const [columns] = await db.query("SHOW COLUMNS FROM users LIKE 'avatarUrl'");
-        if (Array.isArray(columns) && columns.length === 0) {
-            await db.query("ALTER TABLE users ADD COLUMN avatarUrl VARCHAR(255)");
+        const connection = await db.getConnection();
+        try {
+            await connection.query(`
+                CREATE TABLE IF NOT EXISTS users (
+                    id VARCHAR(36) NOT NULL PRIMARY KEY,
+                    username VARCHAR(255) NOT NULL UNIQUE,
+                    password_hash VARCHAR(255) NOT NULL,
+                    role VARCHAR(50) NOT NULL DEFAULT 'User',
+                    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    avatarUrl VARCHAR(255)
+                );
+            `);
+            const [columns] = await connection.query("SHOW COLUMNS FROM users LIKE 'avatarUrl'");
+            if (Array.isArray(columns) && columns.length === 0) {
+                await connection.query("ALTER TABLE users ADD COLUMN avatarUrl VARCHAR(255)");
+            }
+        } finally {
+            connection.release();
         }
     } catch (error) {
         console.error("Failed to create or alter users table:", error);
         throw new Error("Database schema setup for users failed.");
     }
 }
+
 
 async function createAccessRequestsTableIfNeeded(connection: any) {
     await connection.query(`
@@ -50,28 +56,39 @@ async function createAccessRequestsTableIfNeeded(connection: any) {
 export async function getUsers(): Promise<AppUser[]> {
     try {
         await createUsersTableIfNeeded();
-        // For security, we don't select the password_hash
-        const [users] = await db.query('SELECT id, username, role, createdAt FROM users ORDER BY username ASC');
-        if (!Array.isArray(users)) {
-            return [];
-        }
+        const connection = await db.getConnection();
+        try {
+            const [users] = await connection.query('SELECT id, username, role, createdAt FROM users ORDER BY username ASC');
+            if (!Array.isArray(users)) {
+                return [];
+            }
 
-        const [personnel] = await db.query('SELECT name, avatarUrl, rank, department FROM personnel');
-        const personnelMap = new Map<string, Partial<Personnel>>();
-        if (Array.isArray(personnel)) {
-            personnel.forEach((p: any) => personnelMap.set(p.name, p));
-        }
+            const [personnel] = await connection.query('SELECT name, avatarUrl, rank, department FROM personnel');
+            const personnelMap = new Map<string, Partial<Personnel>>();
+            if (Array.isArray(personnel)) {
+                personnel.forEach((p: any) => personnelMap.set(p.name, {
+                    ...p,
+                    avatarUrl: p.avatarUrl || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"
+                }));
+            }
 
-        return (users as any[]).map((u: any) => ({ 
-            ...u, 
-            createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined,
-            personnel: personnelMap.get(u.username) || null
-        }));
+            return (users as any[]).map((u: any) => {
+                const pRecord = personnelMap.get(u.username);
+                return {
+                    ...u,
+                    createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined,
+                    personnel: pRecord || null
+                };
+            });
+        } finally {
+            connection.release();
+        }
     } catch (error) {
         console.error("Failed to fetch users:", error);
         return [];
     }
 }
+
 
 const roleSchema = z.object({
     role: z.string().min(1, "Role cannot be empty."),
@@ -210,11 +227,12 @@ export async function approveAccessRequest(data: unknown) {
         }
         const request = (requestRows as any)[0];
         const { password_hash, requested_username } = request;
+        const newUserId = randomUUID();
 
         // 2. Create the user
         await connection.query(
             'INSERT INTO users (id, username, password_hash, role) VALUES (?, ?, ?, ?)',
-            [randomUUID(), username, password_hash, role]
+            [newUserId, username, password_hash, role]
         );
 
         // 3. Update the request status
@@ -289,10 +307,11 @@ export async function createUser(data: unknown) {
 
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
+    const newUserId = randomUUID();
     
     await connection.query(
       'INSERT INTO users (id, username, password_hash, role) VALUES (?, ?, ?, ?)',
-      [randomUUID(), username, password_hash, role]
+      [newUserId, username, password_hash, role]
     );
 
     await logUserAction(adminUser, 'Create User', `Created new user '${username}' with role '${role}'.`, connection);
@@ -361,7 +380,7 @@ export async function changeUserPassword(data: unknown) {
 }
 
 const updateProfilePictureSchema = z.object({
-  userId: z.string(),
+  userId: z.string().uuid(),
   avatarUrl: z.string().url("Invalid URL format."),
   loggedInUser: z.string(),
 });
@@ -369,22 +388,32 @@ const updateProfilePictureSchema = z.object({
 export async function updateProfilePicture(data: unknown) {
     const validation = updateProfilePictureSchema.safeParse(data);
     if (!validation.success) {
-        return { success: false, message: 'Invalid data provided.' };
+        return { success: false, message: validation.error.errors.map(e => e.message).join(', ') };
     }
     const { userId, avatarUrl, loggedInUser } = validation.data;
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
-        // Update avatar in personnel table if exists
-        await connection.query('UPDATE personnel SET avatarUrl = ? WHERE name = ?', [avatarUrl, loggedInUser]);
+        // Update avatar in personnel table using the userId
+        const [result] = await connection.query(
+            'UPDATE personnel SET avatarUrl = ? WHERE userId = ?', 
+            [avatarUrl, userId]
+        );
+
+        const updateWasSuccessful = (result as any).affectedRows > 0;
+        if(!updateWasSuccessful) {
+             // This can happen if the user is not a personnel member yet.
+             // We can log this, but it's not a hard error.
+            console.log(`Attempted to update avatar for userId ${userId}, but no matching personnel record was found.`);
+        }
         
         await logUserAction(loggedInUser, 'Update Profile Picture', `User '${loggedInUser}' updated their profile picture.`, connection);
 
         await connection.commit();
-        revalidatePath(`/users/${encodeURIComponent(loggedInUser)}`);
-        revalidatePath('/roster');
-        revalidatePath('/(dashboard)/layout');
+        
+        revalidatePath(`/users/${encodeURIComponent(loggedInUser)}`, 'layout');
+        
         return { success: true, message: "Profile picture updated." };
     } catch (error) {
         await connection.rollback();

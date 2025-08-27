@@ -1,35 +1,58 @@
 
+
 'use server';
 
 import type { Personnel, ArchivedPersonnel, BlacklistedPersonnel, Application, PersonnelEvent } from "../types";
 import db from '../db';
 import { rankToDepartmentMap, rankOrder } from "../data";
 
+async function createPersonnelTableIfNeeded(connection: any) {
+    await connection.query(`
+        CREATE TABLE IF NOT EXISTS personnel (
+            id VARCHAR(36) NOT NULL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            rank VARCHAR(255) NOT NULL,
+            badgeNumber VARCHAR(10) NOT NULL UNIQUE,
+            discord_username VARCHAR(255),
+            department VARCHAR(255),
+            avatarUrl VARCHAR(255),
+            status ENUM('Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended') NOT NULL DEFAULT 'Active',
+            loa_until DATE,
+            is_rehired BOOLEAN NOT NULL DEFAULT FALSE,
+            userId VARCHAR(36)
+        )
+    `);
+    const [columns] = await connection.query("SHOW COLUMNS FROM personnel LIKE 'userId'");
+    if (Array.isArray(columns) && columns.length === 0) {
+        await connection.query("ALTER TABLE personnel ADD COLUMN userId VARCHAR(36) NULL, ADD INDEX (userId)");
+    }
+}
+
+
 export async function getPersonnel(): Promise<Personnel[]> {
+    const connection = await db.getConnection();
     try {
-        const [rows] = await db.query('SELECT * FROM personnel');
+        await createPersonnelTableIfNeeded(connection);
+        const [rows] = await connection.query('SELECT * FROM personnel');
         if (!Array.isArray(rows)) {
             return [];
         }
 
         const personnel = (rows as any[]).map(p => ({
             ...p,
-            department: rankToDepartmentMap[p.rank] || p.department, // Override department based on rank
+            department: rankToDepartmentMap[p.rank] || p.department,
             avatarUrl: p.avatarUrl || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
-            status: p.status || 'Active', // Default to active if status is null/undefined
+            status: p.status || 'Active',
             loa_until: p.loa_until ? new Date(p.loa_until).toISOString() : null,
             is_rehired: !!p.is_rehired,
         }));
         
-        // Sort personnel by rank order, then by callsign
         personnel.sort((a, b) => {
             const rankIndexA = rankOrder.indexOf(a.rank);
             const rankIndexB = rankOrder.indexOf(b.rank);
-
             if (rankIndexA !== rankIndexB) {
                 return rankIndexA - rankIndexB;
             }
-            
             return parseInt(a.badgeNumber) - parseInt(b.badgeNumber);
         });
 
@@ -37,38 +60,9 @@ export async function getPersonnel(): Promise<Personnel[]> {
 
     } catch (error) {
         console.error("Failed to fetch personnel:", error);
-         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
-             await db.query(`
-                CREATE TABLE personnel (
-                    id VARCHAR(36) NOT NULL PRIMARY KEY,
-                    name VARCHAR(255) NOT NULL,
-                    rank VARCHAR(255) NOT NULL,
-                    badgeNumber VARCHAR(10) NOT NULL UNIQUE,
-                    discord_username VARCHAR(255),
-                    department VARCHAR(255),
-                    avatarUrl VARCHAR(255),
-                    status ENUM('Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended') NOT NULL DEFAULT 'Active',
-                    loa_until DATE,
-                    is_rehired BOOLEAN NOT NULL DEFAULT FALSE
-                )
-            `);
-            return [];
-        }
-        // Handle case where columns don't exist yet
-         if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_UNKNOWN_COLUMN')) {
-            if ((error as any).sqlMessage.includes('status')) {
-                await db.query("ALTER TABLE personnel ADD COLUMN status ENUM('Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended') NOT NULL DEFAULT 'Active'");
-            }
-            if ((error as any).sqlMessage.includes('loa_until')) {
-                await db.query("ALTER TABLE personnel ADD COLUMN loa_until DATE");
-            }
-            if ((error as any).sqlMessage.includes('is_rehired')) {
-                await db.query("ALTER TABLE personnel ADD COLUMN is_rehired BOOLEAN NOT NULL DEFAULT FALSE");
-            }
-            // Retry the query
-            return getPersonnel();
-        }
         return [];
+    } finally {
+        connection.release();
     }
 }
 

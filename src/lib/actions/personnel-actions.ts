@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { z } from 'zod';
@@ -12,12 +13,13 @@ import { logUserAction } from './audit-log-actions';
 import { updateApplicationStatus } from './form-actions';
 import { checkPermissions } from '../permissions';
 
-async function getPersonnelById(id: string): Promise<Personnel | null> {
-  const [rows] = await db.query('SELECT * FROM personnel WHERE id = ?', [id]);
-  if (Array.isArray(rows) && rows.length > 0) {
-    return (rows as any)[0] as Personnel;
-  }
-  return null;
+async function getPersonnelById(id: string, connection?: any): Promise<Personnel | null> {
+    const conn = connection || db;
+    const [rows] = await conn.query('SELECT * FROM personnel WHERE id = ?', [id]);
+    if (Array.isArray(rows) && rows.length > 0) {
+        return (rows as any)[0] as Personnel;
+    }
+    return null;
 }
 
 async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'Promoted' | 'Demoted' | 'Rehired', description: string, dbConnection?: any) {
@@ -28,7 +30,6 @@ async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'P
             [randomUUID(), personnelName, eventType, description, new Date()]
         );
     } catch (error) {
-        // Log the error but don't block the main action if event logging fails
         console.error(`Failed to log event: ${eventType} for ${personnelName}`, error);
     } finally {
         if (!dbConnection) {
@@ -43,23 +44,23 @@ export async function promotePersonnel(personnelId: string, user: string) {
     return { success: false, message: 'You do not have permission to perform this action.' };
   }
 
-  const personnel = await getPersonnelById(personnelId);
-  if (!personnel) {
-    return { success: false, message: 'Personnel not found.' };
-  }
-
-  const currentRankIndex = rankOrder.indexOf(personnel.rank);
-  if (currentRankIndex === -1) {
-    return { success: false, message: 'Invalid current rank.' };
-  }
-  if (currentRankIndex === 0) {
-    return { success: false, message: 'Cannot promote further.' };
-  }
-
-  const newRank = rankOrder[currentRankIndex - 1];
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
+    const personnel = await getPersonnelById(personnelId, connection);
+    if (!personnel) {
+      throw new Error('Personnel not found.');
+    }
+
+    const currentRankIndex = rankOrder.indexOf(personnel.rank);
+    if (currentRankIndex === -1) {
+      throw new Error('Invalid current rank.');
+    }
+    if (currentRankIndex === 0) {
+      return { success: false, message: 'Cannot promote further.' };
+    }
+
+    const newRank = rankOrder[currentRankIndex - 1];
     await connection.query('UPDATE personnel SET rank = ? WHERE id = ?', [newRank, personnelId]);
     await logEvent(personnel.name, 'Promoted', `Promoted from ${personnel.rank} to ${newRank}`, connection);
     await logUserAction(user, "Promote Personnel", `Promoted ${personnel.name} from ${personnel.rank} to ${newRank}.`, connection);
@@ -69,10 +70,10 @@ export async function promotePersonnel(personnelId: string, user: string) {
     revalidatePath('/');
     revalidatePath('/logs');
     return { success: true, message: `${personnel.name} promoted to ${newRank}.` };
-  } catch (error) {
+  } catch (error: any) {
     await connection.rollback();
     console.error('Promotion failed:', error);
-    return { success: false, message: 'Database operation failed.' };
+    return { success: false, message: error.message || 'Database operation failed.' };
   } finally {
     connection.release();
   }
@@ -84,23 +85,23 @@ export async function demotePersonnel(personnelId: string, user: string) {
     return { success: false, message: 'You do not have permission to perform this action.' };
   }
 
-  const personnel = await getPersonnelById(personnelId);
-  if (!personnel) {
-    return { success: false, message: 'Personnel not found.' };
-  }
-
-  const currentRankIndex = rankOrder.indexOf(personnel.rank);
-  if (currentRankIndex === -1) {
-    return { success: false, message: 'Invalid current rank.' };
-  }
-  if (currentRankIndex === rankOrder.length - 1) {
-    return { success: false, message: 'Cannot demote further.' };
-  }
-
-  const newRank = rankOrder[currentRankIndex + 1];
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
+    const personnel = await getPersonnelById(personnelId, connection);
+    if (!personnel) {
+      throw new Error('Personnel not found.');
+    }
+
+    const currentRankIndex = rankOrder.indexOf(personnel.rank);
+    if (currentRankIndex === -1) {
+      throw new Error('Invalid current rank.');
+    }
+    if (currentRankIndex === rankOrder.length - 1) {
+      return { success: false, message: 'Cannot demote further.' };
+    }
+
+    const newRank = rankOrder[currentRankIndex + 1];
     await connection.query('UPDATE personnel SET rank = ? WHERE id = ?', [newRank, personnelId]);
     await logEvent(personnel.name, 'Demoted', `Demoted from ${personnel.rank} to ${newRank}`, connection);
     await logUserAction(user, "Demote Personnel", `Demoted ${personnel.name} from ${personnel.rank} to ${newRank}.`, connection);
@@ -110,10 +111,10 @@ export async function demotePersonnel(personnelId: string, user: string) {
     revalidatePath('/');
     revalidatePath('/logs');
     return { success: true, message: `${personnel.name} demoted to ${newRank}.` };
-  } catch (error) {
+  } catch (error: any) {
     await connection.rollback();
     console.error('Demotion failed:', error);
-    return { success: false, message: 'Database operation failed.' };
+    return { success: false, message: error.message || 'Database operation failed.' };
   } finally {
     connection.release();
   }
@@ -125,22 +126,19 @@ export async function firePersonnel(personnelId: string, reason: string, user: s
     return { success: false, message: 'You do not have permission to perform this action.' };
   }
   
-  const personnel = await getPersonnelById(personnelId);
-  if (!personnel) {
-    return { success: false, message: 'Personnel not found.' };
-  }
-
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
-    
-    // Add to archive
+    const personnel = await getPersonnelById(personnelId, connection);
+    if (!personnel) {
+      throw new Error('Personnel not found.');
+    }
+
     await connection.query(
         'INSERT INTO archived_personnel (id, name, rank, discord_username, status, date, reason) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [personnel.id, personnel.name, personnel.rank, personnel.discordUsername, 'Fired', new Date(), reason]
     );
 
-    // Remove from active roster
     await connection.query('DELETE FROM personnel WHERE id = ?', [personnelId]);
     
     await logEvent(personnel.name, 'Fired', `Fired for: ${reason}`, connection);
@@ -154,10 +152,10 @@ export async function firePersonnel(personnelId: string, reason: string, user: s
     revalidatePath('/callsigns');
     revalidatePath('/logs');
     return { success: true, message: 'Personnel fired successfully.' };
-  } catch (error) {
+  } catch (error: any) {
     await connection.rollback();
     console.error('Firing personnel failed:', error);
-    return { success: false, message: 'Database operation failed.' };
+    return { success: false, message: error.message || 'Database operation failed.' };
   } finally {
     connection.release();
   }
@@ -183,14 +181,13 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
     return { success: false, message: 'You do not have permission to perform this action.' };
   }
 
-  const originalPersonnel = await getPersonnelById(personnelId);
-  if (!originalPersonnel) {
-    return { success: false, message: 'Personnel not found.' };
-  }
-
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
+    const originalPersonnel = await getPersonnelById(personnelId, connection);
+    if (!originalPersonnel) {
+      throw new Error('Personnel not found.');
+    }
 
     await connection.query('UPDATE personnel SET name = ?, badgeNumber = ?, rank = ?, discord_username = ? WHERE id = ?', [name, badgeNumber, rank, discordUsername, personnelId]);
     await logUserAction(user, "Update Personnel", `Updated details for ${name} (formerly ${originalPersonnel.name}).`, connection);
@@ -207,10 +204,10 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
     revalidatePath('/callsigns');
     revalidatePath('/logs');
     return { success: true, message: 'Personnel updated successfully.' };
-  } catch (error) {
+  } catch (error: any) {
     await connection.rollback();
     console.error('Updating personnel failed:', error);
-    return { success: false, message: 'Database operation failed.' };
+    return { success: false, message: error.message || 'Database operation failed.' };
   } finally {
     connection.release();
   }
@@ -225,7 +222,7 @@ const addPersonnelSchema = z.object({
     .max(9999, "Callsign must be between 100 and 9999."),
   discordUsername: z.string().optional(),
   user: z.string(),
-  applicationId: z.string().optional(), // Added to link back to the application
+  applicationId: z.string().optional(),
 });
 
 export async function addPersonnel(data: unknown) {
@@ -243,11 +240,17 @@ export async function addPersonnel(data: unknown) {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
-        const id = randomUUID();
-        // Also setting default status and loa_until
+
+        const [userRows] = await connection.query('SELECT id FROM users WHERE username = ?', [name]);
+        if ((userRows as any[]).length === 0) {
+            throw new Error(`A user account for '${name}' does not exist. Please create a user account first or ensure the names match exactly.`);
+        }
+        const targetUserId = (userRows as any)[0].id;
+        
+        const personnelId = randomUUID();
         await connection.query(
-            'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, status, loa_until) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [id, name, rank, callsign.toString(), discordUsername, 'Active', null]
+            'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, status, loa_until, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [personnelId, name, rank, callsign.toString(), discordUsername, 'Active', null, targetUserId]
         );
         await logEvent(name, 'Hired', `Hired as ${rank}`, connection);
         await logCallsignChange(callsign.toString(), name, 'Assigned', connection);
@@ -255,8 +258,6 @@ export async function addPersonnel(data: unknown) {
         let logDescription = `Added ${name} to the roster as ${rank} with callsign ${callsign}.`;
         if (applicationId) {
             logDescription += ` (Approved from application).`
-            // Use a separate non-transactional call to update status to avoid deadlocks
-            // This is a simplified approach. A more robust system might use a queue.
             await updateApplicationStatus(applicationId, 'Approved', user);
         }
         
@@ -268,15 +269,15 @@ export async function addPersonnel(data: unknown) {
         revalidatePath('/');
         revalidatePath('/callsigns');
         revalidatePath('/logs');
-        revalidatePath('/applications'); // Also revalidate applications page
+        revalidatePath('/applications');
         return { success: true, message: `${name} has been added to the roster.` };
-    } catch (error) {
+    } catch (error: any) {
         await connection.rollback();
         console.error('Adding personnel failed:', error);
         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_DUP_ENTRY') {
              return { success: false, message: 'That callsign is already in use.' };
         }
-        return { success: false, message: 'Database operation failed.' };
+        return { success: false, message: error.message || 'Database operation failed.' };
     } finally {
         connection.release();
     }
@@ -308,17 +309,20 @@ export async function rehirePersonnel(data: unknown) {
   try {
     await connection.beginTransaction();
 
-    // 1. Add back to personnel table, marking as rehired
+    const [userRows] = await connection.query('SELECT id FROM users WHERE username = ?', [name]);
+     if ((userRows as any[]).length === 0) {
+        throw new Error(`A user account for '${name}' does not exist. Please create a user account first before rehiring.`);
+    }
+    const targetUserId = (userRows as any)[0].id;
+
     const newId = randomUUID();
     await connection.query(
-      'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, is_rehired) VALUES (?, ?, ?, ?, ?, ?)',
-      [newId, name, rank, callsign.toString(), discordUsername, true]
+      'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, is_rehired, userId) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [newId, name, rank, callsign.toString(), discordUsername, true, targetUserId]
     );
 
-    // 2. Remove from archived_personnel table
     await connection.query('DELETE FROM archived_personnel WHERE id = ?', [archivedId]);
 
-    // 3. Log events
     await logEvent(name, 'Rehired', `Rehired as ${rank} with callsign ${callsign}`, connection);
     await logCallsignChange(callsign.toString(), name, 'Assigned', connection);
     await logUserAction(user, 'Rehire Personnel', `Rehired ${name} as ${rank} with callsign ${callsign}`, connection);
@@ -332,13 +336,13 @@ export async function rehirePersonnel(data: unknown) {
     revalidatePath('/');
 
     return { success: true, message: `${name} has been rehired.` };
-  } catch (error) {
+  } catch (error: any) {
     await connection.rollback();
     console.error("Failed to rehire personnel:", error);
      if (error instanceof Error && 'code' in error && (error as any).code === 'ER_DUP_ENTRY') {
        return { success: false, message: 'That callsign is already in use.' };
     }
-    return { success: false, message: 'Database operation failed.' };
+    return { success: false, message: error.message || 'Database operation failed.' };
   } finally {
     connection.release();
   }
