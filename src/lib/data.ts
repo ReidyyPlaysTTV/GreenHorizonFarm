@@ -1,4 +1,5 @@
 
+
 import type { Personnel, ArchivedPersonnel, BlacklistedPersonnel, Application, Department } from "./types";
 import db from './db';
 
@@ -146,5 +147,6 @@ export {
     getArchivedPersonnel,
     getBlacklistedPersonnel,
     getApplications,
-    departments 
+    departments,
+    rankOrder
 };

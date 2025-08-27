@@ -1,13 +1,12 @@
 
+
 import { getPersonnel, departments } from "@/lib/data";
 import type { Personnel } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddPersonnelForm } from "@/components/roster/add-personnel-form";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { PersonnelActions } from "@/components/roster/personnel-actions";
 import Image from "next/image";
 
 const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
@@ -19,7 +18,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
           <TableHead>Name</TableHead>
           <TableHead>Rank</TableHead>
           <TableHead>Callsign</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          <TableHead className="text-right w-[200px]">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -37,21 +36,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
                 <Badge variant="secondary">#{p.badgeNumber}</Badge>
               </TableCell>
               <TableCell className="text-right">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>Edit Personnel</DropdownMenuItem>
-                        <DropdownMenuItem>View Profile</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">Fire Personnel</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <PersonnelActions personnel={p} />
               </TableCell>
             </TableRow>
           ))
@@ -85,6 +70,7 @@ export default async function RosterPage() {
       <div className="space-y-8">
         {departments.map(dep => {
           const departmentPersonnel = personnel.filter(p => p.department === dep);
+          // Do not render department card if there are no personnel
           if (departmentPersonnel.length === 0) return null;
           return (
             <Card key={dep}>
