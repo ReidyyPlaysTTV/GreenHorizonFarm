@@ -55,7 +55,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[80px]">Insignia</TableHead>
+            <TableHead className="w-[80px]">Avatar</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Rank</TableHead>
             <TableHead>Callsign</TableHead>
@@ -70,7 +70,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
               <TableRow key={p.id} className={cn(getStatusRowClass(p))}>
                 <TableCell>
                   <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted p-1">
-                    <Image src={p.avatarUrl} alt={`${p.rank} Insignia`} width={32} height={32} className="h-auto w-auto object-contain" />
+                    <Image src={p.avatarUrl} alt={`${p.name}'s avatar`} width={40} height={40} className="rounded-md object-cover aspect-square" />
                   </div>
                 </TableCell>
                 <TableCell className="font-medium">

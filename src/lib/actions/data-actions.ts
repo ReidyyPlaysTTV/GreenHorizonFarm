@@ -3,7 +3,7 @@
 
 import type { Personnel, ArchivedPersonnel, BlacklistedPersonnel, Application, PersonnelEvent } from "../types";
 import db from '../db';
-import { rankToDepartmentMap, rankInsignias, rankOrder } from "../data";
+import { rankToDepartmentMap, rankOrder } from "../data";
 
 export async function getPersonnel(): Promise<Personnel[]> {
     try {
@@ -15,7 +15,7 @@ export async function getPersonnel(): Promise<Personnel[]> {
         const personnel = (rows as any[]).map(p => ({
             ...p,
             department: rankToDepartmentMap[p.rank] || p.department, // Override department based on rank
-            avatarUrl: rankInsignias[p.rank] || p.avatarUrl || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
+            avatarUrl: p.avatarUrl || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
             status: p.status || 'Active', // Default to active if status is null/undefined
             loa_until: p.loa_until ? new Date(p.loa_until).toISOString() : null,
             is_rehired: !!p.is_rehired,
