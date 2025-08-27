@@ -39,6 +39,11 @@ import {
     deleteSuggestion
 } from './actions/report-actions';
 
+import {
+    getUsers,
+    assignUserRole
+} from './actions/user-actions';
+
 export {
     promotePersonnel,
     demotePersonnel,
@@ -62,4 +67,6 @@ export {
     deleteBugReport,
     updateSuggestionStatus,
     deleteSuggestion,
+    getUsers,
+    assignUserRole,
 };

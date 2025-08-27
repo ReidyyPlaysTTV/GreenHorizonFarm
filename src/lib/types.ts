@@ -67,9 +67,16 @@ export interface BugReport {
 }
 
 export interface Suggestion {
-    id: string;
+    id:string;
     title: string;
     description: string;
     status: ReportStatus;
     submittedAt: Date;
+}
+
+// New User type
+export interface AppUser {
+  id: string;
+  username: string;
+  role: string;
 }
