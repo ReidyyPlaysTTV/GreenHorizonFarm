@@ -6,32 +6,58 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { User } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { getUsers } from "@/lib/actions";
+import type { AppUser } from "@/lib/types";
+import { usePathname } from "next/navigation";
+
 
 export function UserProfile() {
     const { state } = useSidebar();
-    const [user, setUser] = useState({
-        name: "User",
-        role: "Developer",
-        avatarUrl: ""
-    });
+    const [user, setUser] = useState<AppUser | null>(null);
+    const pathname = usePathname();
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const loggedInUserName = localStorage.getItem('loggedInUser');
-            if (loggedInUserName) {
-                setUser(prevUser => ({...prevUser, name: loggedInUserName}));
+        const fetchUserData = async () => {
+            if (typeof window !== 'undefined') {
+                const loggedInUserName = localStorage.getItem('loggedInUser');
+                if (loggedInUserName) {
+                    try {
+                        const allUsers = await getUsers();
+                        const currentUser = allUsers.find(u => u.username === loggedInUserName);
+                        if (currentUser) {
+                            // Find personnel record to potentially get avatar
+                            const personnelRecord = currentUser.personnel;
+                            setUser({
+                                ...currentUser,
+                                personnel: personnelRecord
+                            });
+                        } else {
+                             setUser({ id: 'temp', username: loggedInUserName, role: 'User' });
+                        }
+                    } catch (error) {
+                        console.error("Failed to fetch user data for profile", error);
+                        setUser({ id: 'temp', username: loggedInUserName, role: 'User' });
+                    }
+                }
             }
-        }
-    }, []);
+        };
+
+        fetchUserData();
+    }, [pathname]);
+    
+    if (!user) {
+        return null; // Or a loading skeleton
+    }
     
     // In a real app, you'd fetch the user from an auth context
-    const profileLink = `/users/${encodeURIComponent(user.name)}`;
+    const profileLink = `/users/${encodeURIComponent(user.username)}`;
+    const avatarUrl = user.personnel?.avatarUrl;
 
     if (state === "collapsed") {
         return (
              <Link href={profileLink} className="block p-2">
                 <Avatar className="h-8 w-8">
-                    {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
+                    {avatarUrl && <AvatarImage src={avatarUrl} alt={user.username} />}
                     <AvatarFallback>
                         <User className="h-4 w-4" />
                     </AvatarFallback>
@@ -43,13 +69,13 @@ export function UserProfile() {
     return (
         <Link href={profileLink} className="flex items-center gap-2 p-2 rounded-md hover:bg-accent transition-colors">
             <Avatar className="h-10 w-10">
-                 {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
+                 {avatarUrl && <AvatarImage src={avatarUrl} alt={user.username} />}
                  <AvatarFallback>
-                    {user.name.charAt(0).toUpperCase()}
+                    {user.username.charAt(0).toUpperCase()}
                  </AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-                <span className="text-sm font-semibold text-foreground">{user.name}</span>
+                <span className="text-sm font-semibold text-foreground">{user.username}</span>
                 <span className="text-xs text-muted-foreground">{user.role}</span>
             </div>
         </Link>

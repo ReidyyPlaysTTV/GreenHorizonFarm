@@ -2,7 +2,7 @@
 'use server';
 
 import db from '../db';
-import type { AppUser, AccessRequest } from '../types';
+import type { AppUser, AccessRequest, Personnel } from '../types';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { logUserAction } from './audit-log-actions';
@@ -19,12 +19,16 @@ async function createUsersTableIfNeeded() {
                 username VARCHAR(255) NOT NULL UNIQUE,
                 password_hash VARCHAR(255) NOT NULL,
                 role VARCHAR(50) NOT NULL DEFAULT 'User',
-                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                avatarUrl VARCHAR(255)
+                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
         `);
+         // Add avatarUrl column if it doesn't exist, for backwards compatibility
+        const [columns] = await db.query("SHOW COLUMNS FROM users LIKE 'avatarUrl'");
+        if (Array.isArray(columns) && columns.length === 0) {
+            await db.query("ALTER TABLE users ADD COLUMN avatarUrl VARCHAR(255)");
+        }
     } catch (error) {
-        console.error("Failed to create users table:", error);
+        console.error("Failed to create or alter users table:", error);
         throw new Error("Database schema setup for users failed.");
     }
 }
@@ -46,11 +50,22 @@ export async function getUsers(): Promise<AppUser[]> {
     try {
         await createUsersTableIfNeeded();
         // For security, we don't select the password_hash
-        const [rows] = await db.query('SELECT id, username, role, createdAt FROM users ORDER BY username ASC');
-        if (!Array.isArray(rows)) {
+        const [users] = await db.query('SELECT id, username, role, createdAt FROM users ORDER BY username ASC');
+        if (!Array.isArray(users)) {
             return [];
         }
-        return (rows as any[]).map((u: any) => ({ ...u, createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined }));
+
+        const [personnel] = await db.query('SELECT name, avatarUrl, rank, department FROM personnel');
+        const personnelMap = new Map<string, Partial<Personnel>>();
+        if (Array.isArray(personnel)) {
+            personnel.forEach((p: any) => personnelMap.set(p.name, p));
+        }
+
+        return (users as any[]).map((u: any) => ({ 
+            ...u, 
+            createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined,
+            personnel: personnelMap.get(u.username) || null
+        }));
     } catch (error) {
         console.error("Failed to fetch users:", error);
         return [];
@@ -362,14 +377,13 @@ export async function updateProfilePicture(data: unknown) {
 
         // Update avatar in personnel table if exists
         await connection.query('UPDATE personnel SET avatarUrl = ? WHERE name = ?', [avatarUrl, loggedInUser]);
-        // Update avatar in users table
-        await connection.query('UPDATE users SET avatarUrl = ? WHERE id = ?', [avatarUrl, userId]);
-
+        
         await logUserAction(loggedInUser, 'Update Profile Picture', `User '${loggedInUser}' updated their profile picture.`, connection);
 
         await connection.commit();
         revalidatePath(`/users/${encodeURIComponent(loggedInUser)}`);
         revalidatePath('/roster');
+        revalidatePath('/(dashboard)/layout');
         return { success: true, message: "Profile picture updated." };
     } catch (error) {
         await connection.rollback();

@@ -131,12 +131,13 @@ export default function UserProfilePage() {
   
   const isOwnProfile = loggedInUser === user.username;
   const lastLogin = activityLogs.find(log => log.actionType === 'Login');
+  const userAvatar = personnelRecord?.avatarUrl || user.personnel?.avatarUrl;
 
   return (
     <div className="container mx-auto p-4 md:p-8">
       <div className="flex items-center space-x-6 mb-8">
         <Avatar className="h-24 w-24 border-2 border-primary">
-          <AvatarImage src={personnelRecord?.avatarUrl} />
+          <AvatarImage src={userAvatar} />
           <AvatarFallback className="text-3xl">
             <User />
           </AvatarFallback>
