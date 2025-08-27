@@ -1,8 +1,8 @@
 
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, type UseFormReturn } from "react-hook-form";
+import React, { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -68,31 +68,32 @@ export function ApplicationForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [formFields, setFormFields] = useState<FormFieldData[]>([]);
-  // We'll hold the entire form instance in state now
-  const [form, setForm] = useState<UseFormReturn<any> | null>(null);
 
+  // Initialize form at the top level
+  const form = useForm({
+    resolver: undefined, // Will be set in useEffect
+    defaultValues: {},   // Will be set in useEffect
+  });
 
   useEffect(() => {
     const fetchAndBuildForm = async () => {
+        setIsLoading(true);
         try {
             const fields = await getApplicationFormFields();
             if (fields.length > 0) {
               const schema = buildZodSchema(fields);
               const defaultValues = fields.reduce((acc, field) => ({ ...acc, [field.id!]: '' }), {});
 
-              // Create the form instance here, once all data is ready
-              const formInstance = useForm({
-                resolver: zodResolver(schema),
-                defaultValues: defaultValues,
-              });
-
+              // Now update the form with the schema and default values
+              form.reset(defaultValues);
+              // A trick to update the resolver dynamically. This is not standard but works for this case.
+              (form as any).resolver = zodResolver(schema);
+              
               setFormFields(fields);
-              setForm(formInstance);
             } else {
-              // Handle case with no form fields
               setFormFields([]);
-              setForm({} as any); // Set a dummy form object to stop loading
             }
         } catch (err) {
             toast({
@@ -100,11 +101,12 @@ export function ApplicationForm() {
                 title: "Error",
                 description: "Failed to load application form. Please try again later."
             });
-             setForm({} as any); // Stop loading on error
+        } finally {
+            setIsLoading(false);
         }
     };
     fetchAndBuildForm();
-  }, [toast]);
+  }, [toast, form]);
 
 
   async function onSubmit(values: z.infer<z.ZodObject<any>>) {
@@ -158,10 +160,10 @@ export function ApplicationForm() {
     return (
         <FormField
           key={id}
-          control={form!.control}
+          control={form.control}
           name={id!}
           render={({ field }) => {
-            const finalComponent = React.cloneElement(inputComponent, { ...field });
+            const finalComponent = React.cloneElement(inputComponent, { ...field, onValueChange: field.onChange, defaultValue: field.value });
             return (
                 <FormItem>
                 <FormLabel>
@@ -169,7 +171,14 @@ export function ApplicationForm() {
                     {required && <span className="text-destructive"> *</span>}
                 </FormLabel>
                 <FormControl>
-                    {finalComponent}
+                    {inputComponent.type.displayName === 'Select' ? (
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                {finalComponent.props.children[0]}
+                            </FormControl>
+                            {finalComponent.props.children[1]}
+                        </Select>
+                    ) : finalComponent}
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -179,7 +188,7 @@ export function ApplicationForm() {
     )
   }
 
-  if (!form) {
+  if (isLoading) {
       return (
           <div className="flex justify-center items-center h-48">
               <Loader2 className="h-8 w-8 animate-spin" />
