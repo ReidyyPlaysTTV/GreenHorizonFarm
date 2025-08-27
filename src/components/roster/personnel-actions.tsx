@@ -50,7 +50,7 @@ const fireFormSchema = z.object({
 
 const editFormSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters."),
-  badgeNumber: z.string().min(4, "Callsign must be 4 digits.").max(4, "Callsign must be 4 digits."),
+  badgeNumber: z.string().min(3, "Callsign must be 3-4 digits.").max(4, "Callsign must be 3-4 digits."),
   rank: z.string(),
   discordUsername: z.string().optional(),
 });

@@ -144,7 +144,7 @@ export async function firePersonnel(personnelId: string, reason: string, user: s
 
 const updatePersonnelSchema = z.object({
   name: z.string().min(3),
-  badgeNumber: z.string(),
+  badgeNumber: z.string().min(3, "Callsign must be 3-4 digits.").max(4, "Callsign must be 3-4 digits."),
   rank: z.string(),
   discordUsername: z.string().optional(),
   user: z.string(),
@@ -195,8 +195,8 @@ const addPersonnelSchema = z.object({
   rank: z.string({ required_error: "Please select a rank." }),
   callsign: z.coerce
     .number({ invalid_type_error: "Callsign must be a number." })
-    .min(1000, "Callsign must be between 1000 and 9999.")
-    .max(9999, "Callsign must be between 1000 and 9999."),
+    .min(100, "Callsign must be between 100 and 9999.")
+    .max(9999, "Callsign must be between 100 and 9999."),
   discordUsername: z.string().optional(),
   user: z.string(),
 });

@@ -43,8 +43,8 @@ const formSchema = z.object({
   rank: z.string({ required_error: "Please select a rank." }),
   callsign: z.coerce
     .number({ invalid_type_error: "Callsign must be a number." })
-    .min(1000, "Callsign must be between 1000 and 9999.")
-    .max(9999, "Callsign must be between 1000 and 9999."),
+    .min(100, "Callsign must be between 100 and 9999.")
+    .max(9999, "Callsign must be between 100 and 9999."),
   discordUsername: z.string().optional(),
 });
 
