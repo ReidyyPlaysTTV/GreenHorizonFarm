@@ -48,7 +48,7 @@ export async function getApplicationFormFields(): Promise<FormFieldData[]> {
     } catch (error) {
         console.error("Failed to get application form fields:", error);
         // If the table doesn't exist, return an empty array to prevent crashing.
-        if (error instanceof Error && 'code' in error && error.code === 'ER_NO_SUCH_TABLE') {
+        if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
             return [];
         }
         throw error;
@@ -63,13 +63,19 @@ export async function saveApplicationFormFields(fields: FormFieldData[]) {
     await connection.beginTransaction();
 
     try {
-        // Simple approach: delete all and re-insert. Good for this scale.
-        // This is safer than TRUNCATE because it doesn't reset AUTO_INCREMENT if that were in use.
-        await connection.query('DELETE FROM application_field_options');
-        await connection.query('DELETE FROM application_form_fields');
+        // To avoid foreign key constraint errors, we get all existing field IDs first.
+        const [existingFields] = await connection.query('SELECT id FROM application_form_fields');
+        const existingFieldIds = (existingFields as any[]).map(f => f.id);
+
+        if (existingFieldIds.length > 0) {
+             // Delete options for all existing fields, then delete the fields themselves.
+            const placeholders = existingFieldIds.map(() => '?').join(',');
+            await connection.query(`DELETE FROM application_field_options WHERE field_id IN (${placeholders})`, existingFieldIds);
+            await connection.query('DELETE FROM application_form_fields');
+        }
 
         for (const [index, field] of validatedFields.entries()) {
-            const fieldId = field.id || randomUUID();
+            const fieldId = field.id && !field.id.startsWith('new-') ? field.id : randomUUID();
             await connection.query(
                 'INSERT INTO application_form_fields (id, type, label, `order`) VALUES (?, ?, ?, ?)',
                 [fieldId, field.type, field.label, index]
@@ -78,9 +84,10 @@ export async function saveApplicationFormFields(fields: FormFieldData[]) {
             if (field.type === 'select' && field.options) {
                 for (const option of field.options) {
                     if (option.value) { // Don't save empty options
+                         const optionId = option.id && !option.id.startsWith('new-') ? option.id : randomUUID();
                         await connection.query(
                             'INSERT INTO application_field_options (id, field_id, value) VALUES (?, ?, ?)',
-                            [option.id || randomUUID(), fieldId, option.value]
+                            [optionId, fieldId, option.value]
                         );
                     }
                 }
@@ -103,8 +110,11 @@ export async function saveApplicationFormFields(fields: FormFieldData[]) {
 export async function submitApplication(responses: Record<string, any>) {
     const fields = await getApplicationFormFields();
 
-    const nameFromResponses = responses[fields.find(f => f.label.toLowerCase().includes('name'))?.id || ''] || 'Unknown Applicant';
-    const ageFromResponses = responses[fields.find(f => f.label.toLowerCase().includes('age'))?.id || ''] || 0;
+    const nameField = fields.find(f => f.label.toLowerCase().includes('name'));
+    const ageField = fields.find(f => f.label.toLowerCase().includes('age'));
+    
+    const nameFromResponses = nameField ? responses[nameField.id!] : 'Unknown Applicant';
+    const ageFromResponses = ageField ? responses[ageField.id!] : 0;
 
 
     const formattedResponses = fields.map(field => ({

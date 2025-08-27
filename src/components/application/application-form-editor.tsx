@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { randomUUID } from 'crypto';
 
 import { Loader2, GripVertical, PlusCircle, Trash2, Edit, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,8 +17,8 @@ import { Form } from "@/components/ui/form";
 import {
   getApplicationFormFields,
   saveApplicationFormFields,
-  FormFieldData,
 } from "@/lib/actions/form-actions";
+import type { FormFieldData } from "@/lib/actions/form-actions";
 import { EditFieldDialog } from "./edit-field-dialog";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
@@ -137,6 +136,8 @@ export function ApplicationFormEditor() {
         title: "Success",
         description: "Application form saved successfully.",
       });
+       const fetchedFields = await getApplicationFormFields();
+       reset({ fields: fetchedFields as FormFieldSchema[] });
     } catch (error) {
       toast({
         variant: "destructive",
