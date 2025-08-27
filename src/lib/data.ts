@@ -4,10 +4,23 @@ import db from './db';
 
 const departments: Department[] = ["Commissioners Office", "High Command", "Command", "NCOS", "Corrections", "Training"];
 
+const rankInsignias: Record<string, string> = {
+    "Major": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/major.png",
+    // Add other rank insignias here as needed
+}
+
 async function getPersonnel(): Promise<Personnel[]> {
     try {
         const [rows] = await db.query('SELECT * FROM personnel');
-        return rows as Personnel[];
+        if (!Array.isArray(rows)) {
+            return [];
+        }
+
+        return (rows as any[]).map(p => ({
+            ...p,
+            avatarUrl: rankInsignias[p.rank] || p.avatarUrl,
+        }));
+
     } catch (error) {
         console.error("Failed to fetch personnel:", error);
         return [];
@@ -61,7 +74,7 @@ async function getApplications(): Promise<Application[]> {
         });
     } catch (error) {
         console.error("Failed to fetch applications:", error);
-         if (error instanceof Error && 'code' in error && error.code === 'ER_NO_SUCH_TABLE') {
+         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
             return [];
         }
         return [];
