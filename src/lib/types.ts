@@ -87,3 +87,11 @@ export interface AppUser {
   username: string;
   role: string;
 }
+
+export interface CallsignLog {
+    id: string;
+    callsign: string;
+    personnel_name: string;
+    action: 'Assigned' | 'Unassigned';
+    timestamp: Date;
+}

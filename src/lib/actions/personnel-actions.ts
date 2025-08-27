@@ -7,6 +7,7 @@ import db from '../db';
 import { rankOrder } from '../data';
 import type { Personnel } from '../types';
 import { randomUUID } from 'crypto';
+import { logCallsignChange } from './callsign-log-actions';
 
 async function getPersonnelById(id: string): Promise<Personnel | null> {
   const [rows] = await db.query('SELECT * FROM personnel WHERE id = ?', [id]);
@@ -102,11 +103,13 @@ export async function firePersonnel(personnelId: string, reason: string) {
     await connection.query('DELETE FROM personnel WHERE id = ?', [personnelId]);
     
     await logEvent(personnel.name, 'Fired', `Fired for: ${reason}`);
+    await logCallsignChange(personnel.badgeNumber, personnel.name, 'Unassigned', connection);
 
     await connection.commit();
     revalidatePath('/roster');
     revalidatePath('/archive');
     revalidatePath('/');
+    revalidatePath('/callsigns');
     return { success: true, message: 'Personnel fired successfully.' };
   } catch (error) {
     await connection.rollback();
@@ -129,16 +132,35 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
   if (!validation.success) {
     return { success: false, message: 'Invalid data.', issues: validation.error.issues };
   }
-
   const { name, badgeNumber, rank, discordUsername } = validation.data;
   
+  const originalPersonnel = await getPersonnelById(personnelId);
+  if (!originalPersonnel) {
+    return { success: false, message: 'Personnel not found.' };
+  }
+
+  const connection = await db.getConnection();
   try {
-    await db.query('UPDATE personnel SET name = ?, badgeNumber = ?, rank = ?, discord_username = ? WHERE id = ?', [name, badgeNumber, rank, discordUsername, personnelId]);
+    await connection.beginTransaction();
+
+    await connection.query('UPDATE personnel SET name = ?, badgeNumber = ?, rank = ?, discord_username = ? WHERE id = ?', [name, badgeNumber, rank, discordUsername, personnelId]);
+
+    if (originalPersonnel.badgeNumber !== badgeNumber) {
+      await logCallsignChange(originalPersonnel.badgeNumber, originalPersonnel.name, 'Unassigned', connection);
+      await logCallsignChange(badgeNumber, name, 'Assigned', connection);
+    }
+    
+    await connection.commit();
+
     revalidatePath('/roster');
+    revalidatePath('/callsigns');
     return { success: true, message: 'Personnel updated successfully.' };
   } catch (error) {
+    await connection.rollback();
     console.error('Updating personnel failed:', error);
     return { success: false, message: 'Database operation failed.' };
+  } finally {
+    connection.release();
   }
 }
 
@@ -159,19 +181,31 @@ export async function addPersonnel(data: unknown) {
     }
     const { name, rank, callsign, discordUsername } = validation.data;
     
+    const connection = await db.getConnection();
     try {
+        await connection.beginTransaction();
         const id = randomUUID();
-        await db.query(
+        await connection.query(
             'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username) VALUES (?, ?, ?, ?, ?)',
             [id, name, rank, callsign.toString(), discordUsername]
         );
         await logEvent(name, 'Hired', `Hired as ${rank}`);
+        await logCallsignChange(callsign.toString(), name, 'Assigned', connection);
+
+        await connection.commit();
 
         revalidatePath('/roster');
         revalidatePath('/');
+        revalidatePath('/callsigns');
         return { success: true, message: `${name} has been added to the roster.` };
     } catch (error) {
+        await connection.rollback();
         console.error('Adding personnel failed:', error);
+        if (error instanceof Error && 'code' in error && (error as any).code === 'ER_DUP_ENTRY') {
+             return { success: false, message: 'That callsign is already in use.' };
+        }
         return { success: false, message: 'Database operation failed.' };
+    } finally {
+        connection.release();
     }
 }

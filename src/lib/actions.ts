@@ -44,6 +44,8 @@ import {
     assignUserRole
 } from './actions/user-actions';
 
+import { getCallsignLogs } from './actions/callsign-log-actions';
+
 export {
     promotePersonnel,
     demotePersonnel,
@@ -69,4 +71,5 @@ export {
     deleteSuggestion,
     getUsers,
     assignUserRole,
+    getCallsignLogs,
 };
