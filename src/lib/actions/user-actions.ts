@@ -1,12 +1,13 @@
 
-
 'use server';
 
 import db from '../db';
-import type { AppUser } from '../types';
+import type { AppUser, AccessRequest } from '../types';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { logUserAction } from './audit-log-actions';
+import { randomUUID } from 'crypto';
+import * as bcrypt from 'bcryptjs';
 
 async function createUsersTableIfNeeded() {
     try {
@@ -24,6 +25,19 @@ async function createUsersTableIfNeeded() {
         throw new Error("Database schema setup for users failed.");
     }
 }
+
+async function createAccessRequestsTableIfNeeded(connection: any) {
+    await connection.query(`
+        CREATE TABLE IF NOT EXISTS access_requests (
+            id VARCHAR(36) NOT NULL PRIMARY KEY,
+            requested_username VARCHAR(255) NOT NULL UNIQUE,
+            password_hash VARCHAR(255) NOT NULL,
+            status ENUM('Pending', 'Approved', 'Denied') NOT NULL DEFAULT 'Pending',
+            createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
+}
+
 
 export async function getUsers(): Promise<AppUser[]> {
     try {
@@ -78,4 +92,184 @@ export async function assignUserRole(userId: string, data: { role: string, user:
     } finally {
         connection.release();
     }
+}
+
+const accessRequestSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+});
+
+export async function submitAccessRequest(data: unknown) {
+  const validation = accessRequestSchema.safeParse(data);
+  if (!validation.success) {
+    return { success: false, message: 'Invalid data provided.' };
+  }
+  const { username, password } = validation.data;
+
+  const connection = await db.getConnection();
+  try {
+    await createAccessRequestsTableIfNeeded(connection);
+    
+    // Check if username is already in users or requests
+    const [[userExists], [requestExists]] = await Promise.all([
+        connection.query('SELECT id FROM users WHERE username = ?', [username]),
+        connection.query('SELECT id FROM access_requests WHERE requested_username = ?', [username])
+    ]);
+
+    if ((userExists as any[]).length > 0 || (requestExists as any[]).length > 0) {
+      return { success: false, message: "This username is already taken or requested." };
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+
+    await connection.query(
+      'INSERT INTO access_requests (id, requested_username, password_hash) VALUES (?, ?, ?)',
+      [randomUUID(), username, password_hash]
+    );
+
+    revalidatePath('/admin');
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to submit access request:", error);
+    return { success: false, message: 'Database operation failed.' };
+  } finally {
+    connection.release();
+  }
+}
+
+export async function getAccessRequests(): Promise<AccessRequest[]> {
+    const connection = await db.getConnection();
+    try {
+        await createAccessRequestsTableIfNeeded(connection);
+        const [rows] = await connection.query("SELECT id, requested_username, status, createdAt FROM access_requests WHERE status = 'Pending' ORDER BY createdAt ASC");
+        return (rows as any[]).map(r => ({
+            ...r,
+            createdAt: new Date(r.createdAt)
+        }));
+    } catch (error) {
+        console.error("Failed to fetch access requests:", error);
+        return [];
+    } finally {
+        connection.release();
+    }
+}
+
+const approveRequestSchema = z.object({
+    requestId: z.string(),
+    username: z.string().min(3),
+    role: z.string(),
+    adminUser: z.string(),
+});
+
+export async function approveAccessRequest(data: unknown) {
+    const validation = approveRequestSchema.safeParse(data);
+    if (!validation.success) {
+        return { success: false, message: "Invalid data provided." };
+    }
+    const { requestId, username, role, adminUser } = validation.data;
+    
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // 1. Get the request details (specifically the password hash)
+        const [requestRows] = await connection.query('SELECT * FROM access_requests WHERE id = ?', [requestId]);
+        if ((requestRows as any[]).length === 0) {
+            throw new Error("Access request not found.");
+        }
+        const request = (requestRows as any)[0];
+        const { password_hash, requested_username } = request;
+
+        // 2. Create the user
+        await connection.query(
+            'INSERT INTO users (id, username, password_hash, role) VALUES (?, ?, ?, ?)',
+            [randomUUID(), username, password_hash, role]
+        );
+
+        // 3. Update the request status
+        await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Approved', requestId]);
+
+        // 4. Log the action
+        await logUserAction(adminUser, 'Approve Access Request', `Approved request for '${requested_username}' as new user '${username}' with role '${role}'.`, connection);
+
+        await connection.commit();
+        revalidatePath('/admin');
+        revalidatePath('/logs');
+        return { success: true };
+    } catch (error) {
+        await connection.rollback();
+        console.error("Failed to approve access request:", error);
+         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_DUP_ENTRY') {
+            return { success: false, message: 'This username is already taken.' };
+        }
+        return { success: false, message: 'Database operation failed.' };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function denyAccessRequest(requestId: string, username: string, adminUser: string) {
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        await connection.query("UPDATE access_requests SET status = 'Denied' WHERE id = ?", [requestId]);
+        await logUserAction(adminUser, 'Deny Access Request', `Denied access request for '${username}'.`, connection);
+        await connection.commit();
+
+        revalidatePath('/admin');
+        revalidatePath('/logs');
+        return { success: true };
+    } catch (error) {
+        await connection.rollback();
+        console.error("Failed to deny access request:", error);
+        return { success: false, message: 'Database operation failed.' };
+    } finally {
+        connection.release();
+    }
+}
+
+const createUserSchema = z.object({
+  username: z.string().min(3),
+  password: z.string().min(8),
+  role: z.string(),
+  adminUser: z.string(),
+});
+
+export async function createUser(data: unknown) {
+  const validation = createUserSchema.safeParse(data);
+  if (!validation.success) {
+    return { success: false, message: 'Invalid data provided.' };
+  }
+  const { username, password, role, adminUser } = validation.data;
+  
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+    
+    await connection.query(
+      'INSERT INTO users (id, username, password_hash, role) VALUES (?, ?, ?, ?)',
+      [randomUUID(), username, password_hash, role]
+    );
+
+    await logUserAction(adminUser, 'Create User', `Created new user '${username}' with role '${role}'.`, connection);
+    
+    await connection.commit();
+
+    revalidatePath('/admin');
+    revalidatePath('/logs');
+    return { success: true };
+  } catch (error) {
+    await connection.rollback();
+    console.error("Failed to create user:", error);
+     if (error instanceof Error && 'code' in error && (error as any).code === 'ER_DUP_ENTRY') {
+        return { success: false, message: 'This username is already taken.' };
+    }
+    return { success: false, message: 'Database operation failed.' };
+  } finally {
+    connection.release();
+  }
 }

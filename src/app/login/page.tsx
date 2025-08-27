@@ -26,13 +26,23 @@ export default function LoginPage() {
             <LoginForm />
           </CardContent>
         </Card>
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground">Want to join the Department of Corrections?</p>
-          <Button variant="link" asChild className="text-primary">
-            <Link href="/apply">
-              Submit an Application
-            </Link>
-          </Button>
+        <div className="text-center space-y-2">
+            <div>
+              <p className="text-sm text-muted-foreground">Need an account for the roster?</p>
+              <Button variant="link" asChild className="text-primary">
+                <Link href="/request-access">
+                  Request Access
+                </Link>
+              </Button>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Want to join the Department of Corrections?</p>
+              <Button variant="link" asChild className="text-primary">
+                <Link href="/apply">
+                  Submit an Application
+                </Link>
+              </Button>
+            </div>
         </div>
       </div>
     </div>

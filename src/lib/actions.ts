@@ -42,7 +42,12 @@ import {
 
 import {
     getUsers,
-    assignUserRole
+    assignUserRole,
+    submitAccessRequest,
+    getAccessRequests,
+    approveAccessRequest,
+    denyAccessRequest,
+    createUser
 } from './actions/user-actions';
 
 import { getCallsignLogs } from './actions/callsign-log-actions';
@@ -84,4 +89,9 @@ export {
     addBlacklistedPersonnel,
     removeBlacklistedPersonnel,
     updatePersonnelStatus,
+    submitAccessRequest,
+    getAccessRequests,
+    approveAccessRequest,
+    denyAccessRequest,
+    createUser
 };

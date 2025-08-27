@@ -88,11 +88,17 @@ export interface Suggestion {
     submittedAt: Date;
 }
 
-// New User type
 export interface AppUser {
   id: string;
   username: string;
   role: string;
+}
+
+export interface AccessRequest {
+  id: string;
+  requested_username: string;
+  status: 'Pending' | 'Approved' | 'Denied';
+  createdAt: Date;
 }
 
 export interface CallsignLog {

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { AppUser } from "@/lib/types";
@@ -10,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { assignUserRole } from "@/lib/actions";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { AddUserForm } from "./add-user-form";
 
 interface UserManagementProps {
     users: AppUser[];
@@ -54,9 +54,12 @@ export function UserManagement({ users }: UserManagementProps) {
 
     return (
         <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
                 <CardTitle>User Management</CardTitle>
                 <CardDescription>Assign roles to registered application users.</CardDescription>
+              </div>
+              <AddUserForm />
             </CardHeader>
             <CardContent>
                 <Table>
