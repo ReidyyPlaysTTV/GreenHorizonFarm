@@ -1,7 +1,7 @@
 import { LoginForm } from "@/components/auth/login-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldCheck } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -9,7 +9,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center text-foreground">
-          <ShieldCheck className="mx-auto h-12 w-12 text-primary" />
+          <Image src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png" alt="DOC Logo" width={64} height={64} className="mx-auto h-16 w-16" />
           <h1 className="mt-4 text-3xl font-bold tracking-tight">
             DOC Roster
           </h1>

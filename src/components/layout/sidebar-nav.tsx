@@ -10,8 +10,9 @@ import {
   SidebarFooter,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { ShieldCheck, Home, Users, Archive, ShieldAlert, FileText, LogOut } from "lucide-react";
+import { Home, Users, Archive, ShieldAlert, FileText, LogOut } from "lucide-react";
 import { Button } from "../ui/button";
+import Image from "next/image";
 
 const menuItems = [
   { href: "/", label: "Home", icon: Home },
@@ -29,8 +30,8 @@ export function SidebarNav() {
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader>
         <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <ShieldCheck className="h-5 w-5" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg">
+                <Image src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png" alt="DOC Logo" width={24} height={24} className="h-6 w-6" />
             </div>
             <span className="text-lg font-semibold">DOC Roster</span>
         </div>
