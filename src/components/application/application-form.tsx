@@ -163,7 +163,6 @@ export function ApplicationForm() {
           control={form.control}
           name={id!}
           render={({ field }) => {
-            const finalComponent = React.cloneElement(inputComponent, { ...field, onValueChange: field.onChange, defaultValue: field.value });
             return (
                 <FormItem>
                 <FormLabel>
@@ -171,14 +170,20 @@ export function ApplicationForm() {
                     {required && <span className="text-destructive"> *</span>}
                 </FormLabel>
                 <FormControl>
-                    {inputComponent.type.displayName === 'Select' ? (
+                    {type === 'select' ? (
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
-                                {finalComponent.props.children[0]}
+                                <SelectTrigger>
+                                    <SelectValue placeholder={`Select an option for ${label}`} />
+                                </SelectTrigger>
                             </FormControl>
-                            {finalComponent.props.children[1]}
+                            <SelectContent>
+                                {options?.map(opt => <SelectItem key={opt.id} value={opt.value}>{opt.value}</SelectItem>)}
+                            </SelectContent>
                         </Select>
-                    ) : finalComponent}
+                    ) : (
+                       React.cloneElement(inputComponent, {...field})
+                    )}
                 </FormControl>
                 <FormMessage />
                 </FormItem>
