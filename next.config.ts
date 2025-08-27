@@ -27,6 +27,12 @@ const nextConfig: NextConfig = {
         hostname: 'r2.fivemanage.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'app.fivemanage.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
