@@ -10,7 +10,10 @@ const rankInsignias: Record<string, string> = {
     "Warden": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/general.png",
     "Deputy Warden": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/lt-general.png",
     "Major": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/major.png",
-    // Add other rank insignias here as needed
+    "Captain": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/captain.png",
+    "Lieutenant": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/first-lieutenant.png",
+    "Corrections Sergeant": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/staff-sergeant.png",
+    "Senior Corrections Officer": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/corporal.png",
 }
 
 async function getPersonnel(): Promise<Personnel[]> {
