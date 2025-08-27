@@ -12,7 +12,7 @@ import {
   SidebarFooter,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home, Users, Archive, ShieldAlert, FileText, LogOut, ShieldCheck, User, Contact, History } from "lucide-react";
+import { Home, Users, Archive, ShieldAlert, FileText, LogOut, ShieldCheck, User, Contact, History, BookMarked } from "lucide-react";
 import { Button } from "../ui/button";
 import Image from "next/image";
 import { Separator } from "../ui/separator";
@@ -24,6 +24,7 @@ const menuItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/roster", label: "Roster", icon: Users },
   { href: "/callsigns", label: "Callsigns", icon: Contact },
+  { href: "/sops", label: "DOC SOPs", icon: BookMarked },
   { href: "/archive", label: "Fired/Resigned", icon: Archive },
   { href: "/command", label: "DOC Command", icon: ShieldAlert },
   { href: "/applications", label: "Application Center", icon: FileText },
