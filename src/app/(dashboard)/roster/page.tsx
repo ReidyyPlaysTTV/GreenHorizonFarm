@@ -1,7 +1,6 @@
 
 import { getPersonnel, departments } from "@/lib/data";
 import type { Personnel } from "@/lib/types";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,6 +8,7 @@ import { AddPersonnelForm } from "@/components/roster/add-personnel-form";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
+import Image from "next/image";
 
 const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
   return (
@@ -27,10 +27,9 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
           personnel.map((p) => (
             <TableRow key={p.id}>
               <TableCell>
-                <Avatar>
-                  <AvatarImage src={p.avatarUrl} alt={p.name} className="object-contain" />
-                  <AvatarFallback>{p.name.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
+                  <Image src={p.avatarUrl} alt={`${p.rank} Insignia`} width={32} height={32} className="h-8 w-8 object-contain" />
+                </div>
               </TableCell>
               <TableCell className="font-medium">{p.name}</TableCell>
               <TableCell>{p.rank}</TableCell>
@@ -98,3 +97,4 @@ export default async function RosterPage() {
     </div>
   );
 }
+
