@@ -10,7 +10,7 @@ import {
   SidebarFooter,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home, Users, Archive, ShieldAlert, FileText, LogOut } from "lucide-react";
+import { Home, Users, Archive, ShieldAlert, FileText, LogOut, ShieldCheck } from "lucide-react";
 import { Button } from "../ui/button";
 import Image from "next/image";
 
@@ -20,6 +20,7 @@ const menuItems = [
   { href: "/archive", label: "Fired/Resigned", icon: Archive },
   { href: "/command", label: "DOC Command", icon: ShieldAlert },
   { href: "/applications", label: "Application Center", icon: FileText },
+  { href: "/admin", label: "Admin Panel", icon: ShieldCheck },
 ];
 
 export function SidebarNav() {
