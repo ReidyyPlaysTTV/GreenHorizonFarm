@@ -1,6 +1,6 @@
 
-
-import { getPersonnel, departments } from "@/lib/data";
+import { getPersonnel } from "@/lib/actions";
+import { departments } from "@/lib/data";
 import type { Personnel } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

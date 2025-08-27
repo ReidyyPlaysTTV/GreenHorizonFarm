@@ -1,4 +1,4 @@
-import { getApplications } from "@/lib/data";
+import { getApplications } from "@/lib/actions";
 import { ApplicationReviewCard } from "@/components/application/application-review-card";
 import { ApplicationFormEditor } from "@/components/application/application-form-editor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

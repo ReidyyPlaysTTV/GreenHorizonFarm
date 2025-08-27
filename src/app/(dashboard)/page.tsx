@@ -1,4 +1,4 @@
-import { getPersonnel, getApplications } from "@/lib/data";
+import { getPersonnel, getApplications } from "@/lib/actions";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
 
 export default async function DashboardPage() {

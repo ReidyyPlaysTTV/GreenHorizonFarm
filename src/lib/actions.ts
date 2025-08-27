@@ -18,6 +18,13 @@ import {
     updateApplicationStatus 
 } from './actions/form-actions';
 
+import {
+    getPersonnel,
+    getArchivedPersonnel,
+    getBlacklistedPersonnel,
+    getApplications
+} from './actions/data-actions';
+
 export {
     promotePersonnel,
     demotePersonnel,
@@ -26,5 +33,9 @@ export {
     getApplicationFormFields,
     saveApplicationFormFields,
     submitApplication,
-    updateApplicationStatus
+    updateApplicationStatus,
+    getPersonnel,
+    getArchivedPersonnel,
+    getBlacklistedPersonnel,
+    getApplications
 };

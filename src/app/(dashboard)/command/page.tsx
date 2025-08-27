@@ -1,4 +1,4 @@
-import { getBlacklistedPersonnel } from "@/lib/data";
+import { getBlacklistedPersonnel } from "@/lib/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
