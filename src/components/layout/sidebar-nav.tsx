@@ -23,6 +23,7 @@ import { UserProfile } from "./user-profile";
 const menuItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/roster", label: "Roster", icon: Users },
+  { href: "/users", label: "Users", icon: User },
   { href: "/callsigns", label: "Callsigns", icon: Contact },
   { href: "/sops", label: "DOC SOPs", icon: BookMarked },
   { href: "/archive", label: "Fired/Resigned", icon: Archive },
