@@ -57,8 +57,7 @@ const getStatusBadgeVariant = (status?: string) => {
     }
 };
 
-export default function UserProfilePage({ params }: { params: { username: string } }) {
-  const { username } = params;
+export default function UserProfilePage({ params: { username } }: { params: { username: string } }) {
   const decodedUsername = decodeURIComponent(username);
 
   const [user, setUser] = useState<AppUser | null>(null);
