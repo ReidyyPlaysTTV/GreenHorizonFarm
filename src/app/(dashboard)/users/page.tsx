@@ -1,15 +1,38 @@
 
 import { getUsers, getPersonnel } from "@/lib/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import type { AppUser } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User } from "lucide-react";
+import { User, Shield } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+const getRoleClass = (role: string) => {
+    switch (role) {
+        case "Administrator":
+            return "animate-rainbow-text bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500 bg-clip-text text-transparent";
+        case "Developer":
+            return "animate-dev-text";
+        case "Commissioners Office":
+            return "animate-co-text";
+        case "High Command":
+            return "animate-hc-text";
+        case "Command":
+            return "animate-cmd-text";
+        case "NCOs":
+            return "animate-nco-text";
+        case "Corrections":
+             return "animate-co-text-yellow";
+        case "User":
+            return "animate-user-text";
+        case "Training":
+            return "text-yellow-400";
+        default:
+            return "";
+    }
+}
 
 export default async function UsersPage() {
   const users: AppUser[] = await getUsers();
@@ -29,64 +52,57 @@ export default async function UsersPage() {
         <div>
             <h1 className="text-3xl font-bold tracking-tight">Registered Users</h1>
             <p className="text-muted-foreground">
-            List of all users with access to this application.
+            List of all users with access to this application. A total of {users.length} users are registered.
             </p>
         </div>
         <RefreshButton />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Users</CardTitle>
-          <CardDescription>
-            A total of {users.length} users are registered.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[64px]">Avatar</TableHead>
-                <TableHead>Username</TableHead>
-                <TableHead>Permission Group</TableHead>
-                <TableHead>Rank</TableHead>
-                <TableHead>Department</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {usersWithPersonnelData.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                     <Avatar>
-                      <AvatarImage src={user.personnel?.avatarUrl} />
-                      <AvatarFallback>
-                        <User className="h-5 w-5" />
-                      </AvatarFallback>
-                    </Avatar>
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    <Link href={`/users/${encodeURIComponent(user.username)}`} className={cn(buttonVariants({ variant: "link" }), "p-0 h-auto text-base")}>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {usersWithPersonnelData.map((user) => (
+          <Card key={user.id} className="flex flex-col">
+            <CardHeader className="flex-1">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16 border">
+                  <AvatarImage src={user.personnel?.avatarUrl} />
+                  <AvatarFallback className="text-2xl">
+                    <User />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <CardTitle>
+                     <Link href={`/users/${encodeURIComponent(user.username)}`} className={cn(buttonVariants({ variant: "link" }), "p-0 h-auto text-xl")}>
                       {user.username}
                     </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{user.role}</Badge>
-                  </TableCell>
-                  <TableCell>{user.personnel?.rank || "N/A"}</TableCell>
-                  <TableCell>{user.personnel?.department || "N/A"}</TableCell>
-                </TableRow>
-              ))}
-               {users.length === 0 && (
-                 <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                        No users found.
-                    </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                  </CardTitle>
+                  <CardDescription>{user.personnel?.rank || 'Civilian'}</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+               <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Department</span>
+                    <span className="font-medium">{user.personnel?.department || "N/A"}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                        <Shield className="h-4 w-4" />
+                        Permission Group
+                    </span>
+                    <span className={cn("font-bold text-base", getRoleClass(user.role))}>
+                        {user.role}
+                    </span>
+                </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+       {users.length === 0 && (
+         <div className="flex items-center justify-center h-40 rounded-lg border border-dashed">
+            <p className="text-muted-foreground">No users found.</p>
+        </div>
+      )}
     </div>
   );
 }
