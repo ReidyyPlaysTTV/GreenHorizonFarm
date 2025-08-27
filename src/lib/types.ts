@@ -92,6 +92,7 @@ export interface AppUser {
   id: string;
   username: string;
   role: string;
+  personnel?: Personnel | null;
 }
 
 export interface AccessRequest {
