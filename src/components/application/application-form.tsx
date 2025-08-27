@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, type UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -67,41 +67,48 @@ function buildZodSchema(fields: FormFieldData[]) {
 export function ApplicationForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFormReady, setIsFormReady] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formFields, setFormFields] = useState<FormFieldData[]>([]);
-  const [zodSchema, setZodSchema] = useState<z.ZodObject<any> | null>(null);
+  // We'll hold the entire form instance in state now
+  const [form, setForm] = useState<UseFormReturn<any> | null>(null);
+
 
   useEffect(() => {
-    const fetchFields = async () => {
-        setIsLoading(true);
+    const fetchAndBuildForm = async () => {
         try {
             const fields = await getApplicationFormFields();
-            setFormFields(fields);
-            const schema = buildZodSchema(fields);
-            setZodSchema(schema);
-            setIsFormReady(true);
+            if (fields.length > 0) {
+              const schema = buildZodSchema(fields);
+              const defaultValues = fields.reduce((acc, field) => ({ ...acc, [field.id!]: '' }), {});
+
+              // Create the form instance here, once all data is ready
+              const formInstance = useForm({
+                resolver: zodResolver(schema),
+                defaultValues: defaultValues,
+              });
+
+              setFormFields(fields);
+              setForm(formInstance);
+            } else {
+              // Handle case with no form fields
+              setFormFields([]);
+              setForm({} as any); // Set a dummy form object to stop loading
+            }
         } catch (err) {
             toast({
                 variant: 'destructive',
                 title: "Error",
                 description: "Failed to load application form. Please try again later."
             });
-        } finally {
-            setIsLoading(false);
+             setForm({} as any); // Stop loading on error
         }
     };
-    fetchFields();
+    fetchAndBuildForm();
   }, [toast]);
-
-  const form = useForm({
-    resolver: zodSchema ? zodResolver(zodSchema) : undefined,
-    defaultValues: isFormReady ? formFields.reduce((acc, field) => ({ ...acc, [field.id!]: '' }), {}) : {}
-  });
 
 
   async function onSubmit(values: z.infer<z.ZodObject<any>>) {
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
         await submitApplication(values);
         toast({
@@ -116,43 +123,45 @@ export function ApplicationForm() {
             description: "There was an error submitting your application. Please try again."
         });
     } finally {
-        setIsLoading(false);
+        setIsSubmitting(false);
     }
   }
 
   const renderFormField = (fieldData: FormFieldData) => {
     const { id, type, label, options, required } = fieldData;
 
+    let inputComponent;
+    switch(type) {
+        case 'text':
+            inputComponent = <Input placeholder={`Your ${label.toLowerCase()}`} />;
+            break;
+        case 'textarea':
+            inputComponent = <Textarea placeholder="Please provide a detailed response..." className="min-h-[120px]" />;
+            break;
+        case 'select':
+              inputComponent = (
+                <Select>
+                    <SelectTrigger>
+                        <SelectValue placeholder={`Select an option for ${label}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {options?.map(opt => <SelectItem key={opt.id} value={opt.value}>{opt.value}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+              );
+              break;
+        default:
+            return null;
+    }
+
+
     return (
         <FormField
           key={id}
-          control={form.control}
+          control={form!.control}
           name={id!}
           render={({ field }) => {
-            let inputComponent;
-            switch(type) {
-                case 'text':
-                    inputComponent = <Input placeholder={`Your ${label.toLowerCase()}`} {...field} />;
-                    break;
-                case 'textarea':
-                    inputComponent = <Textarea placeholder="Please provide a detailed response..." className="min-h-[120px]" {...field} />;
-                    break;
-                case 'select':
-                     inputComponent = (
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <SelectTrigger>
-                                <SelectValue placeholder={`Select an option for ${label}`} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {options?.map(opt => <SelectItem key={opt.id} value={opt.value}>{opt.value}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                     );
-                     break;
-                default:
-                    inputComponent = null;
-            }
-
+            const finalComponent = React.cloneElement(inputComponent, { ...field });
             return (
                 <FormItem>
                 <FormLabel>
@@ -160,7 +169,7 @@ export function ApplicationForm() {
                     {required && <span className="text-destructive"> *</span>}
                 </FormLabel>
                 <FormControl>
-                    {inputComponent}
+                    {finalComponent}
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -170,20 +179,29 @@ export function ApplicationForm() {
     )
   }
 
-  if (isLoading || !isFormReady) {
+  if (!form) {
       return (
           <div className="flex justify-center items-center h-48">
               <Loader2 className="h-8 w-8 animate-spin" />
           </div>
       )
   }
+  
+  if (formFields.length === 0) {
+      return (
+           <div className="flex justify-center items-center h-48 text-center text-muted-foreground">
+              <p>The application form is not available at this time. <br/> Please check back later.</p>
+          </div>
+      )
+  }
+
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {formFields.map(renderFormField)}
-        <Button type="submit" className="w-full" disabled={isLoading || !zodSchema}>
-           {isLoading ? (
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
+           {isSubmitting ? (
             <Loader2 className="animate-spin" />
           ) : (
             "Submit Application"
