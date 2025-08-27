@@ -348,6 +348,10 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
           </DialogHeader>
           <Form {...fireForm}>
             <form onSubmit={fireForm.handleSubmit(handleFireSubmit)} className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="discordUsername">Discord</Label>
+                    <Input id="discordUsername" value={personnel.discordUsername || 'N/A'} disabled />
+                </div>
                 <FormField
                     control={fireForm.control}
                     name="reason"

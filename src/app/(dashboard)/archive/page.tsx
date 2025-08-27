@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { RehireDialog } from "@/components/archive/rehire-dialog";
 import type { ArchivedPersonnel } from "@/lib/types";
+import { BlacklistDialog } from "@/components/archive/blacklist-dialog";
 
 export default async function ArchivePage() {
   const archivedPersonnel: ArchivedPersonnel[] = await getArchivedPersonnel();
@@ -52,7 +53,8 @@ export default async function ArchivePage() {
                   </TableCell>
                   <TableCell>{new Date(p.date).toLocaleDateString()}</TableCell>
                   <TableCell>{p.reason}</TableCell>
-                   <TableCell className="text-right">
+                   <TableCell className="text-right space-x-2">
+                    <BlacklistDialog personnel={p} />
                     <RehireDialog personnel={p} />
                   </TableCell>
                 </TableRow>
