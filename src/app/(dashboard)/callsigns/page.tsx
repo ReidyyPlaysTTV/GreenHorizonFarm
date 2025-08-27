@@ -2,7 +2,7 @@
 import { getPersonnel } from "@/lib/actions";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User } from "lucide-react";
+import { User, Check, X } from "lucide-react";
 
 export default async function CallsignsPage() {
   const personnel = await getPersonnel();
@@ -34,9 +34,11 @@ export default async function CallsignsPage() {
               <CardHeader className="p-4">
                 <CardTitle className="flex justify-between items-center">
                   <span>{callsign}</span>
-                  <Badge variant={isUsed ? "destructive" : "secondary"}>
-                    {isUsed ? "Used" : "Available"}
-                  </Badge>
+                  {isUsed ? (
+                    <Check className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <X className="h-5 w-5 text-muted-foreground" />
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0">
