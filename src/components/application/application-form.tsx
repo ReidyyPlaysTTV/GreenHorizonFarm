@@ -1,13 +1,13 @@
 
 "use client";
 
-import React, { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { getApplicationFormFields, submitApplication } from "@/lib/actions";
 import type { FormFieldData } from "@/lib/types";
 
