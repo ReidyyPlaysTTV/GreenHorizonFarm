@@ -1,3 +1,4 @@
+
 import type { Personnel, ArchivedPersonnel, BlacklistedPersonnel, Application, Department } from "./types";
 import db from './db';
 
@@ -36,15 +37,25 @@ async function getBlacklistedPersonnel(): Promise<BlacklistedPersonnel[]> {
 async function getApplications(): Promise<Application[]> {
     try {
         const [rows] = await db.query('SELECT * FROM applications');
-        return (rows as any[]).map(app => ({
-            ...app,
-            submittedAt: new Date(app.submittedAt),
-        }));
+        return (rows as any[]).map(app => {
+            const nameField = app.responses?.find((r: any) => r.label.toLowerCase().includes('name'));
+            const ageField = app.responses?.find((r: any) => r.label.toLowerCase().includes('age'));
+            
+            return {
+                ...app,
+                name: nameField ? nameField.answer : "Unknown Applicant",
+                age: ageField ? parseInt(ageField.answer, 10) : 0,
+                // A bit of a hack to find the "reason"
+                reasonForApplying: app.responses?.find((r: any) => r.type === 'textarea')?.answer || 'No reason provided.',
+                submittedAt: new Date(app.submittedAt),
+            }
+        });
     } catch (error) {
         console.error("Failed to fetch applications:", error);
         return [];
     }
 }
+
 
 export { 
     getPersonnel,
@@ -53,3 +64,4 @@ export {
     getApplications,
     departments 
 };
+

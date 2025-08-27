@@ -1,3 +1,4 @@
+
 export type Department = "Commissioners Office" | "High Command" | "Command" | "NCOS" | "Corrections" | "Training";
 
 export interface Personnel {
@@ -32,4 +33,5 @@ export interface Application {
   reasonForApplying: string;
   status: "Pending" | "Approved" | "Rejected";
   submittedAt: Date;
+  responses: any; // JSON column
 }

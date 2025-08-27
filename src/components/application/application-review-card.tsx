@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Application } from "@/lib/types";
@@ -5,8 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X } from "lucide-react";
+import { Check, X, FileText } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "../ui/label";
 
 interface ApplicationReviewCardProps {
   application: Application;
@@ -44,29 +47,58 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
         <div className="flex justify-between items-start">
             <div>
                 <CardTitle>{application.name}</CardTitle>
-                <CardDescription>Age: {application.age}</CardDescription>
+                <CardDescription>Age: {application.age > 0 ? application.age : 'N/A'}</CardDescription>
             </div>
             <Badge variant={statusColors[application.status]}>{application.status}</Badge>
         </div>
       </CardHeader>
-      <CardContent className="flex-1">
-        <p className="text-sm text-muted-foreground italic">
-          "{application.reasonForApplying}"
-        </p>
-        <p className="text-xs text-muted-foreground mt-4">
-          Submitted {formatDistanceToNow(application.submittedAt, { addSuffix: true })}
-        </p>
+      <CardContent className="flex-1 space-y-4">
+        <div>
+            <Label className="text-xs text-muted-foreground">Reason for Applying</Label>
+            <p className="text-sm italic line-clamp-3">
+            "{application.reasonForApplying}"
+            </p>
+        </div>
+        
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1">
+                    <FileText className="h-4 w-4"/>
+                    View Full Application
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>Application for {application.name}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    {application.responses?.map((res: any) => (
+                        <div key={res.fieldId}>
+                            <Label className="font-semibold">{res.label}</Label>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{res.answer || "No answer provided."}</p>
+                        </div>
+                    ))}
+                </div>
+            </DialogContent>
+        </Dialog>
+
       </CardContent>
-      {application.status === "Pending" && (
-        <CardFooter className="flex justify-end gap-2">
-          <Button size="sm" variant="outline" className="gap-1" onClick={handleReject}>
-            <X className="h-4 w-4" /> Reject
-          </Button>
-          <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700" onClick={handleApprove}>
-            <Check className="h-4 w-4" /> Approve
-          </Button>
-        </CardFooter>
-      )}
+     
+      <CardFooter className="flex justify-between items-center">
+        <p className="text-xs text-muted-foreground mt-4">
+          Submitted {formatDistanceToNow(new Date(application.submittedAt), { addSuffix: true })}
+        </p>
+        {application.status === "Pending" && (
+            <div className="flex justify-end gap-2">
+                <Button size="sm" variant="outline" className="gap-1" onClick={handleReject}>
+                    <X className="h-4 w-4" /> Reject
+                </Button>
+                <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700" onClick={handleApprove}>
+                    <Check className="h-4 w-4" /> Approve
+                </Button>
+            </div>
+        )}
+      </CardFooter>
     </Card>
   );
 }

@@ -1,140 +1,251 @@
+
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save } from "lucide-react";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
+import { Loader2, GripVertical, PlusCircle, Trash2, Edit, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form } from "@/components/ui/form";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+  getApplicationFormFields,
+  saveApplicationFormFields,
+  FormFieldData,
+} from "@/lib/actions/form-actions";
+import { EditFieldDialog } from "./edit-field-dialog";
+import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Label } from "../ui/label";
 
-// In a real application, these values would be fetched from a database.
-const defaultFormValues = {
-    fullNameLabel: "Full Name",
-    dateOfBirthLabel: "Date of Birth",
-    reasonLabel: "Why do you want to join the DOC?",
-    reasonPlaceholder: "Explain your motivations, relevant skills, and what you hope to achieve...",
-};
+const formFieldSchema = z.object({
+  id: z.string().optional(),
+  label: z.string().min(1, "Label is required"),
+  type: z.enum(["text", "textarea", "select"]),
+  options: z.array(z.object({ id: z.string().optional(), value: z.string() })).optional(),
+});
 
 const formSchema = z.object({
-  fullNameLabel: z.string().min(1, "Label cannot be empty."),
-  dateOfBirthLabel: z.string().min(1, "Label cannot be empty."),
-  reasonLabel: z.string().min(1, "Label cannot be empty."),
-  reasonPlaceholder: z.string().min(1, "Placeholder cannot be empty."),
+  fields: z.array(formFieldSchema),
 });
+
+type FormSchema = z.infer<typeof formSchema>;
+type FormFieldSchema = z.infer<typeof formFieldSchema>;
+
+const SortableField = ({ field, index, onEdit, onRemove }: { field: FormFieldSchema, index: number, onEdit: (index: number) => void, onRemove: (index: number) => void }) => {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: field.id! });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const renderFieldPreview = () => {
+    switch(field.type) {
+      case 'text':
+        return <Input placeholder={field.label} disabled />;
+      case 'textarea':
+        return <Textarea placeholder={field.label} disabled />;
+      case 'select':
+        return (
+             <Select disabled>
+                <SelectTrigger>
+                    <SelectValue placeholder={field.label} />
+                </SelectTrigger>
+                <SelectContent>
+                    {field.options?.map((opt, i) => <SelectItem key={i} value={opt.value}>{opt.value}</SelectItem>)}
+                </SelectContent>
+            </Select>
+        )
+      default:
+        return <p>Unsupported field type</p>
+    }
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 p-4 bg-muted/50 rounded-lg">
+      <div {...attributes} {...listeners} className="cursor-grab p-2">
+        <GripVertical className="h-5 w-5 text-muted-foreground" />
+      </div>
+      <div className="flex-1">
+        <Label className="font-normal">{field.label}</Label>
+        {renderFieldPreview()}
+      </div>
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" onClick={() => onEdit(index)}>
+          <Edit className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => onRemove(index)} className="text-destructive hover:text-destructive">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 export function ApplicationFormEditor() {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [editDialogIndex, setEditDialogIndex] = useState<number | null>(null);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
-    defaultValues: defaultFormValues,
+    defaultValues: {
+      fields: [],
+    },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true);
-    // Simulate API call to save form settings
-    setTimeout(() => {
-      console.log("Saving form settings:", values);
+  const { fields, control, reset } = form;
+  const { append, remove, move } = useFieldArray({
+    control,
+    name: "fields",
+  });
+
+  useEffect(() => {
+    setIsMounted(true);
+    const fetchFields = async () => {
+      try {
+        const fetchedFields = await getApplicationFormFields();
+        reset({ fields: fetchedFields as FormFieldSchema[] });
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not load form fields.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchFields();
+  }, [reset, toast]);
+
+  const onSubmit = async (data: FormSchema) => {
+    setIsSaving(true);
+    try {
+      await saveApplicationFormFields(data.fields);
       toast({
-        title: "Form Settings Saved",
-        description: "The application form has been updated successfully.",
+        title: "Success",
+        description: "Application form saved successfully.",
       });
-      setIsLoading(false);
-    }, 1500);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save the form.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    if (active.id !== over.id) {
+      const oldIndex = fields.value.findIndex((f) => f.id === active.id);
+      const newIndex = fields.value.findIndex((f) => f.id === over.id);
+      move(oldIndex, newIndex);
+    }
+  };
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor)
+  );
+
+  const handleAddNewField = () => {
+     append({ label: "New Question", type: 'text', options: [] }, { shouldFocus: false });
+     setEditDialogIndex(form.getValues('fields').length);
+  };
+
+  const handleSaveField = (index: number, data: FormFieldSchema) => {
+    form.setValue(`fields.${index}`, data, { shouldDirty: true });
+    setEditDialogIndex(null);
   }
+
+  if (!isMounted) {
+    return (
+       <div className="flex items-center justify-center p-8">
+         <Loader2 className="h-8 w-8 animate-spin" />
+       </div>
+    );
+  }
+  
+  const currentFields = form.getValues('fields');
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Edit Application Form</CardTitle>
         <CardDescription>
-          Customize the labels and placeholders for the public application form.
+          Drag and drop to reorder fields. Click "Add Field" to create new questions.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FormField
-              control={form.control}
-              name="fullNameLabel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name Field Label</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="dateOfBirthLabel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date of Birth Field Label</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="reasonLabel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Reason Field Label</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-                control={form.control}
-                name="reasonPlaceholder"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Reason Field Placeholder</FormLabel>
-                    <FormControl>
-                        <Textarea {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
+            {isLoading ? (
+               <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+               </div>
+            ) : (
+              <div className="space-y-4">
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={currentFields.map(f => f.id!)} strategy={verticalListSortingStrategy}>
+                    {currentFields.map((field, index) => (
+                      <SortableField key={field.id} field={field} index={index} onEdit={setEditDialogIndex} onRemove={remove} />
+                    ))}
+                  </SortableContext>
+                </DndContext>
+                {currentFields.length === 0 && (
+                    <div className="flex flex-col items-center justify-center h-40 rounded-lg border border-dashed text-center p-4">
+                        <p className="text-muted-foreground">Your application form is empty.</p>
+                        <p className="text-sm text-muted-foreground">Click "Add New Field" to get started.</p>
+                    </div>
                 )}
-            />
-            <div className="flex justify-end">
-                <Button type="submit" disabled={isLoading}>
-                    {isLoading ? (
-                        <Loader2 className="animate-spin" />
-                    ) : (
-                        <>
-                            <Save className="mr-2 h-4 w-4" />
-                            Save Changes
-                        </>
-                    )}
-                </Button>
+              </div>
+            )}
+            
+            <div className="flex justify-between items-center">
+              <Button type="button" variant="outline" onClick={handleAddNewField}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add New Field
+              </Button>
+              <Button type="submit" disabled={isSaving || isLoading}>
+                {isSaving ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Form
+                  </>
+                )}
+              </Button>
             </div>
           </form>
         </Form>
       </CardContent>
+
+      {editDialogIndex !== null && (
+        <EditFieldDialog
+            isOpen={editDialogIndex !== null}
+            onClose={() => setEditDialogIndex(null)}
+            onSave={(data) => handleSaveField(editDialogIndex, data)}
+            onDelete={() => {
+                remove(editDialogIndex);
+                setEditDialogIndex(null);
+            }}
+            fieldData={currentFields[editDialogIndex]}
+        />
+       )}
     </Card>
   );
 }
+
