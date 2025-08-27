@@ -27,8 +27,8 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
           personnel.map((p) => (
             <TableRow key={p.id}>
               <TableCell>
-                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
-                  <Image src={p.avatarUrl} alt={`${p.rank} Insignia`} width={32} height={32} className="h-8 w-8 object-contain" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted p-1">
+                  <Image src={p.avatarUrl} alt={`${p.rank} Insignia`} width={32} height={32} className="h-auto w-auto object-contain" />
                 </div>
               </TableCell>
               <TableCell className="font-medium">{p.name}</TableCell>
@@ -83,18 +83,21 @@ export default async function RosterPage() {
       </div>
       
       <div className="space-y-8">
-        {departments.map(dep => (
-          <Card key={dep}>
-            <CardHeader>
-              <CardTitle>{dep}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-                <RosterTable personnel={personnel.filter(p => p.department === dep)} />
-            </CardContent>
-          </Card>
-        ))}
+        {departments.map(dep => {
+          const departmentPersonnel = personnel.filter(p => p.department === dep);
+          if (departmentPersonnel.length === 0) return null;
+          return (
+            <Card key={dep}>
+              <CardHeader>
+                <CardTitle>{dep}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                  <RosterTable personnel={departmentPersonnel} />
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
     </div>
   );
 }
-

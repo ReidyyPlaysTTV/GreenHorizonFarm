@@ -16,7 +16,35 @@ const rankInsignias: Record<string, string> = {
     "Senior Corrections Officer": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/corporal.png",
     "Correctional Officer": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
     "Probationary Correctional Officer": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
-}
+};
+
+const rankToDepartmentMap: Record<string, Department> = {
+    "Commissioner": "Commissioners Office",
+    "Deputy Comissioner": "Commissioners Office",
+    "Warden": "High Command",
+    "Deputy Warden": "High Command",
+    "Major": "High Command",
+    "Captain": "Command",
+    "Lieutenant": "Command",
+    "Corrections Sergeant": "NCOS",
+    "Senior Corrections Officer": "Corrections",
+    "Correctional Officer": "Corrections",
+    "Probationary Correctional Officer": "Training",
+};
+
+const rankOrder = [
+    "Commissioner",
+    "Deputy Comissioner",
+    "Warden",
+    "Deputy Warden",
+    "Major",
+    "Captain",
+    "Lieutenant",
+    "Corrections Sergeant",
+    "Senior Corrections Officer",
+    "Correctional Officer",
+    "Probationary Correctional Officer",
+];
 
 async function getPersonnel(): Promise<Personnel[]> {
     try {
@@ -25,10 +53,25 @@ async function getPersonnel(): Promise<Personnel[]> {
             return [];
         }
 
-        return (rows as any[]).map(p => ({
+        const personnel = (rows as any[]).map(p => ({
             ...p,
+            department: rankToDepartmentMap[p.rank] || p.department, // Override department based on rank
             avatarUrl: rankInsignias[p.rank] || p.avatarUrl || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
         }));
+        
+        // Sort personnel by rank order, then by callsign
+        personnel.sort((a, b) => {
+            const rankIndexA = rankOrder.indexOf(a.rank);
+            const rankIndexB = rankOrder.indexOf(b.rank);
+
+            if (rankIndexA !== rankIndexB) {
+                return rankIndexA - rankIndexB;
+            }
+            
+            return parseInt(a.badgeNumber) - parseInt(b.badgeNumber);
+        });
+
+        return personnel;
 
     } catch (error) {
         console.error("Failed to fetch personnel:", error);
