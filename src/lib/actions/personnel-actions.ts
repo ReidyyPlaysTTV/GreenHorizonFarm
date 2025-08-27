@@ -10,6 +10,7 @@ import type { Personnel } from '../types';
 import { randomUUID } from 'crypto';
 import { logCallsignChange } from './callsign-log-actions';
 import { logUserAction } from './audit-log-actions';
+import { updateApplicationStatus } from './form-actions';
 
 async function getPersonnelById(id: string): Promise<Personnel | null> {
   const [rows] = await db.query('SELECT * FROM personnel WHERE id = ?', [id]);
@@ -19,15 +20,20 @@ async function getPersonnelById(id: string): Promise<Personnel | null> {
   return null;
 }
 
-async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'Promoted' | 'Demoted', description: string) {
+async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'Promoted' | 'Demoted', description: string, dbConnection?: any) {
+    const connection = dbConnection || await db.getConnection();
     try {
-        await db.query(
+        await connection.query(
             'INSERT INTO personnel_events (id, personnel_name, event_type, description, date) VALUES (?, ?, ?, ?, ?)',
             [randomUUID(), personnelName, eventType, description, new Date()]
         );
     } catch (error) {
         // Log the error but don't block the main action if event logging fails
         console.error(`Failed to log event: ${eventType} for ${personnelName}`, error);
+    } finally {
+        if (!dbConnection) {
+            connection.release();
+        }
     }
 }
 
@@ -50,7 +56,7 @@ export async function promotePersonnel(personnelId: string, user: string) {
   try {
     await connection.beginTransaction();
     await connection.query('UPDATE personnel SET rank = ? WHERE id = ?', [newRank, personnelId]);
-    await logEvent(personnel.name, 'Promoted', `Promoted from ${personnel.rank} to ${newRank}`);
+    await logEvent(personnel.name, 'Promoted', `Promoted from ${personnel.rank} to ${newRank}`, connection);
     await logUserAction(user, "Promote Personnel", `Promoted ${personnel.name} from ${personnel.rank} to ${newRank}.`, connection);
     await connection.commit();
 
@@ -86,7 +92,7 @@ export async function demotePersonnel(personnelId: string, user: string) {
   try {
     await connection.beginTransaction();
     await connection.query('UPDATE personnel SET rank = ? WHERE id = ?', [newRank, personnelId]);
-    await logEvent(personnel.name, 'Demoted', `Demoted from ${personnel.rank} to ${newRank}`);
+    await logEvent(personnel.name, 'Demoted', `Demoted from ${personnel.rank} to ${newRank}`, connection);
     await logUserAction(user, "Demote Personnel", `Demoted ${personnel.name} from ${personnel.rank} to ${newRank}.`, connection);
     await connection.commit();
 
@@ -122,7 +128,7 @@ export async function firePersonnel(personnelId: string, reason: string, user: s
     // Remove from active roster
     await connection.query('DELETE FROM personnel WHERE id = ?', [personnelId]);
     
-    await logEvent(personnel.name, 'Fired', `Fired for: ${reason}`);
+    await logEvent(personnel.name, 'Fired', `Fired for: ${reason}`, connection);
     await logCallsignChange(personnel.badgeNumber, personnel.name, 'Unassigned', connection);
     await logUserAction(user, "Fire Personnel", `Fired ${personnel.name}. Reason: ${reason}`, connection);
 
@@ -199,6 +205,7 @@ const addPersonnelSchema = z.object({
     .max(9999, "Callsign must be between 100 and 9999."),
   discordUsername: z.string().optional(),
   user: z.string(),
+  applicationId: z.string().optional(), // Added to link back to the application
 });
 
 export async function addPersonnel(data: unknown) {
@@ -206,7 +213,7 @@ export async function addPersonnel(data: unknown) {
     if (!validation.success) {
         return { success: false, message: 'Invalid data.', issues: validation.error.issues };
     }
-    const { name, rank, callsign, discordUsername, user } = validation.data;
+    const { name, rank, callsign, discordUsername, user, applicationId } = validation.data;
     
     const connection = await db.getConnection();
     try {
@@ -216,9 +223,18 @@ export async function addPersonnel(data: unknown) {
             'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username) VALUES (?, ?, ?, ?, ?)',
             [id, name, rank, callsign.toString(), discordUsername]
         );
-        await logEvent(name, 'Hired', `Hired as ${rank}`);
+        await logEvent(name, 'Hired', `Hired as ${rank}`, connection);
         await logCallsignChange(callsign.toString(), name, 'Assigned', connection);
-        await logUserAction(user, "Add Personnel", `Added ${name} to the roster as ${rank} with callsign ${callsign}.`, connection);
+        
+        let logDescription = `Added ${name} to the roster as ${rank} with callsign ${callsign}.`;
+        if (applicationId) {
+            logDescription += ` (Approved from application).`
+            // Use a separate non-transactional call to update status to avoid deadlocks
+            // This is a simplified approach. A more robust system might use a queue.
+            await updateApplicationStatus(applicationId, 'Approved', user);
+        }
+        
+        await logUserAction(user, "Add Personnel", logDescription, connection);
 
         await connection.commit();
 
@@ -226,6 +242,7 @@ export async function addPersonnel(data: unknown) {
         revalidatePath('/');
         revalidatePath('/callsigns');
         revalidatePath('/logs');
+        revalidatePath('/applications'); // Also revalidate applications page
         return { success: true, message: `${name} has been added to the roster.` };
     } catch (error) {
         await connection.rollback();

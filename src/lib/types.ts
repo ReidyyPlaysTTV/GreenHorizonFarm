@@ -30,7 +30,7 @@ export interface BlacklistedPersonnel {
 export interface Application {
   id: string;
   name: string;
-  age: number;
+  discordUsername?: string;
   reasonForApplying: string;
   status: "Pending" | "Approved" | "Rejected";
   submittedAt: Date;

@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "../ui/label";
 import { updateApplicationStatus } from "@/lib/actions";
 import { useState, useEffect } from "react";
+import { ApproveApplicationDialog } from "./approve-application-dialog";
 
 interface ApplicationReviewCardProps {
   application: Application;
@@ -29,9 +30,10 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
     }
   }, []);
 
-  const handleStatusUpdate = async (status: 'Approved' | 'Rejected') => {
+  const handleStatusUpdate = async (status: 'Rejected') => {
     setIsUpdating(true);
     try {
+      // We only handle rejection here now. Approval is via the dialog.
       await updateApplicationStatus(application.id, status, currentUser);
       toast({
         title: `Application ${status}`,
@@ -60,7 +62,7 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
         <div className="flex justify-between items-start">
             <div>
                 <CardTitle>{application.name}</CardTitle>
-                <CardDescription>Age: {application.age > 0 ? application.age : 'N/A'}</CardDescription>
+                <CardDescription>Discord: {application.discordUsername || 'N/A'}</CardDescription>
             </div>
             <Badge variant={statusColors[application.status]}>{application.status}</Badge>
         </div>
@@ -106,9 +108,11 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
                 <Button size="sm" variant="outline" className="gap-1" onClick={() => handleStatusUpdate('Rejected')} disabled={isUpdating}>
                     {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><X className="h-4 w-4" /> Reject</>}
                 </Button>
-                <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate('Approved')} disabled={isUpdating}>
-                    {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4" /> Approve</>}
-                </Button>
+                <ApproveApplicationDialog application={application} currentUser={currentUser}>
+                  <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700" disabled={isUpdating}>
+                      <Check className="h-4 w-4" /> Approve
+                  </Button>
+                </ApproveApplicationDialog>
             </div>
         )}
       </CardFooter>

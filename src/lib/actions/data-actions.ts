@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import type { Personnel, ArchivedPersonnel, BlacklistedPersonnel, Application, PersonnelEvent } from "../types";
@@ -58,6 +59,11 @@ export async function getBlacklistedPersonnel(): Promise<BlacklistedPersonnel[]>
     }
 }
 
+// Helper to find a response by its label, case-insensitively
+const findResponse = (responses: any[], label: string) => {
+  return responses.find(r => r.label && r.label.toLowerCase().includes(label))?.answer || undefined;
+}
+
 export async function getApplications(): Promise<Application[]> {
     try {
         const [rows] = await db.query('SELECT * FROM applications ORDER BY submittedAt DESC');
@@ -73,31 +79,23 @@ export async function getApplications(): Promise<Application[]> {
                     parsedResponses = JSON.parse(app.responses);
                 } catch (e) {
                     console.error(`Failed to parse responses for application ${app.id}:`, e);
-                    // Keep responses as an empty array if parsing fails
                 }
             } else if (Array.isArray(app.responses)) {
-                // Handle cases where it might already be an object (though DB returns string)
                 parsedResponses = app.responses;
             }
 
-            let reason = 'No reason provided.';
-            if (Array.isArray(parsedResponses)) {
-                const reasonField = parsedResponses.find((r: any) => r.type === 'textarea');
-                if (reasonField && reasonField.answer) {
-                    reason = reasonField.answer;
-                } else {
-                    const firstAnswer = parsedResponses[0]?.answer;
-                    if(firstAnswer) reason = firstAnswer;
-                }
-            }
-            
+            // Extract key information
+            const appName = findResponse(parsedResponses, 'name') || "Unknown Applicant";
+            const appDiscord = findResponse(parsedResponses, 'discord');
+            const reason = parsedResponses.find(r => r.type === 'textarea')?.answer || 'No reason provided.';
+
             return {
                 ...app,
-                name: app.name || "Unknown Applicant",
-                age: app.age || 0,
+                name: appName,
+                discordUsername: appDiscord,
                 reasonForApplying: reason,
                 submittedAt: new Date(app.submittedAt),
-                responses: parsedResponses, // Return parsed array
+                responses: parsedResponses,
             }
         });
     } catch (error) {
@@ -105,7 +103,6 @@ export async function getApplications(): Promise<Application[]> {
          if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
             return [];
         }
-        // Return empty array on other errors as well to prevent crashes
         return [];
     }
 }

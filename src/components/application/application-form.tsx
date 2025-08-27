@@ -29,10 +29,14 @@ function buildZodSchema(fields: FormFieldData[]) {
   fields.forEach(field => {
     let fieldSchema;
     const requiredError = `${field.label} is required.`;
+    const fieldLabelLower = field.label.toLowerCase();
 
     switch (field.type) {
       case 'text':
         fieldSchema = z.string();
+         if (fieldLabelLower.includes('email')) {
+          fieldSchema = fieldSchema.email({ message: "Please enter a valid email address."});
+        }
         if (field.required) {
           fieldSchema = fieldSchema.min(1, requiredError);
         } else {
@@ -131,11 +135,15 @@ export function ApplicationForm() {
 
   const renderFormField = (fieldData: FormFieldData) => {
     const { id, type, label, options, required } = fieldData;
-
+    const fieldLabelLower = label.toLowerCase();
+    
     let inputComponent;
     switch(type) {
         case 'text':
-            inputComponent = <Input placeholder={`Your ${label.toLowerCase()}`} />;
+            let inputType = 'text';
+            if (fieldLabelLower.includes('email')) inputType = 'email';
+            if (fieldLabelLower.includes('age')) inputType = 'number';
+            inputComponent = <Input placeholder={`Your ${label.toLowerCase()}`} type={inputType} />;
             break;
         case 'textarea':
             inputComponent = <Textarea placeholder="Please provide a detailed response..." className="min-h-[120px]" />;
