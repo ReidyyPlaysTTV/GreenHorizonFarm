@@ -49,7 +49,7 @@ export function ApplicationForm() {
         title: "Application Submitted",
         description: "Thank you for your interest. We will review your application shortly.",
       });
-      router.push("/");
+      router.push("/login");
       setIsLoading(false);
     }, 1500);
   }
