@@ -50,7 +50,7 @@ function buildZodSchema(fields: FormFieldData[]) {
       case 'select':
         fieldSchema = z.string();
         if(field.required) {
-            fieldSchema = fieldSchema.refine(value => value, { message: `Please make a selection for ${field.label}.` });
+            fieldSchema = fieldSchema.refine(value => value && value.length > 0, { message: `Please make a selection for ${field.label}.` });
         } else {
              fieldSchema = fieldSchema.optional().or(z.literal(''));
         }
@@ -68,6 +68,7 @@ export function ApplicationForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isFormReady, setIsFormReady] = useState(false);
   const [formFields, setFormFields] = useState<FormFieldData[]>([]);
   const [zodSchema, setZodSchema] = useState<z.ZodObject<any> | null>(null);
 
@@ -79,6 +80,7 @@ export function ApplicationForm() {
             setFormFields(fields);
             const schema = buildZodSchema(fields);
             setZodSchema(schema);
+            setIsFormReady(true);
         } catch (err) {
             toast({
                 variant: 'destructive',
@@ -94,16 +96,8 @@ export function ApplicationForm() {
 
   const form = useForm({
     resolver: zodSchema ? zodResolver(zodSchema) : undefined,
-    defaultValues: formFields.reduce((acc, field) => ({ ...acc, [field.id!]: '' }), {})
+    defaultValues: isFormReady ? formFields.reduce((acc, field) => ({ ...acc, [field.id!]: '' }), {}) : {}
   });
-  
-  useEffect(() => {
-      if (zodSchema) {
-          const defaultValues = formFields.reduce((acc, field) => ({ ...acc, [field.id!]: '' }), {});
-          form.reset(defaultValues);
-      }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zodSchema, form.reset]);
 
 
   async function onSubmit(values: z.infer<z.ZodObject<any>>) {
@@ -176,7 +170,7 @@ export function ApplicationForm() {
     )
   }
 
-  if (isLoading && formFields.length === 0) {
+  if (isLoading || !isFormReady) {
       return (
           <div className="flex justify-center items-center h-48">
               <Loader2 className="h-8 w-8 animate-spin" />
