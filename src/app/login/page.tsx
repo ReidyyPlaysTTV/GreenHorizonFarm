@@ -33,23 +33,31 @@ export default function LoginPage() {
                 <LoginForm />
             </CardContent>
             </Card>
-            <div className="text-center space-y-2">
-                <div>
-                <p className="text-sm text-muted-foreground">Need an account for the roster?</p>
-                <Button variant="link" asChild className="text-primary">
-                    <Link href="/request-access">
-                    Request Access
-                    </Link>
-                </Button>
-                </div>
-                <div>
-                <p className="text-sm text-muted-foreground">Want to join the Department of Corrections?</p>
-                <Button variant="link" asChild className="text-primary">
-                    <Link href="/apply">
-                    Submit an Application
-                    </Link>
-                </Button>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="bg-card/80 backdrop-blur-sm text-center">
+                    <CardHeader>
+                        <CardTitle className="text-base">Need an account?</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                         <Button variant="link" asChild className="text-primary">
+                            <Link href="/request-access">
+                                Request Access
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                 <Card className="bg-card/80 backdrop-blur-sm text-center">
+                    <CardHeader>
+                        <CardTitle className="text-base">Want to join?</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Button variant="link" asChild className="text-primary">
+                            <Link href="/apply">
+                                Submit Application
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     </div>
