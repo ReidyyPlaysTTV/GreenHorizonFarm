@@ -1,7 +1,7 @@
 
 'use server';
 
-import type { Personnel, ArchivedPersonnel, BlacklistedPersonnel, Application } from "../types";
+import type { Personnel, ArchivedPersonnel, BlacklistedPersonnel, Application, PersonnelEvent } from "../types";
 import db from '../db';
 import { rankToDepartmentMap, rankInsignias, rankOrder } from "../data";
 
@@ -40,7 +40,7 @@ export async function getPersonnel(): Promise<Personnel[]> {
 
 export async function getArchivedPersonnel(): Promise<ArchivedPersonnel[]> {
     try {
-        const [rows] = await db.query('SELECT * FROM archived_personnel');
+        const [rows] = await db.query('SELECT * FROM archived_personnel ORDER BY date DESC');
         return rows as ArchivedPersonnel[];
     } catch (error) {
         console.error("Failed to fetch archived personnel:", error);
@@ -95,6 +95,31 @@ export async function getApplications(): Promise<Application[]> {
             return [];
         }
         // Return empty array on other errors as well to prevent crashes
+        return [];
+    }
+}
+
+export async function getRecentActivity(): Promise<PersonnelEvent[]> {
+    try {
+        const [rows] = await db.query('SELECT * FROM personnel_events ORDER BY date DESC LIMIT 10');
+        if (!Array.isArray(rows)) {
+            return [];
+        }
+        return (rows as any[]).map(e => ({...e, date: new Date(e.date)}));
+    } catch(error) {
+         console.error("Failed to fetch recent activity:", error);
+        if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
+            await db.query(`
+                CREATE TABLE personnel_events (
+                    id VARCHAR(36) NOT NULL PRIMARY KEY,
+                    personnel_name VARCHAR(255) NOT NULL,
+                    event_type ENUM('Hired', 'Fired', 'Promoted', 'Demoted') NOT NULL,
+                    description VARCHAR(255) NOT NULL,
+                    date DATETIME NOT NULL
+                )
+            `);
+            return [];
+        }
         return [];
     }
 }

@@ -47,3 +47,11 @@ export interface FormFieldData {
     label: string;
     options?: FormFieldOption[];
 }
+
+export interface PersonnelEvent {
+    id: string;
+    personnel_name: string;
+    event_type: 'Hired' | 'Fired' | 'Promoted' | 'Demoted';
+    description: string;
+    date: Date;
+}

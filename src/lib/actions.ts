@@ -8,7 +8,8 @@ import {
     promotePersonnel, 
     demotePersonnel, 
     firePersonnel, 
-    updatePersonnel 
+    updatePersonnel,
+    addPersonnel
 } from './actions/personnel-actions';
 
 import { 
@@ -22,7 +23,8 @@ import {
     getPersonnel,
     getArchivedPersonnel,
     getBlacklistedPersonnel,
-    getApplications
+    getApplications,
+    getRecentActivity
 } from './actions/data-actions';
 
 export {
@@ -30,6 +32,7 @@ export {
     demotePersonnel,
     firePersonnel,
     updatePersonnel,
+    addPersonnel,
     getApplicationFormFields,
     saveApplicationFormFields,
     submitApplication,
@@ -37,5 +40,6 @@ export {
     getPersonnel,
     getArchivedPersonnel,
     getBlacklistedPersonnel,
-    getApplications
+    getApplications,
+    getRecentActivity,
 };

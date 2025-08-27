@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -33,19 +34,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const ranks = [
-  "Commissioner",
-  "Deputy Comissioner",
-  "Warden",
-  "Deputy Warden",
-  "Major",
-  "Captain",
-  "Corrections Sergeant",
-  "Senior Corrections Officer",
-  "Correctional Officer",
-  "Probationary Correctional Officer",
-];
+import { addPersonnel } from "@/lib/actions";
+import { rankOrder } from "@/lib/data";
 
 const formSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters."),
@@ -68,19 +58,24 @@ export function AddPersonnelForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Adding personnel:", values);
+    const result = await addPersonnel(values);
+    if (result.success) {
       toast({
         title: "Personnel Added",
-        description: `${values.name} has been added to the roster.`,
+        description: result.message,
       });
-      setIsLoading(false);
       setIsOpen(false);
       form.reset();
-    }, 1500);
+    } else {
+       toast({
+        variant: "destructive",
+        title: "Error",
+        description: result.message,
+      });
+    }
+    setIsLoading(false);
   }
 
   return (
@@ -126,7 +121,7 @@ export function AddPersonnelForm() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {ranks.map((rank) => (
+                      {rankOrder.map((rank) => (
                         <SelectItem key={rank} value={rank}>
                           {rank}
                         </SelectItem>
