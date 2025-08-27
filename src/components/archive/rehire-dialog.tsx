@@ -66,6 +66,7 @@ export function RehireDialog({ personnel }: RehireDialogProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       rank: personnel.rank,
+      callsign: "" as any,
     },
   });
 
