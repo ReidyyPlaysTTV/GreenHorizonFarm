@@ -1,3 +1,4 @@
+
 import { getPersonnel, departments } from "@/lib/data";
 import type { Personnel } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -50,7 +51,7 @@ export default async function RosterPage() {
   const personnel = await getPersonnel();
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
+    <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
             <h1 className="text-3xl font-bold tracking-tight">Personnel Roster</h1>
