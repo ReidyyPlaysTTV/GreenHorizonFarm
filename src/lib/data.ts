@@ -14,6 +14,8 @@ const rankInsignias: Record<string, string> = {
     "Lieutenant": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/first-lieutenant.png",
     "Corrections Sergeant": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/staff-sergeant.png",
     "Senior Corrections Officer": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/corporal.png",
+    "Correctional Officer": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
+    "Probationary Correctional Officer": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
 }
 
 async function getPersonnel(): Promise<Personnel[]> {
@@ -25,7 +27,7 @@ async function getPersonnel(): Promise<Personnel[]> {
 
         return (rows as any[]).map(p => ({
             ...p,
-            avatarUrl: rankInsignias[p.rank] || p.avatarUrl,
+            avatarUrl: rankInsignias[p.rank] || p.avatarUrl || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
         }));
 
     } catch (error) {
