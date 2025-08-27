@@ -121,6 +121,7 @@ const updatePersonnelSchema = z.object({
   name: z.string().min(3),
   badgeNumber: z.string(),
   rank: z.string(),
+  discordUsername: z.string().optional(),
 });
 
 export async function updatePersonnel(personnelId: string, data: unknown) {
@@ -129,10 +130,10 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
     return { success: false, message: 'Invalid data.', issues: validation.error.issues };
   }
 
-  const { name, badgeNumber, rank } = validation.data;
+  const { name, badgeNumber, rank, discordUsername } = validation.data;
   
   try {
-    await db.query('UPDATE personnel SET name = ?, badgeNumber = ?, rank = ? WHERE id = ?', [name, badgeNumber, rank, personnelId]);
+    await db.query('UPDATE personnel SET name = ?, badgeNumber = ?, rank = ?, discord_username = ? WHERE id = ?', [name, badgeNumber, rank, discordUsername, personnelId]);
     revalidatePath('/roster');
     return { success: true, message: 'Personnel updated successfully.' };
   } catch (error) {
@@ -148,6 +149,7 @@ const addPersonnelSchema = z.object({
     .number({ invalid_type_error: "Callsign must be a number." })
     .min(1000, "Callsign must be between 1000 and 9999.")
     .max(9999, "Callsign must be between 1000 and 9999."),
+  discordUsername: z.string().optional(),
 });
 
 export async function addPersonnel(data: unknown) {
@@ -155,13 +157,13 @@ export async function addPersonnel(data: unknown) {
     if (!validation.success) {
         return { success: false, message: 'Invalid data.', issues: validation.error.issues };
     }
-    const { name, rank, callsign } = validation.data;
+    const { name, rank, callsign, discordUsername } = validation.data;
     
     try {
         const id = randomUUID();
         await db.query(
-            'INSERT INTO personnel (id, name, rank, badgeNumber) VALUES (?, ?, ?, ?)',
-            [id, name, rank, callsign.toString()]
+            'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username) VALUES (?, ?, ?, ?, ?)',
+            [id, name, rank, callsign.toString(), discordUsername]
         );
         await logEvent(name, 'Hired', `Hired as ${rank}`);
 

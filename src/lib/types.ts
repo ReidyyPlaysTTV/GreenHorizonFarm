@@ -8,6 +8,7 @@ export interface Personnel {
   badgeNumber: string;
   department: Department;
   avatarUrl: string;
+  discordUsername?: string;
 }
 
 export interface ArchivedPersonnel {
@@ -33,7 +34,12 @@ export interface Application {
   reasonForApplying: string;
   status: "Pending" | "Approved" | "Rejected";
   submittedAt: Date;
-  responses: any; // JSON column
+  responses: {
+    fieldId: string;
+    label: string;
+    type: string;
+    answer: string;
+  }[];
 }
 
 export interface FormFieldOption {

@@ -1,4 +1,5 @@
 
+
 import { getPersonnel } from "@/lib/actions";
 import { departments } from "@/lib/data";
 import type { Personnel } from "@/lib/types";
@@ -18,6 +19,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
           <TableHead>Name</TableHead>
           <TableHead>Rank</TableHead>
           <TableHead>Callsign</TableHead>
+          <TableHead>Discord</TableHead>
           <TableHead className="text-right w-[200px]">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -35,6 +37,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
               <TableCell>
                 <Badge variant="secondary">#{p.badgeNumber}</Badge>
               </TableCell>
+              <TableCell>{p.discordUsername || 'N/A'}</TableCell>
               <TableCell className="text-right">
                 <PersonnelActions personnel={p} />
               </TableCell>
@@ -42,7 +45,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
           ))
         ) : (
           <TableRow>
-            <TableCell colSpan={5} className="h-24 text-center">
+            <TableCell colSpan={6} className="h-24 text-center">
               No personnel found in this department.
             </TableCell>
           </TableRow>

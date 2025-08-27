@@ -51,6 +51,7 @@ const editFormSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters."),
   badgeNumber: z.string().min(4, "Callsign must be 4 digits.").max(4, "Callsign must be 4 digits."),
   rank: z.string(),
+  discordUsername: z.string().optional(),
 });
 
 export function PersonnelActions({ personnel }: PersonnelActionsProps) {
@@ -74,6 +75,7 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
       name: personnel.name,
       badgeNumber: personnel.badgeNumber,
       rank: personnel.rank,
+      discordUsername: personnel.discordUsername || "",
     },
   });
 
@@ -157,6 +159,13 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
                     <FormField control={editForm.control} name="name" render={({field}) => (
                         <FormItem>
                             <Label>Name</Label>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage/>
+                        </FormItem>
+                    )}/>
+                    <FormField control={editForm.control} name="discordUsername" render={({field}) => (
+                        <FormItem>
+                            <Label>Discord Username</Label>
                             <FormControl><Input {...field} /></FormControl>
                             <FormMessage/>
                         </FormItem>

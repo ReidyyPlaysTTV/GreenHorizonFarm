@@ -44,6 +44,7 @@ const formSchema = z.object({
     .number({ invalid_type_error: "Callsign must be a number." })
     .min(1000, "Callsign must be between 1000 and 9999.")
     .max(9999, "Callsign must be between 1000 and 9999."),
+  discordUsername: z.string().optional(),
 });
 
 export function AddPersonnelForm() {
@@ -55,6 +56,7 @@ export function AddPersonnelForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      discordUsername: "",
     },
   });
 
@@ -103,6 +105,19 @@ export function AddPersonnelForm() {
                   <FormLabel>Full Name</FormLabel>
                   <FormControl>
                     <Input placeholder="John Doe" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="discordUsername"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Discord Username</FormLabel>
+                  <FormControl>
+                    <Input placeholder="johndoe#1234" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
