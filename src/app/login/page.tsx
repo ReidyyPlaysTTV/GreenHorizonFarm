@@ -16,7 +16,7 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-black/60 z-0" />
         <div className="relative z-10 w-full max-w-md space-y-6">
             <div className="text-center text-foreground">
-            <Image src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png" alt="DOC Logo" width={64} height={64} className="mx-auto h-16 w-16" />
+            <Image src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png" alt="DOC Logo" width={96} height={96} className="mx-auto h-24 w-24 object-contain" />
             <h1 className="mt-4 text-3xl font-bold tracking-tight">
                 DOC Roster
             </h1>
