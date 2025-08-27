@@ -62,6 +62,7 @@ export function BlacklistDialog({ personnel }: BlacklistDialogProps) {
     setIsLoading(true);
     const result = await addBlacklistedPersonnel({ 
         name: personnel.name, 
+        discordUsername: personnel.discordUsername,
         reason: values.reason, 
         user: currentUser 
     });
@@ -102,6 +103,10 @@ export function BlacklistDialog({ personnel }: BlacklistDialogProps) {
                 <div>
                     <FormLabel>Name</FormLabel>
                     <Input value={personnel.name} disabled className="mt-2" />
+                </div>
+                 <div>
+                    <FormLabel>Discord</FormLabel>
+                    <Input value={personnel.discordUsername || 'N/A'} disabled className="mt-2" />
                 </div>
                 <FormField
                     control={form.control}

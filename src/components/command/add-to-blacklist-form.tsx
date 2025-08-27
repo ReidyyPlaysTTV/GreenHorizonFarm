@@ -31,6 +31,7 @@ import { Loader2, PlusCircle } from "lucide-react";
 
 const formSchema = z.object({
   name: z.string().min(3, "Name is required."),
+  discordUsername: z.string().optional(),
   reason: z.string().min(10, "A detailed reason is required."),
 });
 
@@ -50,6 +51,7 @@ export function AddToBlacklistForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      discordUsername: "",
       reason: "",
     },
   });
@@ -99,6 +101,19 @@ export function AddToBlacklistForm() {
                             <FormLabel>Name</FormLabel>
                             <FormControl>
                                 <Input placeholder="John Doe" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="discordUsername"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Discord Username (Optional)</FormLabel>
+                            <FormControl>
+                                <Input placeholder="johndoe#1234" {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

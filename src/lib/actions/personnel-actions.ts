@@ -121,8 +121,8 @@ export async function firePersonnel(personnelId: string, reason: string, user: s
     
     // Add to archive
     await connection.query(
-        'INSERT INTO archived_personnel (id, name, rank, status, date, reason) VALUES (?, ?, ?, ?, ?, ?)',
-        [personnel.id, personnel.name, personnel.rank, 'Fired', new Date(), reason]
+        'INSERT INTO archived_personnel (id, name, rank, discord_username, status, date, reason) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [personnel.id, personnel.name, personnel.rank, personnel.discordUsername, 'Fired', new Date(), reason]
     );
 
     // Remove from active roster
@@ -262,6 +262,7 @@ const rehirePersonnelSchema = z.object({
   archivedId: z.string(),
   name: z.string(),
   rank: z.string(),
+  discordUsername: z.string().optional(),
   callsign: z.coerce.number().min(100).max(9999),
   user: z.string(),
 });
@@ -271,7 +272,7 @@ export async function rehirePersonnel(data: unknown) {
   if (!validation.success) {
     return { success: false, message: 'Invalid data provided.' };
   }
-  const { archivedId, name, rank, callsign, user } = validation.data;
+  const { archivedId, name, rank, discordUsername, callsign, user } = validation.data;
 
   const connection = await db.getConnection();
   try {
@@ -280,8 +281,8 @@ export async function rehirePersonnel(data: unknown) {
     // 1. Add back to personnel table, marking as rehired
     const newId = randomUUID();
     await connection.query(
-      'INSERT INTO personnel (id, name, rank, badgeNumber, is_rehired) VALUES (?, ?, ?, ?, ?)',
-      [newId, name, rank, callsign.toString(), true]
+      'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, is_rehired) VALUES (?, ?, ?, ?, ?, ?)',
+      [newId, name, rank, callsign.toString(), discordUsername, true]
     );
 
     // 2. Remove from archived_personnel table

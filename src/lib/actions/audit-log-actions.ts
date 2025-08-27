@@ -67,6 +67,7 @@ export async function getAuditLogs(): Promise<AuditLog[]> {
 
 const blacklistSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters."),
+  discordUsername: z.string().optional(),
   reason: z.string().min(5, "Reason must be at least 5 characters."),
   user: z.string(),
 });
@@ -76,15 +77,15 @@ export async function addBlacklistedPersonnel(data: unknown) {
   if (!validation.success) {
     return { success: false, message: 'Invalid data provided.' };
   }
-  const { name, reason, user } = validation.data;
+  const { name, discordUsername, reason, user } = validation.data;
 
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
 
     await connection.query(
-      'INSERT INTO blacklisted_personnel (id, name, reason, dateAdded) VALUES (?, ?, ?, ?)',
-      [randomUUID(), name, reason, new Date()]
+      'INSERT INTO blacklisted_personnel (id, name, discord_username, reason, dateAdded) VALUES (?, ?, ?, ?, ?)',
+      [randomUUID(), name, discordUsername, reason, new Date()]
     );
 
     await logUserAction(

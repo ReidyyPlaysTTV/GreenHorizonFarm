@@ -51,6 +51,7 @@ export default async function CommandPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Discord</TableHead>
                 <TableHead>Reason for Blacklist</TableHead>
                 <TableHead>Date Added</TableHead>
               </TableRow>
@@ -59,13 +60,14 @@ export default async function CommandPage() {
               {blacklistedPersonnel.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableCell>{p.discordUsername || 'N/A'}</TableCell>
                   <TableCell>{p.reason}</TableCell>
                   <TableCell>{p.dateAdded}</TableCell>
                 </TableRow>
               ))}
                {blacklistedPersonnel.length === 0 && (
                  <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center">
+                    <TableCell colSpan={4} className="h-24 text-center">
                         No one is currently blacklisted.
                     </TableCell>
                 </TableRow>

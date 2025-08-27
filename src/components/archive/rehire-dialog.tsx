@@ -40,6 +40,7 @@ import { Loader2, Recycle } from "lucide-react";
 
 const formSchema = z.object({
   rank: z.string({ required_error: "Please select a rank." }),
+  discordUsername: z.string().optional(),
   callsign: z.coerce
     .number({ invalid_type_error: "Callsign must be a number." })
     .min(100, "Callsign must be between 100 and 9999.")
@@ -66,6 +67,7 @@ export function RehireDialog({ personnel }: RehireDialogProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       rank: personnel.rank,
+      discordUsername: personnel.discordUsername || "",
       callsign: "" as any,
     },
   });
@@ -76,6 +78,7 @@ export function RehireDialog({ personnel }: RehireDialogProps) {
         archivedId: personnel.id,
         name: personnel.name,
         rank: values.rank,
+        discordUsername: values.discordUsername,
         callsign: values.callsign,
         user: currentUser,
     });
@@ -118,6 +121,19 @@ export function RehireDialog({ personnel }: RehireDialogProps) {
                 <FormLabel>Name</FormLabel>
                 <Input value={personnel.name} disabled className="mt-2" />
             </div>
+            <FormField
+              control={form.control}
+              name="discordUsername"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Discord Username</FormLabel>
+                  <FormControl>
+                    <Input placeholder="johndoe#1234" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="rank"

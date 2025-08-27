@@ -20,6 +20,7 @@ export interface ArchivedPersonnel {
   id: string;
   name: string;
   rank: string;
+  discordUsername?: string;
   status: "Fired" | "Resigned";
   date: string;
   reason: string;
@@ -28,6 +29,7 @@ export interface ArchivedPersonnel {
 export interface BlacklistedPersonnel {
   id: string;
   name: string;
+  discordUsername?: string;
   reason: string;
   dateAdded: string;
 }

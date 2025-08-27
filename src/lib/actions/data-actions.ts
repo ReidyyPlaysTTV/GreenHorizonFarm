@@ -76,7 +76,10 @@ export async function getPersonnel(): Promise<Personnel[]> {
 export async function getArchivedPersonnel(): Promise<ArchivedPersonnel[]> {
     try {
         const [rows] = await db.query('SELECT * FROM archived_personnel ORDER BY date DESC');
-        return rows as ArchivedPersonnel[];
+        return (rows as any[]).map(p => ({
+            ...p,
+            discordUsername: p.discord_username,
+        }));
     } catch (error) {
         console.error("Failed to fetch archived personnel:", error);
          if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
@@ -85,12 +88,19 @@ export async function getArchivedPersonnel(): Promise<ArchivedPersonnel[]> {
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
                     rank VARCHAR(255) NOT NULL,
+                    discord_username VARCHAR(255),
                     status ENUM('Fired', 'Resigned') NOT NULL,
                     date DATETIME NOT NULL,
                     reason TEXT
                 )
             `);
             return [];
+         }
+          if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_UNKNOWN_COLUMN')) {
+             if ((error as any).sqlMessage.includes('discord_username')) {
+                await db.query("ALTER TABLE archived_personnel ADD COLUMN discord_username VARCHAR(255)");
+             }
+             return getArchivedPersonnel();
          }
         return [];
     }
@@ -99,7 +109,11 @@ export async function getArchivedPersonnel(): Promise<ArchivedPersonnel[]> {
 export async function getBlacklistedPersonnel(): Promise<BlacklistedPersonnel[]> {
      try {
         const [rows] = await db.query('SELECT * FROM blacklisted_personnel');
-        return (rows as any[]).map(p => ({...p, dateAdded: new Date(p.dateAdded).toISOString().split('T')[0]}));
+        return (rows as any[]).map(p => ({
+            ...p, 
+            discordUsername: p.discord_username,
+            dateAdded: new Date(p.dateAdded).toISOString().split('T')[0]
+        }));
     } catch (error) {
         console.error("Failed to fetch blacklisted personnel:", error);
          if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
@@ -107,12 +121,19 @@ export async function getBlacklistedPersonnel(): Promise<BlacklistedPersonnel[]>
                 CREATE TABLE blacklisted_personnel (
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
+                    discord_username VARCHAR(255),
                     reason TEXT,
                     dateAdded DATETIME NOT NULL
                 )
             `);
             return [];
         }
+         if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_UNKNOWN_COLUMN')) {
+             if ((error as any).sqlMessage.includes('discord_username')) {
+                await db.query("ALTER TABLE blacklisted_personnel ADD COLUMN discord_username VARCHAR(255)");
+             }
+             return getBlacklistedPersonnel();
+         }
         return [];
     }
 }
