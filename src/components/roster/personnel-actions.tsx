@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
   promotePersonnel,
@@ -60,9 +61,16 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
   const [isDemoting, setIsDemoting] = useState(false);
   const [isFiring, setIsFiring] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [currentUser, setCurrentUser] = useState("System");
   
   const [isFireDialogOpen, setFireDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentUser(localStorage.getItem('loggedInUser') || "System");
+    }
+  }, []);
   
   const fireForm = useForm<z.infer<typeof fireFormSchema>>({
     resolver: zodResolver(fireFormSchema),
@@ -81,7 +89,7 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
 
   const handlePromote = async () => {
     setIsPromoting(true);
-    const result = await promotePersonnel(personnel.id);
+    const result = await promotePersonnel(personnel.id, currentUser);
     if (result.success) {
       toast({ title: "Success", description: result.message });
     } else {
@@ -92,7 +100,7 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
 
   const handleDemote = async () => {
     setIsDemoting(true);
-    const result = await demotePersonnel(personnel.id);
+    const result = await demotePersonnel(personnel.id, currentUser);
     if (result.success) {
       toast({ title: "Success", description: result.message });
     } else {
@@ -103,7 +111,7 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
 
   const handleFireSubmit = async (values: z.infer<typeof fireFormSchema>) => {
     setIsFiring(true);
-    const result = await firePersonnel(personnel.id, values.reason);
+    const result = await firePersonnel(personnel.id, values.reason, currentUser);
     if (result.success) {
       toast({ title: "Personnel Fired", description: `${personnel.name} has been moved to the archive.` });
       setFireDialogOpen(false);
@@ -116,7 +124,7 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
 
   const handleEditSubmit = async (values: z.infer<typeof editFormSchema>) => {
     setIsEditing(true);
-    const result = await updatePersonnel(personnel.id, values);
+    const result = await updatePersonnel(personnel.id, { ...values, user: currentUser });
      if (result.success) {
       toast({ title: "Success", description: result.message });
       setEditDialogOpen(false);

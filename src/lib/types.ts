@@ -95,3 +95,11 @@ export interface CallsignLog {
     action: 'Assigned' | 'Unassigned';
     timestamp: Date;
 }
+
+export interface AuditLog {
+    id: string;
+    user: string;
+    actionType: string;
+    description: string;
+    timestamp: Date;
+}

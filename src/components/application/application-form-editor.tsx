@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -99,6 +100,13 @@ export function ApplicationFormEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [editDialogIndex, setEditDialogIndex] = useState<number | null>(null);
+  const [currentUser, setCurrentUser] = useState("System");
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentUser(localStorage.getItem('loggedInUser') || "System");
+    }
+  }, []);
 
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
@@ -135,7 +143,7 @@ export function ApplicationFormEditor() {
   const onSubmit = async (data: FormSchema) => {
     setIsSaving(true);
     try {
-      await saveApplicationFormFields(data.fields);
+      await saveApplicationFormFields(data.fields, currentUser);
       toast({
         title: "Success",
         description: "Application form saved successfully.",

@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -50,7 +51,14 @@ const formSchema = z.object({
 export function AddPersonnelForm() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState("System");
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentUser(localStorage.getItem('loggedInUser') || "System");
+    }
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -62,7 +70,7 @@ export function AddPersonnelForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    const result = await addPersonnel(values);
+    const result = await addPersonnel({ ...values, user: currentUser });
     if (result.success) {
       toast({
         title: "Personnel Added",

@@ -1,5 +1,6 @@
 
-import { getBlacklistedPersonnel, getCallsignLogs } from "@/lib/actions";
+
+import { getBlacklistedPersonnel, getCallsignLogs, addBlacklistedPersonnel } from "@/lib/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PlusCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { AddToBlacklistForm } from "@/components/command/add-to-blacklist-form";
 
 export default async function CommandPage() {
   const blacklistedPersonnel = await getBlacklistedPersonnel();
@@ -39,39 +41,7 @@ export default async function CommandPage() {
               Individuals barred from DOC premises and activities.
             </CardDescription>
           </div>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1">
-                <PlusCircle className="h-4 w-4" />
-                Add to Blacklist
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add to Blacklist</DialogTitle>
-                <DialogDescription>
-                  Enter the details of the individual to be blacklisted. This action is irreversible.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
-                    Name
-                  </Label>
-                  <Input id="name" placeholder="John Doe" className="col-span-3" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="reason" className="text-right">
-                    Reason
-                  </Label>
-                  <Input id="reason" placeholder="Reason for blacklisting" className="col-span-3" />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit" variant="destructive">Add to Blacklist</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <AddToBlacklistForm />
         </CardHeader>
         <CardContent>
           <Table>

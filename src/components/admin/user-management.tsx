@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { AppUser } from "@/lib/types";
@@ -7,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { assignUserRole } from "@/lib/actions";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 interface UserManagementProps {
@@ -20,11 +21,18 @@ const roles = ["Developer", "Administrator", "Commissioners Office", "High Comma
 export function UserManagement({ users }: UserManagementProps) {
     const { toast } = useToast();
     const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
+    const [currentUser, setCurrentUser] = useState("System");
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+        setCurrentUser(localStorage.getItem('loggedInUser') || "System");
+        }
+    }, []);
 
     const handleRoleChange = async (userId: string, role: string) => {
         setIsUpdating(prev => ({...prev, [userId]: true}));
         try {
-            const result = await assignUserRole(userId, role);
+            const result = await assignUserRole(userId, { role, user: currentUser });
             if (result.success) {
                 toast({
                     title: "Role Updated",

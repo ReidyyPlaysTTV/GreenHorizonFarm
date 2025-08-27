@@ -1,4 +1,5 @@
 
+
 // This file serves as a central hub for re-exporting all server actions.
 // By doing this, we can ensure that client components only import from this file,
 // providing a clear boundary between server and client code.
@@ -46,6 +47,9 @@ import {
 
 import { getCallsignLogs } from './actions/callsign-log-actions';
 
+import { getAuditLogs, logUserAction, addBlacklistedPersonnel } from './actions/audit-log-actions';
+
+
 export {
     promotePersonnel,
     demotePersonnel,
@@ -72,4 +76,7 @@ export {
     getUsers,
     assignUserRole,
     getCallsignLogs,
+    getAuditLogs,
+    logUserAction,
+    addBlacklistedPersonnel,
 };

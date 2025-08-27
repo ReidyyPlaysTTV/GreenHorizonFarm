@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { Application } from "@/lib/types";
@@ -11,7 +12,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "../ui/label";
 import { updateApplicationStatus } from "@/lib/actions";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface ApplicationReviewCardProps {
   application: Application;
@@ -20,11 +21,18 @@ interface ApplicationReviewCardProps {
 export function ApplicationReviewCard({ application }: ApplicationReviewCardProps) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [currentUser, setCurrentUser] = useState("System");
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentUser(localStorage.getItem('loggedInUser') || "System");
+    }
+  }, []);
 
   const handleStatusUpdate = async (status: 'Approved' | 'Rejected') => {
     setIsUpdating(true);
     try {
-      await updateApplicationStatus(application.id, status);
+      await updateApplicationStatus(application.id, status, currentUser);
       toast({
         title: `Application ${status}`,
         description: `${application.name}'s application has been ${status.toLowerCase()}.`,
@@ -77,7 +85,7 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
                     <DialogTitle>Application for {application.name}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                    {application.responses?.map((res: any) => (
+                    {Array.isArray(application.responses) && application.responses.map((res: any) => (
                         <div key={res.fieldId}>
                             <Label className="font-semibold">{res.label}</Label>
                             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{res.answer || "No answer provided."}</p>

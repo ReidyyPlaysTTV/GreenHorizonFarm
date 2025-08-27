@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import { logUserAction } from "@/lib/actions";
 
 const formSchema = z.object({
   username: z.string().min(2, {
@@ -40,23 +42,25 @@ export function LoginForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      // In a real app, you'd validate credentials here.
-      // For this demo, we'll just log in successfully.
-      console.log(values);
-      if (typeof window !== 'undefined') {
+    
+    // In a real app, you'd validate credentials here.
+    // For this demo, we'll just log in successfully.
+    if (typeof window !== 'undefined') {
         localStorage.setItem('loggedInUser', values.username);
-      }
-      toast({
+    }
+    
+    // Log the login action
+    await logUserAction(values.username, "Login", `User '${values.username}' signed in.`);
+
+    toast({
         title: "Login Successful",
         description: `Welcome back, ${values.username}!`,
-      });
-      router.push("/"); // Navigate to dashboard home
-      setIsLoading(false);
-    }, 1500);
+    });
+    
+    router.push("/"); // Navigate to dashboard home
+    setIsLoading(false);
   }
 
   return (

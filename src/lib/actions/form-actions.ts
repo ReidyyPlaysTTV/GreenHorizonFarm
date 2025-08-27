@@ -6,6 +6,7 @@ import db from '../db';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import type { FormFieldData } from '../types';
+import { logUserAction } from './audit-log-actions';
 
 // Schema for validating fields from the client
 const formFieldSchema = z.object({
@@ -46,7 +47,7 @@ export async function getApplicationFormFields(): Promise<FormFieldData[]> {
 }
 
 
-export async function saveApplicationFormFields(fields: FormFieldData[]) {
+export async function saveApplicationFormFields(fields: FormFieldData[], user: string) {
     const validatedFields = formFieldsSchema.parse(fields);
     
     const connection = await db.getConnection();
@@ -78,7 +79,8 @@ export async function saveApplicationFormFields(fields: FormFieldData[]) {
                 }
             }
         }
-
+        
+        await logUserAction(user, 'Update Form', 'Updated the application form fields.', connection);
         await connection.commit();
     } catch (error) {
         await connection.rollback();
@@ -90,6 +92,7 @@ export async function saveApplicationFormFields(fields: FormFieldData[]) {
 
     revalidatePath('/apply');
     revalidatePath('/applications');
+    revalidatePath('/logs');
 }
 
 export async function submitApplication(responses: Record<string, any>) {
@@ -127,18 +130,33 @@ export async function submitApplication(responses: Record<string, any>) {
 
 const applicationStatusSchema = z.enum(['Approved', 'Rejected']);
 
-export async function updateApplicationStatus(applicationId: string, status: 'Approved' | 'Rejected') {
+export async function updateApplicationStatus(applicationId: string, status: 'Approved' | 'Rejected', user: string) {
   const validatedStatus = applicationStatusSchema.parse(status);
 
+  const connection = await db.getConnection();
   try {
-    await db.query(
+    await connection.beginTransaction();
+
+    await connection.query(
       'UPDATE applications SET status = ? WHERE id = ?',
       [validatedStatus, applicationId]
     );
+
+    const [appRows] = await connection.query('SELECT name FROM applications WHERE id = ?', [applicationId]);
+    const appName = (appRows as any)[0]?.name || 'Unknown Applicant';
+
+    await logUserAction(user, 'Update Application Status', `${validatedStatus} application for ${appName}.`, connection);
+    
+    await connection.commit();
+
   } catch (error) {
+    await connection.rollback();
     console.error(`Failed to update application status to ${validatedStatus}:`, error);
     throw new Error('Database operation failed.');
+  } finally {
+    connection.release();
   }
 
   revalidatePath('/applications');
+  revalidatePath('/logs');
 }

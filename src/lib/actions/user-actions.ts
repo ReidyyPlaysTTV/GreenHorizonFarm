@@ -1,10 +1,12 @@
 
+
 'use server';
 
 import db from '../db';
 import type { AppUser } from '../types';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import { logUserAction } from './audit-log-actions';
 
 async function createUsersTableIfNeeded() {
     try {
@@ -19,7 +21,7 @@ async function createUsersTableIfNeeded() {
         `);
     } catch (error) {
         console.error("Failed to create users table:", error);
-        throw new Error("Database schema setup failed for users.");
+        throw new Error("Database schema setup for users failed.");
     }
 }
 
@@ -38,24 +40,42 @@ export async function getUsers(): Promise<AppUser[]> {
     }
 }
 
-const roleSchema = z.string().min(1, "Role cannot be empty.");
+const roleSchema = z.object({
+    role: z.string().min(1, "Role cannot be empty."),
+    user: z.string(),
+});
 
-export async function assignUserRole(userId: string, role: string) {
-    const validatedRole = roleSchema.safeParse(role);
+export async function assignUserRole(userId: string, data: { role: string, user: string }) {
+    const validation = roleSchema.safeParse(data);
 
-    if (!validatedRole.success) {
+    if (!validation.success) {
         return { success: false, message: 'Invalid role specified.' };
     }
+    const { role, user } = validation.data;
+    const connection = await db.getConnection();
 
     try {
-        await db.query(
+        await connection.beginTransaction();
+
+        const [userRows] = await connection.query('SELECT username FROM users WHERE id = ?', [userId]);
+        const targetUsername = (userRows as any)[0]?.username || 'Unknown User';
+
+        await connection.query(
             'UPDATE users SET role = ? WHERE id = ?',
-            [validatedRole.data, userId]
+            [role, userId]
         );
+
+        await logUserAction(user, 'Assign Role', `Assigned role '${role}' to user '${targetUsername}'.`, connection);
+
+        await connection.commit();
         revalidatePath('/admin');
+        revalidatePath('/logs');
         return { success: true };
     } catch (error) {
+        await connection.rollback();
         console.error('Failed to assign user role:', error);
         return { success: false, message: 'Database operation failed.' };
+    } finally {
+        connection.release();
     }
 }

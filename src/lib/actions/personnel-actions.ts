@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { z } from 'zod';
@@ -8,6 +9,7 @@ import { rankOrder } from '../data';
 import type { Personnel } from '../types';
 import { randomUUID } from 'crypto';
 import { logCallsignChange } from './callsign-log-actions';
+import { logUserAction } from './audit-log-actions';
 
 async function getPersonnelById(id: string): Promise<Personnel | null> {
   const [rows] = await db.query('SELECT * FROM personnel WHERE id = ?', [id]);
@@ -29,7 +31,7 @@ async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'P
     }
 }
 
-export async function promotePersonnel(personnelId: string) {
+export async function promotePersonnel(personnelId: string, user: string) {
   const personnel = await getPersonnelById(personnelId);
   if (!personnel) {
     return { success: false, message: 'Personnel not found.' };
@@ -44,19 +46,28 @@ export async function promotePersonnel(personnelId: string) {
   }
 
   const newRank = rankOrder[currentRankIndex - 1];
+  const connection = await db.getConnection();
   try {
-    await db.query('UPDATE personnel SET rank = ? WHERE id = ?', [newRank, personnelId]);
+    await connection.beginTransaction();
+    await connection.query('UPDATE personnel SET rank = ? WHERE id = ?', [newRank, personnelId]);
     await logEvent(personnel.name, 'Promoted', `Promoted from ${personnel.rank} to ${newRank}`);
+    await logUserAction(user, "Promote Personnel", `Promoted ${personnel.name} from ${personnel.rank} to ${newRank}.`, connection);
+    await connection.commit();
+
     revalidatePath('/roster');
     revalidatePath('/');
+    revalidatePath('/logs');
     return { success: true, message: `${personnel.name} promoted to ${newRank}.` };
   } catch (error) {
+    await connection.rollback();
     console.error('Promotion failed:', error);
     return { success: false, message: 'Database operation failed.' };
+  } finally {
+    connection.release();
   }
 }
 
-export async function demotePersonnel(personnelId: string) {
+export async function demotePersonnel(personnelId: string, user: string) {
   const personnel = await getPersonnelById(personnelId);
   if (!personnel) {
     return { success: false, message: 'Personnel not found.' };
@@ -71,19 +82,28 @@ export async function demotePersonnel(personnelId: string) {
   }
 
   const newRank = rankOrder[currentRankIndex + 1];
+  const connection = await db.getConnection();
   try {
-    await db.query('UPDATE personnel SET rank = ? WHERE id = ?', [newRank, personnelId]);
+    await connection.beginTransaction();
+    await connection.query('UPDATE personnel SET rank = ? WHERE id = ?', [newRank, personnelId]);
     await logEvent(personnel.name, 'Demoted', `Demoted from ${personnel.rank} to ${newRank}`);
+    await logUserAction(user, "Demote Personnel", `Demoted ${personnel.name} from ${personnel.rank} to ${newRank}.`, connection);
+    await connection.commit();
+
     revalidatePath('/roster');
     revalidatePath('/');
+    revalidatePath('/logs');
     return { success: true, message: `${personnel.name} demoted to ${newRank}.` };
   } catch (error) {
+    await connection.rollback();
     console.error('Demotion failed:', error);
     return { success: false, message: 'Database operation failed.' };
+  } finally {
+    connection.release();
   }
 }
 
-export async function firePersonnel(personnelId: string, reason: string) {
+export async function firePersonnel(personnelId: string, reason: string, user: string) {
   const personnel = await getPersonnelById(personnelId);
   if (!personnel) {
     return { success: false, message: 'Personnel not found.' };
@@ -104,12 +124,14 @@ export async function firePersonnel(personnelId: string, reason: string) {
     
     await logEvent(personnel.name, 'Fired', `Fired for: ${reason}`);
     await logCallsignChange(personnel.badgeNumber, personnel.name, 'Unassigned', connection);
+    await logUserAction(user, "Fire Personnel", `Fired ${personnel.name}. Reason: ${reason}`, connection);
 
     await connection.commit();
     revalidatePath('/roster');
     revalidatePath('/archive');
     revalidatePath('/');
     revalidatePath('/callsigns');
+    revalidatePath('/logs');
     return { success: true, message: 'Personnel fired successfully.' };
   } catch (error) {
     await connection.rollback();
@@ -125,6 +147,7 @@ const updatePersonnelSchema = z.object({
   badgeNumber: z.string(),
   rank: z.string(),
   discordUsername: z.string().optional(),
+  user: z.string(),
 });
 
 export async function updatePersonnel(personnelId: string, data: unknown) {
@@ -132,7 +155,7 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
   if (!validation.success) {
     return { success: false, message: 'Invalid data.', issues: validation.error.issues };
   }
-  const { name, badgeNumber, rank, discordUsername } = validation.data;
+  const { name, badgeNumber, rank, discordUsername, user } = validation.data;
   
   const originalPersonnel = await getPersonnelById(personnelId);
   if (!originalPersonnel) {
@@ -144,6 +167,8 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
     await connection.beginTransaction();
 
     await connection.query('UPDATE personnel SET name = ?, badgeNumber = ?, rank = ?, discord_username = ? WHERE id = ?', [name, badgeNumber, rank, discordUsername, personnelId]);
+    await logUserAction(user, "Update Personnel", `Updated details for ${name} (formerly ${originalPersonnel.name}).`, connection);
+
 
     if (originalPersonnel.badgeNumber !== badgeNumber) {
       await logCallsignChange(originalPersonnel.badgeNumber, originalPersonnel.name, 'Unassigned', connection);
@@ -154,6 +179,7 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
 
     revalidatePath('/roster');
     revalidatePath('/callsigns');
+    revalidatePath('/logs');
     return { success: true, message: 'Personnel updated successfully.' };
   } catch (error) {
     await connection.rollback();
@@ -172,6 +198,7 @@ const addPersonnelSchema = z.object({
     .min(1000, "Callsign must be between 1000 and 9999.")
     .max(9999, "Callsign must be between 1000 and 9999."),
   discordUsername: z.string().optional(),
+  user: z.string(),
 });
 
 export async function addPersonnel(data: unknown) {
@@ -179,7 +206,7 @@ export async function addPersonnel(data: unknown) {
     if (!validation.success) {
         return { success: false, message: 'Invalid data.', issues: validation.error.issues };
     }
-    const { name, rank, callsign, discordUsername } = validation.data;
+    const { name, rank, callsign, discordUsername, user } = validation.data;
     
     const connection = await db.getConnection();
     try {
@@ -191,12 +218,14 @@ export async function addPersonnel(data: unknown) {
         );
         await logEvent(name, 'Hired', `Hired as ${rank}`);
         await logCallsignChange(callsign.toString(), name, 'Assigned', connection);
+        await logUserAction(user, "Add Personnel", `Added ${name} to the roster as ${rank} with callsign ${callsign}.`, connection);
 
         await connection.commit();
 
         revalidatePath('/roster');
         revalidatePath('/');
         revalidatePath('/callsigns');
+        revalidatePath('/logs');
         return { success: true, message: `${name} has been added to the roster.` };
     } catch (error) {
         await connection.rollback();
