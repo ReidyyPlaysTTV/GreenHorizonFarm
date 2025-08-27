@@ -1,6 +1,6 @@
 
 import { getPersonnel } from "@/lib/actions";
-import { departments } from "@/lib/data";
+import { departments, rankInsignias } from "@/lib/data";
 import type { Personnel, PersonnelStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,7 +55,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[80px]">Avatar</TableHead>
+            <TableHead className="w-[80px]">Insignia</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Rank</TableHead>
             <TableHead>Callsign</TableHead>
@@ -70,7 +70,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
               <TableRow key={p.id} className={cn(getStatusRowClass(p))}>
                 <TableCell>
                   <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted p-1">
-                    <Image src={p.avatarUrl} alt={`${p.name}'s avatar`} width={40} height={40} className="rounded-md object-cover aspect-square" />
+                    <Image src={rankInsignias[p.rank] || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"} alt={`${p.rank} insignia`} width={40} height={40} className="rounded-md object-contain" />
                   </div>
                 </TableCell>
                 <TableCell className="font-medium">
