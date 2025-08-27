@@ -1,7 +1,7 @@
 
 import { getPersonnel } from "@/lib/actions";
 import { departments } from "@/lib/data";
-import type { Personnel } from "@/lib/types";
+import type { Personnel, PersonnelStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,8 +9,45 @@ import { AddPersonnelForm } from "@/components/roster/add-personnel-form";
 import { PersonnelActions } from "@/components/roster/personnel-actions";
 import Image from "next/image";
 import { RefreshButton } from "@/components/layout/refresh-button";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
+  
+  const getStatusRowClass = (p: Personnel) => {
+    const isLoaExpired = p.status === 'LOA' && p.loa_until && new Date(p.loa_until) < new Date();
+    if (isLoaExpired) return 'bg-red-900/50 hover:bg-red-900/60';
+
+    switch (p.status) {
+      case 'LOA':
+        return 'bg-orange-900/50 hover:bg-orange-900/60';
+      case 'Suspended':
+      case 'Inactive':
+        return 'bg-red-900/50 hover:bg-red-900/60';
+      case 'Low Activity':
+        return 'bg-red-800/50 hover:bg-red-800/60';
+      case 'Medical Leave':
+        return 'bg-yellow-900/50 hover:bg-yellow-900/60';
+      default:
+        return '';
+    }
+  };
+
+  const getStatusBadgeVariant = (status: PersonnelStatus) => {
+    switch (status) {
+        case 'Active': return 'secondary';
+        case 'LOA':
+        case 'Medical Leave':
+            return 'default';
+        case 'Inactive':
+        case 'Suspended':
+        case 'Low Activity':
+            return 'destructive';
+        default: return 'secondary';
+    }
+  }
+
+
   return (
     <Table>
       <TableHeader>
@@ -19,6 +56,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
           <TableHead>Name</TableHead>
           <TableHead>Rank</TableHead>
           <TableHead>Callsign</TableHead>
+          <TableHead>Status</TableHead>
           <TableHead>Discord</TableHead>
           <TableHead className="text-right w-[200px]">Actions</TableHead>
         </TableRow>
@@ -26,7 +64,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
       <TableBody>
         {personnel.length > 0 ? (
           personnel.map((p) => (
-            <TableRow key={p.id}>
+            <TableRow key={p.id} className={cn(getStatusRowClass(p))}>
               <TableCell>
                 <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted p-1">
                   <Image src={p.avatarUrl} alt={`${p.rank} Insignia`} width={32} height={32} className="h-auto w-auto object-contain" />
@@ -37,6 +75,12 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
               <TableCell>
                 <Badge variant="secondary">#{p.badgeNumber}</Badge>
               </TableCell>
+              <TableCell>
+                 <Badge variant={getStatusBadgeVariant(p.status)}>
+                    {p.status}
+                    {p.status === 'LOA' && p.loa_until && ` until ${format(new Date(p.loa_until), 'MM/dd/yyyy')}`}
+                </Badge>
+              </TableCell>
               <TableCell>{p.discordUsername || 'N/A'}</TableCell>
               <TableCell className="text-right">
                 <PersonnelActions personnel={p} />
@@ -45,7 +89,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
           ))
         ) : (
           <TableRow>
-            <TableCell colSpan={6} className="h-24 text-center">
+            <TableCell colSpan={7} className="h-24 text-center">
               No personnel found in this department.
             </TableCell>
           </TableRow>

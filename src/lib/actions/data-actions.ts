@@ -17,6 +17,8 @@ export async function getPersonnel(): Promise<Personnel[]> {
             ...p,
             department: rankToDepartmentMap[p.rank] || p.department, // Override department based on rank
             avatarUrl: rankInsignias[p.rank] || p.avatarUrl || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
+            status: p.status || 'Active', // Default to active if status is null/undefined
+            loa_until: p.loa_until ? new Date(p.loa_until).toISOString() : null,
         }));
         
         // Sort personnel by rank order, then by callsign
@@ -35,6 +37,33 @@ export async function getPersonnel(): Promise<Personnel[]> {
 
     } catch (error) {
         console.error("Failed to fetch personnel:", error);
+         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
+             await db.query(`
+                CREATE TABLE personnel (
+                    id VARCHAR(36) NOT NULL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    rank VARCHAR(255) NOT NULL,
+                    badgeNumber VARCHAR(10) NOT NULL UNIQUE,
+                    discord_username VARCHAR(255),
+                    department VARCHAR(255),
+                    avatarUrl VARCHAR(255),
+                    status ENUM('Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended') NOT NULL DEFAULT 'Active',
+                    loa_until DATE
+                )
+            `);
+            return [];
+        }
+        // Handle case where columns don't exist yet
+         if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_UNKNOWN_COLUMN')) {
+            if ((error as any).sqlMessage.includes('status')) {
+                await db.query("ALTER TABLE personnel ADD COLUMN status ENUM('Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended') NOT NULL DEFAULT 'Active'");
+            }
+            if ((error as any).sqlMessage.includes('loa_until')) {
+                await db.query("ALTER TABLE personnel ADD COLUMN loa_until DATE");
+            }
+            // Retry the query
+            return getPersonnel();
+        }
         return [];
     }
 }

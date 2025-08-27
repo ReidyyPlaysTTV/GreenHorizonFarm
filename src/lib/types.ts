@@ -1,5 +1,7 @@
 
 export type Department = "Commissioners Office" | "High Command" | "Command" | "NCOS" | "Corrections" | "Training";
+export type PersonnelStatus = 'Active' | 'LOA' | 'Inactive' | 'Low Activity' | 'Medical Leave' | 'Suspended';
+
 
 export interface Personnel {
   id: string;
@@ -9,6 +11,8 @@ export interface Personnel {
   department: Department;
   avatarUrl: string;
   discordUsername?: string;
+  status: PersonnelStatus;
+  loa_until?: string | null;
 }
 
 export interface ArchivedPersonnel {

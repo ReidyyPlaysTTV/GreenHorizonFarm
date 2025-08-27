@@ -219,9 +219,10 @@ export async function addPersonnel(data: unknown) {
     try {
         await connection.beginTransaction();
         const id = randomUUID();
+        // Also setting default status and loa_until
         await connection.query(
-            'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username) VALUES (?, ?, ?, ?, ?)',
-            [id, name, rank, callsign.toString(), discordUsername]
+            'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, status, loa_until) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [id, name, rank, callsign.toString(), discordUsername, 'Active', null]
         );
         await logEvent(name, 'Hired', `Hired as ${rank}`, connection);
         await logCallsignChange(callsign.toString(), name, 'Assigned', connection);
