@@ -1,17 +1,8 @@
-"use client";
-
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { personnel, applications } from "@/lib/data";
+import { getPersonnel, getApplications } from "@/lib/data";
 import { Users, FileText, UserCheck, UserX } from "lucide-react";
-
-const departmentCounts = personnel.reduce((acc, p) => {
-  acc[p.department] = (acc[p.department] || 0) + 1;
-  return acc;
-}, {} as Record<string, number>);
-
-const chartData = Object.entries(departmentCounts).map(([name, total]) => ({ name, total }));
 
 const chartConfig = {
   total: {
@@ -20,7 +11,18 @@ const chartConfig = {
   },
 };
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const personnel = await getPersonnel();
+  const applications = await getApplications();
+  
+  const departmentCounts = personnel.reduce((acc, p) => {
+    acc[p.department] = (acc[p.department] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const chartData = Object.entries(departmentCounts).map(([name, total]) => ({ name, total }));
+
+
   const pendingApplications = applications.filter(app => app.status === "Pending").length;
 
   return (

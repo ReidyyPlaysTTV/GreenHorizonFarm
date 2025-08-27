@@ -1,6 +1,4 @@
-"use client";
-
-import { personnel } from "@/lib/data";
+import { getPersonnel, departments } from "@/lib/data";
 import type { Department, Personnel } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -8,16 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const departments: Department[] = [
-  "Commissioners Office",
-  "High Command",
-  "Command",
-  "NCOS",
-  "Corrections",
-  "Training",
-];
-
-const RosterTable = ({ department }: { department: Department }) => {
+const RosterTable = ({ department, personnel }: { department: Department, personnel: Personnel[] }) => {
   const departmentPersonnel = personnel.filter(p => p.department === department);
 
   return (
@@ -59,7 +48,9 @@ const RosterTable = ({ department }: { department: Department }) => {
   );
 };
 
-export default function RosterPage() {
+export default async function RosterPage() {
+  const personnel = await getPersonnel();
+
   return (
     <div className="container mx-auto p-4 md:p-8">
       <div className="mb-8">
@@ -81,7 +72,7 @@ export default function RosterPage() {
             </div>
             {departments.map(dep => (
               <TabsContent key={dep} value={dep} className="p-0">
-                <RosterTable department={dep} />
+                <RosterTable department={dep} personnel={personnel} />
               </TabsContent>
             ))}
           </Tabs>

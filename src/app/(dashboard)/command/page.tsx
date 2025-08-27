@@ -1,4 +1,4 @@
-import { blacklistedPersonnel } from "@/lib/data";
+import { getBlacklistedPersonnel } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,9 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PlusCircle } from "lucide-react";
 
-export default function CommandPage() {
+export default async function CommandPage() {
+  const blacklistedPersonnel = await getBlacklistedPersonnel();
+
   return (
     <div className="container mx-auto p-4 md:p-8">
       <div className="mb-8">

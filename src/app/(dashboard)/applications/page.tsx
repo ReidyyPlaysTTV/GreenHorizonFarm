@@ -1,7 +1,8 @@
-import { applications } from "@/lib/data";
+import { getApplications } from "@/lib/data";
 import { ApplicationReviewCard } from "@/components/application/application-review-card";
 
-export default function ApplicationsPage() {
+export default async function ApplicationsPage() {
+  const applications = await getApplications();
   const pendingApplications = applications.filter(a => a.status === "Pending");
   const reviewedApplications = applications.filter(a => a.status !== "Pending");
 

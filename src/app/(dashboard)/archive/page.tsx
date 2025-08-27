@@ -1,9 +1,10 @@
-import { archivedPersonnel } from "@/lib/data";
+import { getArchivedPersonnel } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-export default function ArchivePage() {
+export default async function ArchivePage() {
+  const archivedPersonnel = await getArchivedPersonnel();
   return (
     <div className="container mx-auto p-4 md:p-8">
       <div className="mb-8">
@@ -41,7 +42,7 @@ export default function ArchivePage() {
                       {p.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{p.date}</TableCell>
+                  <TableCell>{new Date(p.date).toLocaleDateString()}</TableCell>
                   <TableCell>{p.reason}</TableCell>
                 </TableRow>
               ))}
