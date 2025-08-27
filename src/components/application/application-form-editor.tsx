@@ -17,7 +17,7 @@ import { Form } from "@/components/ui/form";
 import {
   getApplicationFormFields,
   saveApplicationFormFields,
-} from "@/lib/actions/form-actions";
+} from "@/lib/actions";
 import type { FormFieldData } from "@/lib/actions/form-actions";
 import { EditFieldDialog } from "./edit-field-dialog";
 import { Input } from "../ui/input";

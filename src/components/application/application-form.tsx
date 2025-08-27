@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { getApplicationFormFields, submitApplication } from "@/lib/actions/form-actions";
+import { getApplicationFormFields, submitApplication } from "@/lib/actions";
 import type { FormFieldData } from "@/lib/actions/form-actions";
 
 import { Button } from "@/components/ui/button";

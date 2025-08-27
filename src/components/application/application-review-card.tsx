@@ -10,7 +10,7 @@ import { Check, X, FileText, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "../ui/label";
-import { updateApplicationStatus } from "@/lib/actions/form-actions";
+import { updateApplicationStatus } from "@/lib/actions";
 import { useState } from "react";
 
 interface ApplicationReviewCardProps {

@@ -8,7 +8,7 @@ import {
   demotePersonnel,
   firePersonnel,
   updatePersonnel,
-} from "@/lib/actions/personnel-actions";
+} from "@/lib/actions";
 import type { Personnel } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
