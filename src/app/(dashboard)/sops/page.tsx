@@ -1,6 +1,5 @@
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 import { Card, CardContent } from "@/components/ui/card";
-import { Terminal } from "lucide-react";
 
 export default function SOPsPage() {
   // IMPORTANT: Replace this with your own Google Slides embed URL.
@@ -17,14 +16,6 @@ export default function SOPsPage() {
           Official guidelines and procedures for all personnel.
         </p>
       </div>
-      
-      <Alert className="mb-6">
-        <Terminal className="h-4 w-4" />
-        <AlertTitle>Note for Admins</AlertTitle>
-        <AlertDescription>
-          To display your SOPs, you must update the placeholder URL in the file: <code>src/app/(dashboard)/sops/page.tsx</code>
-        </AlertDescription>
-      </Alert>
 
       <Card className="overflow-hidden">
         <CardContent className="p-0">
