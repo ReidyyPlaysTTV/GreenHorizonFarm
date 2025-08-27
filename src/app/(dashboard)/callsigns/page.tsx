@@ -2,38 +2,31 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { getPersonnel, getCallsignLogs } from "@/lib/actions";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { getPersonnel } from "@/lib/actions";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { User, Check, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow } from "date-fns";
-import type { CallsignLog } from "@/lib/types";
 
 const usePersonnelData = () => {
     const [personnel, setPersonnel] = useState<Awaited<ReturnType<typeof getPersonnel>>>([]);
     const [loading, setLoading] = useState(true);
-    const [logs, setLogs] = useState<CallsignLog[]>([]);
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             const personnelData = await getPersonnel();
-            const logsData = await getCallsignLogs();
             setPersonnel(personnelData);
-            setLogs(logsData);
             setLoading(false);
         };
         fetchData();
     }, []);
 
-    return { personnel, logs, loading };
+    return { personnel, loading };
 }
 
 export default function CallsignsPage() {
-  const { personnel, logs, loading } = usePersonnelData();
+  const { personnel, loading } = usePersonnelData();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 500;
@@ -148,53 +141,6 @@ export default function CallsignsPage() {
             <p className="text-muted-foreground">No callsigns found matching your search.</p>
         </div>
       )}
-
-      <Card className="mt-12">
-        <CardHeader>
-            <CardTitle>Callsign Logs</CardTitle>
-            <CardDescription>Recent callsign assignment changes.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Callsign</TableHead>
-                        <TableHead>Action</TableHead>
-                        <TableHead>Personnel</TableHead>
-                        <TableHead>Date</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {loading && (
-                        <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center">
-                                Loading logs...
-                            </TableCell>
-                        </TableRow>
-                    )}
-                    {!loading && logs.length === 0 && (
-                         <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center">
-                                No callsign logs found.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                    {logs.map(log => (
-                        <TableRow key={log.id}>
-                            <TableCell><Badge variant="secondary">#{log.callsign}</Badge></TableCell>
-                            <TableCell>
-                                <Badge variant={log.action === 'Assigned' ? 'default' : 'destructive'}>
-                                    {log.action}
-                                </Badge>
-                            </TableCell>
-                            <TableCell>{log.personnel_name}</TableCell>
-                            <TableCell>{formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}</TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </CardContent>
-      </Card>
     </div>
   );
 }
