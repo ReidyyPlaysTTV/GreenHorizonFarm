@@ -241,11 +241,9 @@ export async function addPersonnel(data: unknown) {
     try {
         await connection.beginTransaction();
 
+        // Check for an existing user account to link, but don't require it.
         const [userRows] = await connection.query('SELECT id FROM users WHERE username = ?', [name]);
-        if ((userRows as any[]).length === 0) {
-            throw new Error(`A user account for '${name}' does not exist. Please create a user account first or ensure the names match exactly.`);
-        }
-        const targetUserId = (userRows as any)[0].id;
+        const targetUserId = (userRows as any[])?.[0]?.id || null;
         
         const personnelId = randomUUID();
         await connection.query(
@@ -308,12 +306,10 @@ export async function rehirePersonnel(data: unknown) {
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
-
+    
+    // Check for an existing user account to link, but don't require it.
     const [userRows] = await connection.query('SELECT id FROM users WHERE username = ?', [name]);
-     if ((userRows as any[]).length === 0) {
-        throw new Error(`A user account for '${name}' does not exist. Please create a user account first before rehiring.`);
-    }
-    const targetUserId = (userRows as any)[0].id;
+    const targetUserId = (userRows as any[])?.[0]?.id || null;
 
     const newId = randomUUID();
     await connection.query(
