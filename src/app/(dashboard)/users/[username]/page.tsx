@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { notFound } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +57,9 @@ const getStatusBadgeVariant = (status?: string) => {
     }
 };
 
-export default function UserProfilePage({ params: { username } }: { params: { username: string } }) {
+export default function UserProfilePage() {
+  const params = useParams();
+  const username = params.username as string;
   const decodedUsername = decodeURIComponent(username);
 
   const [user, setUser] = useState<AppUser | null>(null);
