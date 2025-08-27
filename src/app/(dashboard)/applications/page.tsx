@@ -1,7 +1,7 @@
 import { getApplications } from "@/lib/data";
 import { ApplicationReviewCard } from "@/components/application/application-review-card";
+import { ApplicationFormEditor } from "@/components/application/application-form-editor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
 
 export default async function ApplicationsPage() {
   const applications = await getApplications();
@@ -30,15 +30,16 @@ export default async function ApplicationsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Application Center</h1>
         <p className="text-muted-foreground">
-          Review and manage incoming applications.
+          Review and manage incoming applications and the application form itself.
         </p>
       </div>
 
       <Tabs defaultValue="pending" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="pending">Pending ({pendingApplications.length})</TabsTrigger>
           <TabsTrigger value="approved">Approved ({approvedApplications.length})</TabsTrigger>
           <TabsTrigger value="denied">Denied ({rejectedApplications.length})</TabsTrigger>
+          <TabsTrigger value="edit">Edit Form</TabsTrigger>
         </TabsList>
         <TabsContent value="pending" className="mt-6">
             <ApplicationList applications={pendingApplications} />
@@ -48,6 +49,9 @@ export default async function ApplicationsPage() {
         </TabsContent>
         <TabsContent value="denied" className="mt-6">
             <ApplicationList applications={rejectedApplications} />
+        </TabsContent>
+        <TabsContent value="edit" className="mt-6">
+            <ApplicationFormEditor />
         </TabsContent>
       </Tabs>
     </div>
