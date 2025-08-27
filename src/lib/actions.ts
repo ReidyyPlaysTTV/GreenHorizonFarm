@@ -47,7 +47,9 @@ import {
     getAccessRequests,
     approveAccessRequest,
     denyAccessRequest,
-    createUser
+    createUser,
+    changeUserPassword,
+    updateProfilePicture,
 } from './actions/user-actions';
 
 import { getCallsignLogs } from './actions/callsign-log-actions';
@@ -93,5 +95,7 @@ export {
     getAccessRequests,
     approveAccessRequest,
     denyAccessRequest,
-    createUser
+    createUser,
+    changeUserPassword,
+    updateProfilePicture,
 };

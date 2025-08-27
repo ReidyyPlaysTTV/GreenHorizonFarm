@@ -48,11 +48,24 @@ export async function logUserAction(
 }
 
 
-export async function getAuditLogs(): Promise<AuditLog[]> {
+export async function getAuditLogs(options: { username?: string } = {}): Promise<AuditLog[]> {
+    const { username } = options;
     const connection = await db.getConnection();
     try {
         await createAuditLogTableIfNeeded(connection);
-        const [rows] = await connection.query('SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 200');
+        
+        let query = 'SELECT * FROM audit_logs';
+        const queryParams = [];
+
+        if (username) {
+            query += ' WHERE user = ?';
+            queryParams.push(username);
+        }
+
+        query += ' ORDER BY timestamp DESC LIMIT 200';
+        
+        const [rows] = await connection.query(query, queryParams);
+
         if (!Array.isArray(rows)) {
             return [];
         }

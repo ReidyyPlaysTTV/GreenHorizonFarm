@@ -17,7 +17,8 @@ async function createUsersTableIfNeeded() {
                 username VARCHAR(255) NOT NULL UNIQUE,
                 password_hash VARCHAR(255) NOT NULL,
                 role VARCHAR(50) NOT NULL DEFAULT 'User',
-                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                avatarUrl VARCHAR(255)
             );
         `);
     } catch (error) {
@@ -43,11 +44,11 @@ export async function getUsers(): Promise<AppUser[]> {
     try {
         await createUsersTableIfNeeded();
         // For security, we don't select the password_hash
-        const [rows] = await db.query('SELECT id, username, role FROM users ORDER BY username ASC');
+        const [rows] = await db.query('SELECT id, username, role, createdAt FROM users ORDER BY username ASC');
         if (!Array.isArray(rows)) {
             return [];
         }
-        return rows as AppUser[];
+        return (rows as any[]).map((u: any) => ({ ...u, createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined }));
     } catch (error) {
         console.error("Failed to fetch users:", error);
         return [];
@@ -272,4 +273,86 @@ export async function createUser(data: unknown) {
   } finally {
     connection.release();
   }
+}
+
+const changePasswordSchema = z.object({
+    userId: z.string(),
+    currentPassword: z.string(),
+    newPassword: z.string().min(8, "New password must be at least 8 characters."),
+});
+
+export async function changeUserPassword(data: unknown) {
+    const validation = changePasswordSchema.safeParse(data);
+    if (!validation.success) {
+        return { success: false, message: 'Invalid data provided.' };
+    }
+    const { userId, currentPassword, newPassword } = validation.data;
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        
+        const [rows] = await connection.query('SELECT username, password_hash FROM users WHERE id = ?', [userId]);
+        if ((rows as any[]).length === 0) {
+            return { success: false, message: "User not found." };
+        }
+        const user = (rows as any)[0];
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+        if (!isMatch) {
+            return { success: false, message: "Incorrect current password." };
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const new_password_hash = await bcrypt.hash(newPassword, salt);
+
+        await connection.query('UPDATE users SET password_hash = ? WHERE id = ?', [new_password_hash, userId]);
+        await logUserAction(user.username, 'Change Password', `User '${user.username}' changed their password.`, connection);
+        
+        await connection.commit();
+        revalidatePath(`/users/${encodeURIComponent(user.username)}`);
+        return { success: true, message: "Password updated successfully." };
+    } catch (error) {
+        await connection.rollback();
+        console.error("Failed to change password:", error);
+        return { success: false, message: "Database operation failed." };
+    } finally {
+        connection.release();
+    }
+}
+
+const updateProfilePictureSchema = z.object({
+  userId: z.string(),
+  avatarUrl: z.string().url("Invalid URL format."),
+  loggedInUser: z.string(),
+});
+
+export async function updateProfilePicture(data: unknown) {
+    const validation = updateProfilePictureSchema.safeParse(data);
+    if (!validation.success) {
+        return { success: false, message: 'Invalid data provided.' };
+    }
+    const { userId, avatarUrl, loggedInUser } = validation.data;
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // Update avatar in personnel table if exists
+        await connection.query('UPDATE personnel SET avatarUrl = ? WHERE name = ?', [avatarUrl, loggedInUser]);
+        // Update avatar in users table
+        await connection.query('UPDATE users SET avatarUrl = ? WHERE id = ?', [avatarUrl, userId]);
+
+        await logUserAction(loggedInUser, 'Update Profile Picture', `User '${loggedInUser}' updated their profile picture.`, connection);
+
+        await connection.commit();
+        revalidatePath(`/users/${encodeURIComponent(loggedInUser)}`);
+        revalidatePath('/roster');
+        return { success: true, message: "Profile picture updated." };
+    } catch (error) {
+        await connection.rollback();
+        console.error("Failed to update profile picture:", error);
+        return { success: false, message: "Database operation failed." };
+    } finally {
+        connection.release();
+    }
 }
