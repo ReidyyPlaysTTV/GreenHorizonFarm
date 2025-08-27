@@ -126,3 +126,21 @@ export async function submitApplication(responses: Record<string, any>) {
 
     revalidatePath('/applications');
 }
+
+const applicationStatusSchema = z.enum(['Approved', 'Rejected']);
+
+export async function updateApplicationStatus(applicationId: string, status: 'Approved' | 'Rejected') {
+  const validatedStatus = applicationStatusSchema.parse(status);
+
+  try {
+    await db.query(
+      'UPDATE applications SET status = ? WHERE id = ?',
+      [validatedStatus, applicationId]
+    );
+  } catch (error) {
+    console.error(`Failed to update application status to ${validatedStatus}:`, error);
+    throw new Error('Database operation failed.');
+  }
+
+  revalidatePath('/applications');
+}

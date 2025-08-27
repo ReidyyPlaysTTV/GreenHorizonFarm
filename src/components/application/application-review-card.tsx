@@ -6,10 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, FileText } from "lucide-react";
+import { Check, X, FileText, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "../ui/label";
+import { updateApplicationStatus } from "@/lib/actions/form-actions";
+import { useState } from "react";
 
 interface ApplicationReviewCardProps {
   application: Application;
@@ -17,24 +19,27 @@ interface ApplicationReviewCardProps {
 
 export function ApplicationReviewCard({ application }: ApplicationReviewCardProps) {
   const { toast } = useToast();
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleApprove = () => {
-    toast({
-      title: "Application Approved",
-      description: `${application.name}'s application has been approved.`,
-    });
-    // Here you would update the application status in your database.
+  const handleStatusUpdate = async (status: 'Approved' | 'Rejected') => {
+    setIsUpdating(true);
+    try {
+      await updateApplicationStatus(application.id, status);
+      toast({
+        title: `Application ${status}`,
+        description: `${application.name}'s application has been ${status.toLowerCase()}.`,
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: `Could not update the application status. Please try again.`,
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
-  const handleReject = () => {
-    toast({
-      title: "Application Rejected",
-      variant: "destructive",
-      description: `${application.name}'s application has been rejected.`,
-    });
-     // Here you would update the application status in your database.
-  };
-  
   const statusColors = {
     Pending: "default",
     Approved: "secondary",
@@ -90,11 +95,11 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
         </p>
         {application.status === "Pending" && (
             <div className="flex justify-end gap-2">
-                <Button size="sm" variant="outline" className="gap-1" onClick={handleReject}>
-                    <X className="h-4 w-4" /> Reject
+                <Button size="sm" variant="outline" className="gap-1" onClick={() => handleStatusUpdate('Rejected')} disabled={isUpdating}>
+                    {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><X className="h-4 w-4" /> Reject</>}
                 </Button>
-                <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700" onClick={handleApprove}>
-                    <Check className="h-4 w-4" /> Approve
+                <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate('Approved')} disabled={isUpdating}>
+                    {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4" /> Approve</>}
                 </Button>
             </div>
         )}
