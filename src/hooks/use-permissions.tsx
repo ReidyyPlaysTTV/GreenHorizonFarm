@@ -6,6 +6,7 @@ import { type Permission, type Role } from "@/lib/types";
 import { permissionsMap } from "@/lib/data";
 import { getUsers } from "@/lib/actions";
 import type { AppUser } from "@/lib/types";
+import { usePathname } from "next/navigation";
 
 type PermissionsContextType = {
     userRole: Role | null;
@@ -16,6 +17,7 @@ const PermissionsContext = createContext<PermissionsContextType | null>(null);
 
 export function PermissionsProvider({ children }: { children: React.ReactNode }) {
     const [userRole, setUserRole] = useState<Role | null>(null);
+    const pathname = usePathname();
 
     useEffect(() => {
         const fetchUserRole = async () => {
@@ -42,7 +44,7 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
             }
         };
         fetchUserRole();
-    }, []);
+    }, [pathname]);
 
     const hasPermission = (permission: Permission) => {
         if (!userRole) return false;
