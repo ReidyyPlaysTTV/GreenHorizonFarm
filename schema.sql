@@ -1,55 +1,44 @@
--- Database schema for the DOC Roster application
+-- Personnel Table: Stores all active personnel records.
+CREATE TABLE personnel (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    rank VARCHAR(100) NOT NULL,
+    badgeNumber VARCHAR(50) NOT NULL UNIQUE,
+    department VARCHAR(100) NOT NULL,
+    avatarUrl VARCHAR(255)
+);
 
---
--- Table structure for table `personnel`
---
+-- Archived Personnel Table: Stores records of fired or resigned personnel.
+CREATE TABLE archived_personnel (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    rank VARCHAR(100) NOT NULL,
+    status ENUM('Fired', 'Resigned') NOT NULL,
+    date DATE NOT NULL,
+    reason TEXT
+);
 
-CREATE TABLE `personnel` (
-  `id` varchar(255) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `rank` varchar(255) NOT NULL,
-  `badgeNumber` varchar(255) NOT NULL,
-  `department` enum('Commissioners Office','High Command','Command','NCOS','Corrections','Training') NOT NULL,
-  `avatarUrl` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Blacklisted Personnel Table: Stores individuals who are barred.
+CREATE TABLE blacklisted_personnel (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    reason TEXT,
+    dateAdded DATE NOT NULL
+);
 
---
--- Table structure for table `archived_personnel`
---
+-- Applications Table: Stores all submitted applications.
+CREATE TABLE applications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    age INT NOT NULL,
+    reasonForApplying TEXT NOT NULL,
+    status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+    submittedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-CREATE TABLE `archived_personnel` (
-  `id` varchar(255) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `rank` varchar(255) NOT NULL,
-  `status` enum('Fired','Resigned') NOT NULL,
-  `date` date NOT NULL,
-  `reason` text NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
---
--- Table structure for table `blacklisted_personnel`
---
-
-CREATE TABLE `blacklisted_personnel` (
-  `id` varchar(255) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `reason` text NOT NULL,
-  `dateAdded` date NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
---
--- Table structure for table `applications`
---
-
-CREATE TABLE `applications` (
-  `id` varchar(255) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `age` int(11) NOT NULL,
-  `reasonForApplying` text NOT NULL,
-  `status` enum('Pending','Approved','Rejected') NOT NULL DEFAULT 'Pending',
-  `submittedAt` datetime NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Users Table: Stores login credentials.
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL
+);
