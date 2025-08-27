@@ -11,6 +11,8 @@ import Image from "next/image";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Recycle } from "lucide-react";
 
 const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
   
@@ -49,53 +51,69 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
 
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-[80px]">Insignia</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead>Rank</TableHead>
-          <TableHead>Callsign</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Discord</TableHead>
-          <TableHead className="text-right w-[200px]">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {personnel.length > 0 ? (
-          personnel.map((p) => (
-            <TableRow key={p.id} className={cn(getStatusRowClass(p))}>
-              <TableCell>
-                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted p-1">
-                  <Image src={p.avatarUrl} alt={`${p.rank} Insignia`} width={32} height={32} className="h-auto w-auto object-contain" />
-                </div>
-              </TableCell>
-              <TableCell className="font-medium">{p.name}</TableCell>
-              <TableCell>{p.rank}</TableCell>
-              <TableCell>
-                <Badge variant="secondary">#{p.badgeNumber}</Badge>
-              </TableCell>
-              <TableCell>
-                 <Badge variant={getStatusBadgeVariant(p.status)}>
-                    {p.status}
-                    {p.status === 'LOA' && p.loa_until && ` until ${format(new Date(p.loa_until), 'MM/dd/yyyy')}`}
-                </Badge>
-              </TableCell>
-              <TableCell>{p.discordUsername || 'N/A'}</TableCell>
-              <TableCell className="text-right">
-                <PersonnelActions personnel={p} />
+    <TooltipProvider>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[80px]">Insignia</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Rank</TableHead>
+            <TableHead>Callsign</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Discord</TableHead>
+            <TableHead className="text-right w-[200px]">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {personnel.length > 0 ? (
+            personnel.map((p) => (
+              <TableRow key={p.id} className={cn(getStatusRowClass(p))}>
+                <TableCell>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted p-1">
+                    <Image src={p.avatarUrl} alt={`${p.rank} Insignia`} width={32} height={32} className="h-auto w-auto object-contain" />
+                  </div>
+                </TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {p.name}
+                    {p.is_rehired && (
+                       <Tooltip>
+                          <TooltipTrigger>
+                            <Recycle className="h-4 w-4 text-green-500" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Rehired (2nd Chance)</p>
+                          </TooltipContent>
+                        </Tooltip>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>{p.rank}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">#{p.badgeNumber}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={getStatusBadgeVariant(p.status)}>
+                      {p.status}
+                      {p.status === 'LOA' && p.loa_until && ` until ${format(new Date(p.loa_until), 'MM/dd/yyyy')}`}
+                  </Badge>
+                </TableCell>
+                <TableCell>{p.discordUsername || 'N/A'}</TableCell>
+                <TableCell className="text-right">
+                  <PersonnelActions personnel={p} />
+                </TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={7} className="h-24 text-center">
+                No personnel found in this department.
               </TableCell>
             </TableRow>
-          ))
-        ) : (
-          <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
-              No personnel found in this department.
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
+          )}
+        </TableBody>
+      </Table>
+    </TooltipProvider>
   );
 };
 

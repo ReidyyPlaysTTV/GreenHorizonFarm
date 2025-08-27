@@ -4,9 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RefreshButton } from "@/components/layout/refresh-button";
+import { RehireDialog } from "@/components/archive/rehire-dialog";
+import type { ArchivedPersonnel } from "@/lib/types";
 
 export default async function ArchivePage() {
-  const archivedPersonnel = await getArchivedPersonnel();
+  const archivedPersonnel: ArchivedPersonnel[] = await getArchivedPersonnel();
   return (
     <div className="container mx-auto p-4 md:p-8">
       <div className="flex items-center justify-between mb-8">
@@ -35,6 +37,7 @@ export default async function ArchivePage() {
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Reason</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -49,6 +52,9 @@ export default async function ArchivePage() {
                   </TableCell>
                   <TableCell>{new Date(p.date).toLocaleDateString()}</TableCell>
                   <TableCell>{p.reason}</TableCell>
+                   <TableCell className="text-right">
+                    <RehireDialog personnel={p} />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

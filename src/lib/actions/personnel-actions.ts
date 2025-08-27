@@ -20,7 +20,7 @@ async function getPersonnelById(id: string): Promise<Personnel | null> {
   return null;
 }
 
-async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'Promoted' | 'Demoted', description: string, dbConnection?: any) {
+async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'Promoted' | 'Demoted' | 'Rehired', description: string, dbConnection?: any) {
     const connection = dbConnection || await db.getConnection();
     try {
         await connection.query(
@@ -255,4 +255,60 @@ export async function addPersonnel(data: unknown) {
     } finally {
         connection.release();
     }
+}
+
+
+const rehirePersonnelSchema = z.object({
+  archivedId: z.string(),
+  name: z.string(),
+  rank: z.string(),
+  callsign: z.coerce.number().min(100).max(9999),
+  user: z.string(),
+});
+
+export async function rehirePersonnel(data: unknown) {
+  const validation = rehirePersonnelSchema.safeParse(data);
+  if (!validation.success) {
+    return { success: false, message: 'Invalid data provided.' };
+  }
+  const { archivedId, name, rank, callsign, user } = validation.data;
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // 1. Add back to personnel table, marking as rehired
+    const newId = randomUUID();
+    await connection.query(
+      'INSERT INTO personnel (id, name, rank, badgeNumber, is_rehired) VALUES (?, ?, ?, ?, ?)',
+      [newId, name, rank, callsign.toString(), true]
+    );
+
+    // 2. Remove from archived_personnel table
+    await connection.query('DELETE FROM archived_personnel WHERE id = ?', [archivedId]);
+
+    // 3. Log events
+    await logEvent(name, 'Rehired', `Rehired as ${rank} with callsign ${callsign}`, connection);
+    await logCallsignChange(callsign.toString(), name, 'Assigned', connection);
+    await logUserAction(user, 'Rehire Personnel', `Rehired ${name} as ${rank} with callsign ${callsign}`, connection);
+
+    await connection.commit();
+
+    revalidatePath('/roster');
+    revalidatePath('/archive');
+    revalidatePath('/callsigns');
+    revalidatePath('/logs');
+    revalidatePath('/');
+
+    return { success: true, message: `${name} has been rehired.` };
+  } catch (error) {
+    await connection.rollback();
+    console.error("Failed to rehire personnel:", error);
+     if (error instanceof Error && 'code' in error && (error as any).code === 'ER_DUP_ENTRY') {
+       return { success: false, message: 'That callsign is already in use.' };
+    }
+    return { success: false, message: 'Database operation failed.' };
+  } finally {
+    connection.release();
+  }
 }

@@ -13,6 +13,7 @@ export interface Personnel {
   discordUsername?: string;
   status: PersonnelStatus;
   loa_until?: string | null;
+  is_rehired?: boolean;
 }
 
 export interface ArchivedPersonnel {
@@ -62,7 +63,7 @@ export interface FormFieldData {
 export interface PersonnelEvent {
     id: string;
     personnel_name: string;
-    event_type: 'Hired' | 'Fired' | 'Promoted' | 'Demoted';
+    event_type: 'Hired' | 'Fired' | 'Promoted' | 'Demoted' | 'Rehired';
     description: string;
     date: Date;
 }

@@ -19,6 +19,7 @@ export async function getPersonnel(): Promise<Personnel[]> {
             avatarUrl: rankInsignias[p.rank] || p.avatarUrl || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
             status: p.status || 'Active', // Default to active if status is null/undefined
             loa_until: p.loa_until ? new Date(p.loa_until).toISOString() : null,
+            is_rehired: !!p.is_rehired,
         }));
         
         // Sort personnel by rank order, then by callsign
@@ -48,7 +49,8 @@ export async function getPersonnel(): Promise<Personnel[]> {
                     department VARCHAR(255),
                     avatarUrl VARCHAR(255),
                     status ENUM('Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended') NOT NULL DEFAULT 'Active',
-                    loa_until DATE
+                    loa_until DATE,
+                    is_rehired BOOLEAN NOT NULL DEFAULT FALSE
                 )
             `);
             return [];
@@ -60,6 +62,9 @@ export async function getPersonnel(): Promise<Personnel[]> {
             }
             if ((error as any).sqlMessage.includes('loa_until')) {
                 await db.query("ALTER TABLE personnel ADD COLUMN loa_until DATE");
+            }
+            if ((error as any).sqlMessage.includes('is_rehired')) {
+                await db.query("ALTER TABLE personnel ADD COLUMN is_rehired BOOLEAN NOT NULL DEFAULT FALSE");
             }
             // Retry the query
             return getPersonnel();
@@ -74,6 +79,19 @@ export async function getArchivedPersonnel(): Promise<ArchivedPersonnel[]> {
         return rows as ArchivedPersonnel[];
     } catch (error) {
         console.error("Failed to fetch archived personnel:", error);
+         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
+            await db.query(`
+                CREATE TABLE archived_personnel (
+                    id VARCHAR(36) NOT NULL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    rank VARCHAR(255) NOT NULL,
+                    status ENUM('Fired', 'Resigned') NOT NULL,
+                    date DATETIME NOT NULL,
+                    reason TEXT
+                )
+            `);
+            return [];
+         }
         return [];
     }
 }
@@ -84,6 +102,17 @@ export async function getBlacklistedPersonnel(): Promise<BlacklistedPersonnel[]>
         return (rows as any[]).map(p => ({...p, dateAdded: new Date(p.dateAdded).toISOString().split('T')[0]}));
     } catch (error) {
         console.error("Failed to fetch blacklisted personnel:", error);
+         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
+            await db.query(`
+                CREATE TABLE blacklisted_personnel (
+                    id VARCHAR(36) NOT NULL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    reason TEXT,
+                    dateAdded DATETIME NOT NULL
+                )
+            `);
+            return [];
+        }
         return [];
     }
 }
@@ -130,6 +159,14 @@ export async function getApplications(): Promise<Application[]> {
     } catch (error) {
         console.error("Failed to fetch applications:", error);
          if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
+             await db.query(`
+                CREATE TABLE applications (
+                    id VARCHAR(36) NOT NULL PRIMARY KEY,
+                    responses JSON NOT NULL,
+                    status ENUM('Pending', 'Approved', 'Rejected') NOT NULL DEFAULT 'Pending',
+                    submittedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+            `);
             return [];
         }
         return [];
@@ -150,12 +187,17 @@ export async function getRecentActivity(): Promise<PersonnelEvent[]> {
                 CREATE TABLE IF NOT EXISTS personnel_events (
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     personnel_name VARCHAR(255) NOT NULL,
-                    event_type ENUM('Hired', 'Fired', 'Promoted', 'Demoted') NOT NULL,
+                    event_type ENUM('Hired', 'Fired', 'Promoted', 'Demoted', 'Rehired') NOT NULL,
                     description VARCHAR(255) NOT NULL,
                     date DATETIME NOT NULL
                 )
             `);
             return [];
+        }
+        // Handle migration for new event_type
+        if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_TRUNCATED_WRONG_VALUE_FOR_FIELD')) {
+             await db.query("ALTER TABLE personnel_events MODIFY COLUMN event_type ENUM('Hired', 'Fired', 'Promoted', 'Demoted', 'Rehired') NOT NULL");
+             return getRecentActivity(); // Retry
         }
         return [];
     }
