@@ -7,6 +7,8 @@ const departments: Department[] = ["Commissioners Office", "High Command", "Comm
 const rankInsignias: Record<string, string> = {
     "Commissioner": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/gota.png",
     "Deputy Comissioner": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/gota.png",
+    "Warden": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/general.png",
+    "Deputy Warden": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/lt-general.png",
     "Major": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/major.png",
     // Add other rank insignias here as needed
 }
