@@ -24,16 +24,7 @@ export function UserProfile() {
                     try {
                         const allUsers = await getUsers();
                         const currentUser = allUsers.find(u => u.username === loggedInUserName);
-                        if (currentUser) {
-                            // Find personnel record to potentially get avatar
-                            const personnelRecord = currentUser.personnel;
-                            setUser({
-                                ...currentUser,
-                                personnel: personnelRecord
-                            });
-                        } else {
-                             setUser({ id: 'temp', username: loggedInUserName, role: 'User' });
-                        }
+                        setUser(currentUser || null);
                     } catch (error) {
                         console.error("Failed to fetch user data for profile", error);
                         setUser({ id: 'temp', username: loggedInUserName, role: 'User' });

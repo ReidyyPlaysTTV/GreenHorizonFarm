@@ -84,10 +84,7 @@ export default function UserProfilePage() {
           return;
         }
         setUser(foundUser);
-        
-        const personnel = await getPersonnel();
-        const foundPersonnel = personnel.find(p => p.name === foundUser.username) || null;
-        setPersonnelRecord(foundPersonnel);
+        setPersonnelRecord(foundUser.personnel || null);
 
         const logs = await getAuditLogs({ username: decodedUsername });
         setActivityLogs(logs);
@@ -131,7 +128,7 @@ export default function UserProfilePage() {
   
   const isOwnProfile = loggedInUser === user.username;
   const lastLogin = activityLogs.find(log => log.actionType === 'Login');
-  const userAvatar = personnelRecord?.avatarUrl || user.personnel?.avatarUrl;
+  const userAvatar = personnelRecord?.avatarUrl;
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -240,7 +237,7 @@ export default function UserProfilePage() {
                     </div>
                         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                         <div className="w-6 h-6 flex items-center justify-center">
-                            <Image src={personnelRecord.avatarUrl} alt="Insignia" width={20} height={20} className="object-contain" />
+                            <Image src={userAvatar || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"} alt="Insignia" width={20} height={20} className="object-contain" />
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Status</p>

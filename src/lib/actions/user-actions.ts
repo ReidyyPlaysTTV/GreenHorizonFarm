@@ -51,7 +51,7 @@ export async function getUsers(): Promise<AppUser[]> {
     try {
         await createUsersTableIfNeeded();
         // For security, we don't select the password_hash
-        const [users] = await db.query('SELECT id, username, role, createdAt, avatarUrl FROM users ORDER BY username ASC');
+        const [users] = await db.query('SELECT id, username, role, createdAt FROM users ORDER BY username ASC');
         if (!Array.isArray(users)) {
             return [];
         }
@@ -379,9 +379,6 @@ export async function updateProfilePicture(data: unknown) {
         // Update avatar in personnel table if exists
         await connection.query('UPDATE personnel SET avatarUrl = ? WHERE name = ?', [avatarUrl, loggedInUser]);
         
-        // Also update avatar in the users table
-        await connection.query('UPDATE users SET avatarUrl = ? WHERE id = ?', [avatarUrl, userId]);
-
         await logUserAction(loggedInUser, 'Update Profile Picture', `User '${loggedInUser}' updated their profile picture.`, connection);
 
         await connection.commit();
