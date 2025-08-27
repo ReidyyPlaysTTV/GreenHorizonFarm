@@ -9,5 +9,6 @@ export * from './actions/data-actions';
 export * from './actions/report-actions';
 export * from './actions/user-actions';
 export * from './actions/callsign-log-actions';
-export * from './actions/audit-log-actions';
+export *from './actions/audit-log-actions';
 export * from './actions/status-actions';
+export * from './actions/permission-actions';

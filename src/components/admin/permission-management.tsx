@@ -1,19 +1,65 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Save } from "lucide-react";
-import { roles, permissionsMap, permissionDescriptions } from "@/lib/data";
+import { AlertCircle, Save, Loader2 } from "lucide-react";
+import { roles, permissionDescriptions, permissions as allPermissions } from "@/lib/data";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-
+import type { Role, Permission } from "@/lib/types";
+import { updateRolePermissions } from "@/lib/actions/permission-actions";
+import { useToast } from "@/hooks/use-toast";
 
 export function PermissionManagement() {
-  const { hasPermission } = usePermissions();
+  const { hasPermission, permissionsMap: initialPermissionsMap, userRole } = usePermissions();
+  const { toast } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editablePermissions, setEditablePermissions] = useState<Record<Role, Permission[]>>({} as Record<Role, Permission[]>);
+
+  useEffect(() => {
+    if (initialPermissionsMap) {
+      setEditablePermissions(JSON.parse(JSON.stringify(initialPermissionsMap)));
+      setIsLoading(false);
+    }
+  }, [initialPermissionsMap]);
+  
+  const handlePermissionChange = (role: Role, permissionId: Permission, checked: boolean) => {
+    setEditablePermissions(prev => {
+      const currentPermissions = prev[role] || [];
+      if (checked) {
+        return { ...prev, [role]: [...currentPermissions, permissionId] };
+      } else {
+        return { ...prev, [role]: currentPermissions.filter(p => p !== permissionId) };
+      }
+    });
+  };
+
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    try {
+      if (!userRole) throw new Error("User not authenticated");
+      await updateRolePermissions(editablePermissions, userRole);
+      toast({
+        title: "Success",
+        description: "Permissions updated successfully. Changes may require a refresh to take effect.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to save permissions.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
 
   if (!hasPermission('MANAGE_ROLES_PERMISSIONS')) {
     return (
@@ -33,6 +79,19 @@ export function PermissionManagement() {
       </Card>
     );
   }
+  
+  if (isLoading) {
+    return (
+       <Card>
+        <CardHeader>
+            <CardTitle>Permission Groups</CardTitle>
+        </CardHeader>
+        <CardContent className="flex justify-center items-center h-48">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card>
@@ -41,18 +100,18 @@ export function PermissionManagement() {
             <div>
                 <CardTitle>Permission Groups</CardTitle>
                 <CardDescription>
-                Define what each role can see and do within the application. Permissions are code-based and cannot be edited here.
+                Define what each role can see and do within the application.
                 </CardDescription>
             </div>
-             <Button disabled>
-                <Save className="mr-2 h-4 w-4"/>
-                Save Changes (Disabled)
+             <Button onClick={handleSaveChanges} disabled={isSaving}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+                Save Changes
             </Button>
         </div>
       </CardHeader>
       <CardContent>
-        <Accordion type="multiple" className="w-full" defaultValue={roles}>
-            {roles.map(role => (
+        <Accordion type="multiple" className="w-full" defaultValue={roles.map(r => r)}>
+            {roles.filter(r => r !== 'Developer' && r !== 'Administrator').map(role => (
                  <AccordionItem value={role} key={role}>
                     <AccordionTrigger className="text-lg font-medium">{role}</AccordionTrigger>
                     <AccordionContent>
@@ -61,8 +120,8 @@ export function PermissionManagement() {
                                 <div key={permissionId} className="flex items-center space-x-2">
                                     <Checkbox 
                                         id={`${role}-${permissionId}`} 
-                                        checked={permissionsMap[role as keyof typeof permissionsMap]?.includes(permissionId as any)}
-                                        disabled
+                                        checked={editablePermissions[role]?.includes(permissionId as Permission) || false}
+                                        onCheckedChange={(checked) => handlePermissionChange(role, permissionId as Permission, !!checked)}
                                     />
                                     <Label htmlFor={`${role}-${permissionId}`} className="font-normal">
                                         {label}

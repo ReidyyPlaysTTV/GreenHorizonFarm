@@ -94,9 +94,9 @@ export const permissionDescriptions: Record<Permission, string> = {
 };
 
 
-// Assign permissions to roles.
-// Higher roles inherit permissions from lower roles.
-export const permissionsMap: Record<Role, Permission[]> = {
+// Initial permissions map for database seeding.
+// This will no longer be the source of truth for the application.
+export const initialPermissionsMap: Record<Role, Permission[]> = {
     User: [
         'ACCESS_DASHBOARD',
         'VIEW_ROSTER',

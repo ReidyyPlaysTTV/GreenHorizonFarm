@@ -2,7 +2,7 @@
 'use server';
 import type { AppUser, Role, Permission } from "./types";
 import db from "./db";
-import { permissionsMap } from './data';
+import { getPermissionsMap } from './actions/permission-actions';
 
 // Server-side permission check
 export async function checkPermissions(username: string, permission: Permission): Promise<boolean> {
@@ -29,6 +29,7 @@ export async function checkPermissions(username: string, permission: Permission)
             return true;
         }
 
+        const permissionsMap = await getPermissionsMap();
         const userPermissions = permissionsMap[userRole];
         return userPermissions?.includes(permission) ?? false;
 
