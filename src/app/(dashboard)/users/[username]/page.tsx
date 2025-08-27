@@ -6,6 +6,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { User, Shield, Briefcase, Star, Hash, Mail } from "lucide-react";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
+
+const getRoleClass = (role: string) => {
+    switch (role) {
+        case "Administrator":
+            return "animate-rainbow-text bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500 bg-clip-text text-transparent";
+        case "Developer":
+            return "animate-dev-text";
+        case "Commissioners Office":
+            return "animate-co-text";
+        case "High Command":
+            return "animate-hc-text";
+        case "Command":
+            return "animate-cmd-text";
+        case "NCOs":
+            return "animate-nco-text";
+        case "Corrections":
+             return "animate-co-text-yellow";
+        case "User":
+            return "animate-user-text";
+        case "Training":
+            return "text-yellow-400";
+        default:
+            return "";
+    }
+}
+
 
 export default async function UserProfilePage({ params }: { params: { username: string } }) {
   const { username } = params;
@@ -73,7 +100,7 @@ export default async function UserProfilePage({ params }: { params: { username: 
                     )}
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">Permission Group</span>
-                        <Badge variant="outline">{user.role}</Badge>
+                         <span className={cn("font-bold text-lg", getRoleClass(user.role))}>{user.role}</span>
                     </div>
                 </CardContent>
             </Card>

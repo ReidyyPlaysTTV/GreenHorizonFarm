@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -66,4 +67,66 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@layer utilities {
+    .animate-rainbow-text {
+        background-size: 200% 200%;
+        animation: rainbow-text-animation 5s ease infinite;
+    }
+    .animate-dev-text {
+        animation: dev-text-animation 3s ease infinite;
+    }
+    .animate-co-text {
+        animation: co-text-animation 3s ease infinite;
+    }
+    .animate-hc-text {
+        animation: hc-text-animation 3s ease infinite;
+    }
+    .animate-cmd-text {
+        animation: cmd-text-animation 3s ease infinite;
+    }
+    .animate-nco-text {
+        animation: nco-text-animation 3s ease infinite;
+    }
+    .animate-co-text-yellow {
+        animation: co-text-yellow-animation 3s ease infinite;
+    }
+    .animate-user-text {
+        animation: user-text-animation 2s ease infinite;
+    }
+
+    @keyframes rainbow-text-animation {
+        0%{background-position:0% 50%}
+        50%{background-position:100% 50%}
+        100%{background-position:0% 50%}
+    }
+    @keyframes dev-text-animation {
+        0%, 100% { color: #A855F7; } /* purple-500 */
+        50% { color: #FFFFFF; }
+    }
+    @keyframes co-text-animation {
+        0%, 100% { color: #FFFFFF; }
+        50% { color: #9CA3AF; } /* gray-400 */
+    }
+     @keyframes co-text-yellow-animation {
+        0%, 100% { color: #FFFFFF; }
+        50% { color: #EAB308; } /* yellow-500 */
+    }
+    @keyframes hc-text-animation {
+        0%, 100% { color: #EAB308; } /* yellow-500 */
+        50% { color: #FFFFFF; }
+    }
+    @keyframes cmd-text-animation {
+        0%, 100% { color: #3B82F6; } /* blue-500 */
+        50% { color: #FFFFFF; }
+    }
+    @keyframes nco-text-animation {
+        0%, 100% { color: #22C55E; } /* green-500 */
+        50% { color: #FFFFFF; }
+    }
+    @keyframes user-text-animation {
+        0%, 100% { color: #FFFFFF; opacity: 1; }
+        50% { opacity: 0.7; }
+    }
 }
