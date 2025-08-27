@@ -40,15 +40,12 @@ export function SidebarNav() {
         {menuItems.map((item) => (
           <SidebarMenuItem key={item.href}>
             <SidebarMenuButton
-              asChild
               isActive={pathname === item.href}
               onClick={() => router.push(item.href)}
               tooltip={item.label}
             >
-              <span>
-                <item.icon />
-                <span>{item.label}</span>
-              </span>
+              <item.icon />
+              <span>{item.label}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         ))}
