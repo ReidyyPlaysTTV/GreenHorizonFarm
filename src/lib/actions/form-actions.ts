@@ -95,11 +95,14 @@ export async function saveApplicationFormFields(fields: FormFieldData[]) {
 export async function submitApplication(responses: Record<string, any>) {
     const fields = await getApplicationFormFields();
 
-    const nameField = fields.find(f => f.label.toLowerCase().includes('name'));
-    const ageField = fields.find(f => f.label.toLowerCase().includes('age'));
+    // Find the first two 'text' fields to use for name and age.
+    // This is more robust than relying on labels.
+    const textFields = fields.filter(f => f.type === 'text');
+    const nameField = textFields[0];
+    const ageField = textFields[1];
     
-    const nameFromResponses = nameField ? responses[nameField.id!] : 'Unknown Applicant';
-    const ageFromResponses = ageField ? responses[ageField.id!] : 0;
+    const nameFromResponses = nameField ? (responses[nameField.id!] || "Unknown Applicant") : "Unknown Applicant";
+    const ageFromResponses = ageField ? (responses[ageField.id!] || 0) : 0;
 
 
     const formattedResponses = fields.map(field => ({
@@ -112,7 +115,7 @@ export async function submitApplication(responses: Record<string, any>) {
     try {
         await db.query(
             'INSERT INTO applications (id, name, age, responses) VALUES (?, ?, ?, ?)',
-            [randomUUID(), nameFromResponses, parseInt(ageFromResponses, 10) || 0, JSON.stringify(formattedResponses)]
+            [randomUUID(), nameFromResponses, parseInt(String(ageFromResponses), 10) || 0, JSON.stringify(formattedResponses)]
         );
     } catch(error) {
         console.error("Failed to submit application:", error);
