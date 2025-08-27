@@ -10,7 +10,7 @@ export default function LoginPage() {
     <div 
       className="relative flex min-h-screen items-center justify-center bg-background p-4 bg-cover bg-center"
       style={{
-        backgroundImage: "url('https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/54182c1ba6f3588ec2f3c37e69bb0fba5e3e5c87.png')"
+        backgroundImage: "url('https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/e1b8daf9b26a971543cc901fc4fcec33ab7af144.png')"
       }}
     >
         <div className="absolute inset-0 bg-black/60 z-0" />
