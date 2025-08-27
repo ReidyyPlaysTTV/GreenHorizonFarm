@@ -139,7 +139,7 @@ export default function UserProfilePage() {
         <Avatar className="h-24 w-24 border-2 border-primary">
           <AvatarImage src={userAvatar} />
           <AvatarFallback className="text-3xl">
-            <User />
+            {user.username.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
         <div>
@@ -296,3 +296,5 @@ export default function UserProfilePage() {
     </div>
   );
 }
+
+    
