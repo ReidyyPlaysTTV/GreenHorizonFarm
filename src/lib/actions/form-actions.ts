@@ -12,6 +12,7 @@ const formFieldSchema = z.object({
   id: z.string().optional(),
   label: z.string().min(1, "Label is required"),
   type: z.enum(["text", "textarea", "select"]),
+  required: z.boolean(),
   options: z.array(z.object({ id: z.string().optional(), value: z.string() })).optional(),
 });
 const formFieldsSchema = z.array(formFieldSchema);
@@ -28,9 +29,9 @@ export async function getApplicationFormFields(): Promise<FormFieldData[]> {
         const fieldsWithOpts = await Promise.all((fields as any[]).map(async (field) => {
             if (field.type === 'select') {
                 const [options] = await db.query('SELECT id, value FROM application_field_options WHERE field_id = ?', [field.id]);
-                return { ...field, options: Array.isArray(options) ? options : [] };
+                return { ...field, required: !!field.required, options: Array.isArray(options) ? options : [] };
             }
-            return field;
+            return { ...field, required: !!field.required };
         }));
 
         return fieldsWithOpts;
@@ -61,8 +62,8 @@ export async function saveApplicationFormFields(fields: FormFieldData[]) {
             const fieldId = field.id && !field.id.startsWith('new-') ? field.id : randomUUID();
             
             await connection.query(
-                'INSERT INTO application_form_fields (id, type, label, `order`) VALUES (?, ?, ?, ?)',
-                [fieldId, field.type, field.label, index]
+                'INSERT INTO application_form_fields (id, type, label, `order`, required) VALUES (?, ?, ?, ?, ?)',
+                [fieldId, field.type, field.label, index, field.required]
             );
 
             if (field.type === 'select' && field.options) {

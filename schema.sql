@@ -1,14 +1,12 @@
--- DOC Roster Application SQL Schema
--- Version 1.1
 
--- This file contains the complete database schema for the DOC Roster application.
-
--- Table for active personnel
+-- Main table for active personnel
 CREATE TABLE `personnel` (
   `id` varchar(36) NOT NULL,
   `name` varchar(255) NOT NULL,
   `rank` varchar(255) NOT NULL,
   `badgeNumber` varchar(255) NOT NULL,
+  `department` varchar(255) DEFAULT NULL,
+  `avatarUrl` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -23,7 +21,7 @@ CREATE TABLE `archived_personnel` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Table for blacklisted individuals
+-- Table for individuals who are blacklisted from the department
 CREATE TABLE `blacklisted_personnel` (
   `id` varchar(36) NOT NULL,
   `name` varchar(255) NOT NULL,
@@ -32,16 +30,28 @@ CREATE TABLE `blacklisted_personnel` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Table for dynamic application form fields
+-- Table to store application submissions
+CREATE TABLE `applications` (
+  `id` varchar(36) NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `age` int(11) DEFAULT NULL,
+  `status` enum('Pending','Approved','Rejected') NOT NULL DEFAULT 'Pending',
+  `submittedAt` datetime NOT NULL DEFAULT current_timestamp(),
+  `responses` json DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table to define the structure of the application form
 CREATE TABLE `application_form_fields` (
   `id` varchar(36) NOT NULL,
   `type` enum('text','textarea','select') NOT NULL,
   `label` varchar(255) NOT NULL,
   `order` int(11) NOT NULL,
+  `required` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Table for options of 'select' type fields
+-- Table to store options for 'select' type fields in the application form
 CREATE TABLE `application_field_options` (
   `id` varchar(36) NOT NULL,
   `field_id` varchar(36) NOT NULL,
@@ -51,29 +61,17 @@ CREATE TABLE `application_field_options` (
   CONSTRAINT `application_field_options_ibfk_1` FOREIGN KEY (`field_id`) REFERENCES `application_form_fields` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Table to store submitted applications
-CREATE TABLE `applications` (
+-- Table for logging significant personnel events
+CREATE TABLE `personnel_events` (
   `id` varchar(36) NOT NULL,
-  `name` varchar(255) DEFAULT NULL,
-  `age` int(11) DEFAULT NULL,
-  `status` enum('Pending','Approved','Rejected') NOT NULL DEFAULT 'Pending',
-  `submittedAt` datetime NOT NULL DEFAULT current_timestamp(),
-  `responses` json NOT NULL,
+  `personnel_name` varchar(255) NOT NULL,
+  `event_type` enum('Hired','Fired','Promoted','Demoted') NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `date` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 "COLLATE=utf8mb4_general_ci";
 
--- Table for application users
-CREATE TABLE `users` (
-  `id` varchar(36) NOT NULL,
-  `username` varchar(255) NOT NULL,
-  `password_hash` varchar(255) NOT NULL,
-  `role` varchar(50) NOT NULL DEFAULT 'User',
-  `createdAt` datetime NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `username` (`username`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- Table for bug reports
+-- Table for user-submitted bug reports
 CREATE TABLE `bug_reports` (
   `id` varchar(36) NOT NULL,
   `title` varchar(255) NOT NULL,
@@ -83,7 +81,7 @@ CREATE TABLE `bug_reports` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Table for feature suggestions
+-- Table for user-submitted feature suggestions
 CREATE TABLE `suggestions` (
   `id` varchar(36) NOT NULL,
   `title` varchar(255) NOT NULL,
@@ -91,24 +89,15 @@ CREATE TABLE `suggestions` (
   `status` enum('Pending','In Progress','Completed','Rejected') NOT NULL DEFAULT 'Pending',
   `submittedAt` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 "COLLATE=utf8mb4_general_ci";
 
--- Table for recent personnel events
-CREATE TABLE `personnel_events` (
+-- Table for application users and their roles
+CREATE TABLE `users` (
   `id` varchar(36) NOT NULL,
-  `personnel_name` varchar(255) NOT NULL,
-  `event_type` enum('Hired','Fired','Promoted','Demoted') NOT NULL,
-  `description` varchar(255) NOT NULL,
-  `date` datetime NOT NULL,
-  PRIMARY KEY (`id`)
+  `username` varchar(255) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `role` varchar(50) NOT NULL DEFAULT 'User',
+  `createdAt` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- Table for global application settings
-CREATE TABLE `app_settings` (
-  `setting_key` varchar(50) NOT NULL,
-  `setting_value` varchar(255) NOT NULL,
-  PRIMARY KEY (`setting_key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- Default setting for maintenance mode
-INSERT INTO `app_settings` (`setting_key`, `setting_value`) VALUES ('maintenance_mode', 'false');

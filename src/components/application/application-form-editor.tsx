@@ -29,6 +29,7 @@ const formFieldSchema = z.object({
   id: z.string().optional(),
   label: z.string().min(1, "Label is required"),
   type: z.enum(["text", "textarea", "select"]),
+  required: z.boolean(),
   options: z.array(z.object({ id: z.string().optional(), value: z.string() })).optional(),
 });
 
@@ -74,7 +75,10 @@ const SortableField = ({ field, index, onEdit, onRemove }: { field: FormFieldSch
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
       <div className="flex-1">
-        <Label className="font-normal">{field.label}</Label>
+        <Label className="font-normal">
+            {field.label}
+            {field.required && <span className="text-destructive"> *</span>}
+        </Label>
         {renderFieldPreview()}
       </div>
       <div className="flex items-center gap-2">
@@ -164,7 +168,7 @@ export function ApplicationFormEditor() {
 
   const handleAddNewField = () => {
      // Use a temporary client-side ID for the key, the server will assign a permanent one.
-     append({ id: `new-${Date.now()}`, label: "New Question", type: 'text', options: [] }, { shouldFocus: false });
+     append({ id: `new-${Date.now()}`, label: "New Question", type: 'text', required: true, options: [] }, { shouldFocus: false });
      setEditDialogIndex(form.getValues('fields').length);
   };
 

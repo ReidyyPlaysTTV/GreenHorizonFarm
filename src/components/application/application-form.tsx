@@ -28,15 +28,32 @@ function buildZodSchema(fields: FormFieldData[]) {
   const schemaShape: { [key: string]: z.ZodTypeAny } = {};
   fields.forEach(field => {
     let fieldSchema;
+    const requiredError = `${field.label} is required.`;
+
     switch (field.type) {
       case 'text':
-        fieldSchema = z.string().min(1, `${field.label} is required.`);
+        fieldSchema = z.string();
+        if (field.required) {
+          fieldSchema = fieldSchema.min(1, requiredError);
+        } else {
+          fieldSchema = fieldSchema.optional();
+        }
         break;
       case 'textarea':
-        fieldSchema = z.string().min(10, `${field.label} requires at least 10 characters.`);
+        fieldSchema = z.string();
+        if (field.required) {
+          fieldSchema = fieldSchema.min(10, `${field.label} requires at least 10 characters.`);
+        } else {
+          fieldSchema = fieldSchema.optional();
+        }
         break;
       case 'select':
-        fieldSchema = z.string({ required_error: `Please make a selection for ${field.label}.`});
+        fieldSchema = z.string();
+        if(field.required) {
+            fieldSchema = fieldSchema.refine(value => value, { message: `Please make a selection for ${field.label}.` });
+        } else {
+             fieldSchema = fieldSchema.optional();
+        }
         break;
       default:
         fieldSchema = z.any();
@@ -108,7 +125,7 @@ export function ApplicationForm() {
   }
 
   const renderFormField = (fieldData: FormFieldData) => {
-    const { id, type, label, options } = fieldData;
+    const { id, type, label, options, required } = fieldData;
 
     return (
         <FormField
@@ -117,7 +134,10 @@ export function ApplicationForm() {
           name={id!}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{label}</FormLabel>
+              <FormLabel>
+                {label}
+                {required && <span className="text-destructive"> *</span>}
+              </FormLabel>
               <FormControl>
                 {type === 'text' && <Input placeholder={`Your ${label.toLowerCase()}`} {...field} />}
                 {type === 'textarea' && <Textarea placeholder="Please provide a detailed response..." className="min-h-[120px]" {...field} />}

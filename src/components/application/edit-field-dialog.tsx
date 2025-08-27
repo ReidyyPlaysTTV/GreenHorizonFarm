@@ -32,11 +32,14 @@ import {
 } from "@/components/ui/select";
 import { Trash2, PlusCircle } from "lucide-react";
 import type { FormFieldData } from "@/lib/types";
+import { Switch } from "../ui/switch";
+import { Label } from "../ui/label";
 
 const fieldSchema = z.object({
   id: z.string().optional(),
   label: z.string().min(1, "Label cannot be empty."),
   type: z.enum(["text", "textarea", "select"]),
+  required: z.boolean(),
   options: z.array(z.object({ id: z.string().optional(), value: z.string().min(1, "Option cannot be empty") })).optional(),
 });
 
@@ -62,6 +65,7 @@ export function EditFieldDialog({
     defaultValues: fieldData || {
       label: "",
       type: "text",
+      required: true,
       options: [],
     },
   });
@@ -174,6 +178,29 @@ export function EditFieldDialog({
                   </div>
               </div>
             )}
+            
+            <FormField
+              control={form.control}
+              name="required"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="required-switch">Required</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Is this question mandatory for the applicant to answer?
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      id="required-switch"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
 
             <DialogFooter className="mt-6">
                 <Button type="button" variant="destructive" onClick={() => { onDelete(); onClose(); }}>

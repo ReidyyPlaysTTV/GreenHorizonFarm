@@ -45,6 +45,7 @@ export interface FormFieldData {
     id?: string;
     type: 'text' | 'textarea' | 'select';
     label: string;
+    required: boolean;
     options?: FormFieldOption[];
 }
 
