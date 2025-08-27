@@ -47,9 +47,12 @@ export function LoginForm() {
       // In a real app, you'd validate credentials here.
       // For this demo, we'll just log in successfully.
       console.log(values);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('loggedInUser', values.username);
+      }
       toast({
         title: "Login Successful",
-        description: "Welcome back!",
+        description: `Welcome back, ${values.username}!`,
       });
       router.push("/"); // Navigate to dashboard home
       setIsLoading(false);
