@@ -52,19 +52,14 @@ export async function saveApplicationFormFields(fields: FormFieldData[]) {
     await connection.beginTransaction();
 
     try {
-        // To avoid foreign key constraint errors, we get all existing field IDs first.
-        const [existingFields] = await connection.query('SELECT id FROM application_form_fields');
-        const existingFieldIds = (existingFields as any[]).map(f => f.id);
-
-        if (existingFieldIds.length > 0) {
-             // Delete options for all existing fields, then delete the fields themselves.
-            const placeholders = existingFieldIds.map(() => '?').join(',');
-            await connection.query(`DELETE FROM application_field_options WHERE field_id IN (${placeholders})`, existingFieldIds);
-            await connection.query('DELETE FROM application_form_fields');
-        }
+        // Clear existing fields and options
+        await connection.query('DELETE FROM application_field_options');
+        await connection.query('DELETE FROM application_form_fields');
 
         for (const [index, field] of validatedFields.entries()) {
+            // Use existing ID or generate a new one. `new-` prefix indicates a temp client-side ID.
             const fieldId = field.id && !field.id.startsWith('new-') ? field.id : randomUUID();
+            
             await connection.query(
                 'INSERT INTO application_form_fields (id, type, label, `order`) VALUES (?, ?, ?, ?)',
                 [fieldId, field.type, field.label, index]
