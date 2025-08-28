@@ -121,6 +121,7 @@ export interface AppUser {
   username: string;
   role: Role;
   createdAt?: string;
+  avatarUrl?: string;
   personnel?: Personnel | null;
 }
 

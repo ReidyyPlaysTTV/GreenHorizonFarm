@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import type { Pool } from 'mysql2/promise';
@@ -36,8 +37,8 @@ export async function seedDatabase(pool: Pool) {
             const id = randomUUID();
 
             await connection.query(
-                'INSERT INTO users (id, username, password_hash, role) VALUES (?, ?, ?, ?)',
-                [id, username, password_hash, role]
+                'INSERT INTO users (id, username, password_hash, role, avatarUrl) VALUES (?, ?, ?, ?, ?)',
+                [id, username, password_hash, role, null]
             );
 
             console.log("Default admin user created successfully.");

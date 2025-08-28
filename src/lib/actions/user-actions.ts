@@ -22,9 +22,14 @@ async function createUsersTableIfNeeded() {
                     username VARCHAR(255) NOT NULL UNIQUE,
                     password_hash VARCHAR(255) NOT NULL,
                     role VARCHAR(50) NOT NULL DEFAULT 'User',
-                    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    avatarUrl VARCHAR(255)
                 );
             `);
+             const [columns] = await connection.query("SHOW COLUMNS FROM users LIKE 'avatarUrl'");
+            if (Array.isArray(columns) && columns.length === 0) {
+                await connection.query("ALTER TABLE users ADD COLUMN avatarUrl VARCHAR(255) NULL");
+            }
         } finally {
             connection.release();
         }
@@ -53,7 +58,7 @@ export async function getUsers(): Promise<AppUser[]> {
         await createUsersTableIfNeeded();
         const connection = await db.getConnection();
         try {
-            const [users] = await connection.query('SELECT id, username, role, createdAt FROM users ORDER BY username ASC');
+            const [users] = await connection.query('SELECT id, username, role, createdAt, avatarUrl FROM users ORDER BY username ASC');
             if (!Array.isArray(users)) {
                 return [];
             }
@@ -113,7 +118,7 @@ export async function loginUser(credentials: unknown) {
             return { success: false, message: 'Incorrect username or password. Please try again.' };
         }
 
-        return { success: true, user: { username: user.username, role: user.role } };
+        return { success: true, user: { id: user.id, username: user.username, role: user.role } };
 
     } catch (error) {
         console.error("Login failed:", error);
@@ -413,4 +418,38 @@ export async function changeUserPassword(data: unknown) {
     }
 }
     
+const updateProfilePictureSchema = z.object({
+    userId: z.string(),
+    url: z.string().url("Please enter a valid URL.").refine(
+        (url) => /^https:\/\/i\.imgur\.com\//.test(url) || /^https:\/\/r2\.fivemanage\.com\//.test(url), 
+        "URL must be from i.imgur.com or r2.fivemanage.com"
+    ),
+    user: z.string(),
+});
 
+export async function updateProfilePicture(data: unknown) {
+    const validation = updateProfilePictureSchema.safeParse(data);
+    if (!validation.success) {
+        return { success: false, message: validation.error.errors[0].message };
+    }
+    const { userId, url, user } = validation.data;
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        await connection.query('UPDATE users SET avatarUrl = ? WHERE id = ?', [url, userId]);
+        await logUserAction(user, 'Update Profile Picture', `Updated their profile picture.`, connection);
+
+        await connection.commit();
+        revalidatePath(`/users/${encodeURIComponent(user)}`);
+        revalidatePath(`/users`);
+        return { success: true, message: "Profile picture updated successfully." };
+    } catch (error) {
+        await connection.rollback();
+        console.error("Failed to update profile picture:", error);
+        return { success: false, message: "Database operation failed." };
+    } finally {
+        connection.release();
+    }
+}

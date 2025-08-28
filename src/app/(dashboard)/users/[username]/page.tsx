@@ -4,14 +4,16 @@
 import { useEffect, useState } from "react";
 import { notFound, useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, Shield, Briefcase, Star, Hash, Mail, Activity, KeySquare } from "lucide-react";
+import { User, Shield, Briefcase, Star, Hash, Mail, Activity, KeySquare, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { getAuditLogs, getUsers } from "@/lib/actions";
 import type { AppUser, Personnel, AuditLog } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ChangePasswordDialog } from "@/components/user/change-password-dialog";
+import { ChangeProfilePictureDialog } from "@/components/user/change-profile-picture-dialog";
 import { formatDistanceToNow } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -100,6 +102,7 @@ export default function UserProfilePage() {
     return (
         <div className="container mx-auto p-4 md:p-8">
             <div className="flex items-center space-x-6 mb-8">
+                <Skeleton className="h-24 w-24 rounded-full" />
                 <div className="space-y-2">
                     <Skeleton className="h-10 w-48" />
                     <Skeleton className="h-6 w-32" />
@@ -127,9 +130,15 @@ export default function UserProfilePage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <div className="mb-8">
-          <h1 className="text-4xl font-bold tracking-tight">{user.username}</h1>
-          <p className="text-xl text-muted-foreground">{personnelRecord?.rank || 'Civilian'}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-8">
+          <Avatar className="h-24 w-24 text-lg">
+            <AvatarImage src={user.avatarUrl} alt={user.username} />
+            <AvatarFallback><User className="h-10 w-10"/></AvatarFallback>
+          </Avatar>
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight">{user.username}</h1>
+            <p className="text-xl text-muted-foreground">{personnelRecord?.rank || 'Civilian'}</p>
+          </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -177,6 +186,11 @@ export default function UserProfilePage() {
                 </CardContent>
                 {isOwnProfile && (
                     <CardContent className="border-t pt-4 mt-4 space-y-2">
+                          <ChangeProfilePictureDialog user={user}>
+                             <Button variant="outline" className="w-full justify-start gap-2">
+                                <ImageIcon /> Change Profile Picture
+                            </Button>
+                         </ChangeProfilePictureDialog>
                           <ChangePasswordDialog user={user}>
                             <Button variant="outline" className="w-full justify-start gap-2">
                                 <KeySquare /> Change Password

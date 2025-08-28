@@ -45,18 +45,20 @@ export function UserProfile() {
     if (state === "collapsed") {
         return (
              <Link href={profileLink} className="block p-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                    <User className="h-4 w-4" />
-                </div>
+                <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.avatarUrl} alt={user.username}/>
+                    <AvatarFallback><User /></AvatarFallback>
+                </Avatar>
             </Link>
         )
     }
 
     return (
         <Link href={profileLink} className="flex items-center gap-2 p-2 rounded-md hover:bg-accent transition-colors">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                <User className="h-5 w-5" />
-            </div>
+            <Avatar>
+                <AvatarImage src={user.avatarUrl} alt={user.username}/>
+                <AvatarFallback><User /></AvatarFallback>
+            </Avatar>
             <div className="flex flex-col">
                 <span className="text-sm font-semibold text-foreground">{user.username}</span>
                 <span className="text-xs text-muted-foreground">{user.role}</span>

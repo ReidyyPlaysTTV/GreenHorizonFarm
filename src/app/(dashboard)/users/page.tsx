@@ -1,4 +1,5 @@
 
+
 import { getUsers, getPersonnel } from "@/lib/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshButton } from "@/components/layout/refresh-button";
@@ -52,7 +53,11 @@ export default async function UsersPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {users.map((user) => (
           <Card key={user.id} className="flex flex-col">
-            <CardHeader className="flex-1">
+            <CardHeader className="flex-row items-center gap-4">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={user.avatarUrl} alt={user.username} />
+                  <AvatarFallback><User /></AvatarFallback>
+                </Avatar>
                 <div className="flex-1">
                   <CardTitle>
                      <Link href={`/users/${encodeURIComponent(user.username)}`} className={cn(buttonVariants({ variant: "link" }), "p-0 h-auto text-xl")}>
