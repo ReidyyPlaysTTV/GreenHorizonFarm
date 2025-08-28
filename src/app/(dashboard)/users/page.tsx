@@ -53,12 +53,6 @@ export default async function UsersPage() {
         {users.map((user) => (
           <Card key={user.id} className="flex flex-col">
             <CardHeader className="flex-1">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16 border">
-                  <AvatarFallback className="text-2xl">
-                    <User />
-                  </AvatarFallback>
-                </Avatar>
                 <div className="flex-1">
                   <CardTitle>
                      <Link href={`/users/${encodeURIComponent(user.username)}`} className={cn(buttonVariants({ variant: "link" }), "p-0 h-auto text-xl")}>
@@ -67,7 +61,6 @@ export default async function UsersPage() {
                   </CardTitle>
                   <CardDescription>{user.personnel?.rank || 'Civilian'}</CardDescription>
                 </div>
-              </div>
             </CardHeader>
             <CardContent className="space-y-3">
                <div className="flex items-center justify-between text-sm">

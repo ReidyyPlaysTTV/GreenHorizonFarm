@@ -3,7 +3,6 @@
 
 import { useEffect, useState } from "react";
 import { notFound, useParams } from "next/navigation";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { User, Shield, Briefcase, Star, Hash, Mail, Activity, KeySquare } from "lucide-react";
@@ -101,7 +100,6 @@ export default function UserProfilePage() {
     return (
         <div className="container mx-auto p-4 md:p-8">
             <div className="flex items-center space-x-6 mb-8">
-                <Skeleton className="h-24 w-24 rounded-full" />
                 <div className="space-y-2">
                     <Skeleton className="h-10 w-48" />
                     <Skeleton className="h-6 w-32" />
@@ -129,16 +127,9 @@ export default function UserProfilePage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <div className="flex items-center space-x-6 mb-8">
-        <Avatar className="h-24 w-24 border-2 border-primary">
-          <AvatarFallback className="text-3xl">
-            {user.username.charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <div>
+      <div className="mb-8">
           <h1 className="text-4xl font-bold tracking-tight">{user.username}</h1>
           <p className="text-xl text-muted-foreground">{personnelRecord?.rank || 'Civilian'}</p>
-        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
