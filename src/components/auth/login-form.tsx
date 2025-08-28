@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { logUserAction } from "@/lib/actions";
+import { logUserAction, loginUser } from "@/lib/actions";
 import { Checkbox } from "../ui/checkbox";
 
 const formSchema = z.object({
@@ -58,26 +58,35 @@ export function LoginForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     
-    // In a real app, you'd validate credentials here.
-    // For this demo, we'll just log in successfully.
-    if (typeof window !== 'undefined') {
-        localStorage.setItem('loggedInUser', values.username);
-        
-        if (values.rememberMe) {
-            localStorage.setItem('rememberedCredentials', JSON.stringify({username: values.username, password: values.password}));
-        } else {
-            localStorage.removeItem('rememberedCredentials');
-        }
-    }
-    
-    await logUserAction(values.username, "Login", `User '${values.username}' signed in.`);
+    const result = await loginUser(values);
 
-    toast({
-        title: "Login Successful",
-        description: `Welcome back, ${values.username}!`,
-    });
-    
-    router.push("/dashboard");
+    if (result.success) {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('loggedInUser', values.username);
+            
+            if (values.rememberMe) {
+                localStorage.setItem('rememberedCredentials', JSON.stringify({username: values.username, password: values.password}));
+            } else {
+                localStorage.removeItem('rememberedCredentials');
+            }
+        }
+        
+        await logUserAction(values.username, "Login", `User '${values.username}' signed in.`);
+
+        toast({
+            title: "Login Successful",
+            description: `Welcome back, ${values.username}!`,
+        });
+        
+        router.push("/dashboard");
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: result.message || "An unknown error occurred.",
+        });
+    }
+
     setIsLoading(false);
   }
 

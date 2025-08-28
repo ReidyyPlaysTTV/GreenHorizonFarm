@@ -93,6 +93,42 @@ export async function getUsers(): Promise<AppUser[]> {
     }
 }
 
+const loginSchema = z.object({
+  username: z.string(),
+  password: z.string(),
+});
+
+export async function loginUser(credentials: unknown) {
+    const validation = loginSchema.safeParse(credentials);
+    if (!validation.success) {
+        return { success: false, message: 'Invalid credentials format.' };
+    }
+    const { username, password } = validation.data;
+
+    const connection = await db.getConnection();
+    try {
+        const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', [username]);
+        if (!Array.isArray(rows) || rows.length === 0) {
+            return { success: false, message: 'Incorrect username or password. Please try again.' };
+        }
+        
+        const user = (rows as any[])[0];
+        const passwordMatch = await bcrypt.compare(password, user.password_hash);
+
+        if (!passwordMatch) {
+            return { success: false, message: 'Incorrect username or password. Please try again.' };
+        }
+
+        return { success: true, user: { username: user.username, role: user.role } };
+
+    } catch (error) {
+        console.error("Login failed:", error);
+        return { success: false, message: 'An internal server error occurred.' };
+    } finally {
+        connection.release();
+    }
+}
+
 
 const roleSchema = z.object({
     role: z.string().min(1, "Role cannot be empty."),
