@@ -22,7 +22,7 @@ import { UserProfile } from "./user-profile";
 import { usePermissions } from "@/hooks/use-permissions";
 
 const mainMenuItems = [
-  { href: "/", label: "Home", icon: Home, permission: 'ACCESS_DASHBOARD' },
+  { href: "/dashboard", label: "Home", icon: Home, permission: 'ACCESS_DASHBOARD' },
   { href: "/roster", label: "Roster", icon: Users, permission: 'VIEW_ROSTER' },
   { href: "/users", label: "Users", icon: User, permission: 'VIEW_USERS' },
   { href: "/callsigns", label: "Callsigns", icon: Contact, permission: 'VIEW_CALLSIGNS' },
@@ -108,7 +108,7 @@ export function SidebarNav() {
        <Separator className="my-2" />
       <SidebarFooter className="p-2 mt-auto">
         <UserProfile />
-        <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => router.push('/login')}>
+        <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => router.push('/')}>
             <LogOut className="h-4 w-4"/>
             <span className="group-data-[collapsible=icon]:hidden">Logout</span>
         </Button>

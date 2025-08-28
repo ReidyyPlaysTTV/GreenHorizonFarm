@@ -77,7 +77,7 @@ export function LoginForm() {
         description: `Welcome back, ${values.username}!`,
     });
     
-    router.push("/");
+    router.push("/dashboard");
     setIsLoading(false);
   }
 

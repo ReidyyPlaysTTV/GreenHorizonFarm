@@ -28,7 +28,7 @@ export default function ApplyPage() {
         </Card>
         <div className="text-center">
             <Button variant="ghost" asChild>
-                <Link href="/login" className="flex items-center justify-center gap-2">
+                <Link href="/" className="flex items-center justify-center gap-2">
                     <ArrowLeft className="h-4 w-4" />
                     Back to Login
                 </Link>
