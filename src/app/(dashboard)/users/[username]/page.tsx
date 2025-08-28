@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { User, Shield, Briefcase, Star, Hash, Mail, Activity, KeySquare, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { getAuditLogs, getPersonnel, getUsers } from "@/lib/actions";
+import { getAuditLogs, getUsers } from "@/lib/actions";
 import type { AppUser, Personnel, AuditLog } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ChangePasswordDialog } from "@/components/user/change-password-dialog";
@@ -69,12 +69,11 @@ export default function UserProfilePage() {
   const [loggedInUser, setLoggedInUser] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setLoggedInUser(localStorage.getItem('loggedInUser'));
-    }
-
     const fetchData = async () => {
       setLoading(true);
+       if (typeof window !== 'undefined') {
+        setLoggedInUser(localStorage.getItem('loggedInUser'));
+      }
       try {
         const users = await getUsers();
         const foundUser = users.find(u => u.username === decodedUsername);
