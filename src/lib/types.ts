@@ -1,5 +1,4 @@
 
-
 export const roles = ["Developer", "Administrator", "Commissioners Office", "High Command", "Command", "NCOs", "User"] as const;
 export type Role = typeof roles[number];
 
@@ -25,6 +24,7 @@ export const permissions = [
     'MANAGE_USERS', // Create users, assign roles
     'MANAGE_ROLES_PERMISSIONS',
     'MANAGE_ACCESS_REQUESTS',
+    'MANAGE_APP_SETTINGS',
 ] as const;
 export type Permission = typeof permissions[number];
 

@@ -12,3 +12,4 @@ export * from './actions/callsign-log-actions';
 export *from './actions/audit-log-actions';
 export * from './actions/status-actions';
 export * from './actions/permission-actions';
+export * from './actions/settings-actions';

@@ -3,9 +3,10 @@ import { UserManagement } from "@/components/admin/user-management";
 import { PermissionManagement } from "@/components/admin/permission-management";
 import { DeveloperPanel } from "@/components/admin/developer-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getUsers, getBugReports, getSuggestions, getAccessRequests } from "@/lib/actions";
+import { getUsers, getBugReports, getSuggestions, getAccessRequests, getSopLink } from "@/lib/actions";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { AccessRequestManagement } from "@/components/admin/access-request-management";
+import { SettingsManagement } from "@/components/admin/settings-management";
 
 export default async function AdminPage() {
   // Note: In a real application, you would protect this page to ensure
@@ -14,6 +15,7 @@ export default async function AdminPage() {
   const bugReports = await getBugReports();
   const suggestions = await getSuggestions();
   const accessRequests = await getAccessRequests();
+  const sopLink = await getSopLink();
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -28,10 +30,11 @@ export default async function AdminPage() {
       </div>
 
        <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="users">Users & Roles</TabsTrigger>
           <TabsTrigger value="access_requests">Access Requests</TabsTrigger>
           <TabsTrigger value="permissions">Permission Groups</TabsTrigger>
+          <TabsTrigger value="settings">App Settings</TabsTrigger>
           <TabsTrigger value="developer">Developer</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="mt-6">
@@ -42,6 +45,9 @@ export default async function AdminPage() {
         </TabsContent>
         <TabsContent value="permissions" className="mt-6">
             <PermissionManagement />
+        </TabsContent>
+        <TabsContent value="settings" className="mt-6">
+            <SettingsManagement currentSopLink={sopLink} />
         </TabsContent>
         <TabsContent value="developer" className="mt-6">
             <DeveloperPanel bugReports={bugReports} suggestions={suggestions} />

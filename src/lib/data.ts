@@ -1,5 +1,4 @@
 
-
 import type { Department, Permission, Role } from "./types";
 
 export const departments: Department[] = ["Commissioners Office", "High Command", "Command", "NCOS", "Corrections", "Training"];
@@ -70,6 +69,7 @@ export const permissions: Permission[] = [
     'MANAGE_USERS', // Create users, assign roles
     'MANAGE_ROLES_PERMISSIONS',
     'MANAGE_ACCESS_REQUESTS',
+    'MANAGE_APP_SETTINGS',
 ];
 
 export const permissionDescriptions: Record<Permission, string> = {
@@ -91,6 +91,7 @@ export const permissionDescriptions: Record<Permission, string> = {
     MANAGE_USERS: "Manage Users & Roles",
     MANAGE_ROLES_PERMISSIONS: "Manage Permission Groups",
     MANAGE_ACCESS_REQUESTS: "Manage Access Requests",
+    MANAGE_APP_SETTINGS: "Manage Application Settings (e.g. SOPs)",
 };
 
 
@@ -143,6 +144,7 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'ACCESS_COMMAND_CENTER',
         'MANAGE_BLACKLIST',
         'VIEW_ARCHIVE',
+        'MANAGE_APP_SETTINGS',
     ],
     "Commissioners Office": [
         'ACCESS_DASHBOARD',
@@ -162,6 +164,7 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'ACCESS_ADMIN_PANEL',
         'MANAGE_USERS',
         'MANAGE_ACCESS_REQUESTS',
+        'MANAGE_APP_SETTINGS',
     ],
     // Administrator and Developer have all permissions, handled separately.
     Administrator: [...permissions],
