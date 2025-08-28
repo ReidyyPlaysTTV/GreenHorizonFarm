@@ -128,7 +128,7 @@ export default function UserProfilePage() {
   
   const isOwnProfile = loggedInUser === user.username;
   const lastLogin = activityLogs.find(log => log.actionType === 'Login');
-  const userAvatar = personnelRecord?.avatarUrl;
+  const userAvatar = user.personnel?.avatarUrl;
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -185,7 +185,7 @@ export default function UserProfilePage() {
                     </div>
                      <div className="flex justify-between">
                         <span className="text-muted-foreground">Last Login</span>
-                        <span className="font-medium">{lastLogin ? formatDistanceToNow(lastLogin.timestamp, {addSuffix: true}) : 'Never'}</span>
+                        <span className="font-medium">{lastLogin ? formatDistanceToNow(new Date(lastLogin.timestamp), {addSuffix: true}) : 'Never'}</span>
                     </div>
                 </CardContent>
                 {isOwnProfile && (
@@ -274,7 +274,7 @@ export default function UserProfilePage() {
                                         <p className="text-sm font-medium">{log.actionType}</p>
                                         <p className="text-sm text-muted-foreground">{log.description}</p>
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            {formatDistanceToNow(log.timestamp, { addSuffix: true })}
+                                            {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
                                         </p>
                                     </div>
                                 </li>
