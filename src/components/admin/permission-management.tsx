@@ -16,13 +16,17 @@ import { updateRolePermissions } from "@/lib/actions/permission-actions";
 import { useToast } from "@/hooks/use-toast";
 
 export function PermissionManagement() {
-  const { hasPermission, permissionsMap: initialPermissionsMap, userRole } = usePermissions();
+  const { hasPermission, permissionsMap: initialPermissionsMap } = usePermissions();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState("System");
   const [editablePermissions, setEditablePermissions] = useState<Record<Role, Permission[]>>({} as Record<Role, Permission[]>);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentUser(localStorage.getItem('loggedInUser') || "System");
+    }
     if (initialPermissionsMap) {
       setEditablePermissions(JSON.parse(JSON.stringify(initialPermissionsMap)));
       setIsLoading(false);
@@ -30,6 +34,7 @@ export function PermissionManagement() {
   }, [initialPermissionsMap]);
   
   const handlePermissionChange = (role: Role, permissionId: Permission, checked: boolean) => {
+    if (role === 'Developer' || role === 'Administrator') return;
     setEditablePermissions(prev => {
       const currentPermissions = prev[role] || [];
       if (checked) {
@@ -40,11 +45,31 @@ export function PermissionManagement() {
     });
   };
 
+  const handleToggleAll = (role: Role) => {
+    if (role === 'Developer' || role === 'Administrator') return;
+    const currentPermissions = editablePermissions[role] || [];
+    const allPermissionIds = Object.keys(permissionDescriptions) as Permission[];
+    const areAllSelected = allPermissionIds.every(p => currentPermissions.includes(p));
+
+    setEditablePermissions(prev => ({
+        ...prev,
+        [role]: areAllSelected ? [] : allPermissionIds
+    }));
+  }
+
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-      if (!userRole) throw new Error("User not authenticated");
-      await updateRolePermissions(editablePermissions, userRole);
+      if (!currentUser) throw new Error("User not authenticated");
+      
+      const permissionsToSave = { ...editablePermissions };
+      // Ensure Admin/Dev roles always have all permissions on save
+      const allPermissionIds = Object.keys(permissionDescriptions) as Permission[];
+      permissionsToSave.Administrator = allPermissionIds;
+      permissionsToSave.Developer = allPermissionIds;
+
+      await updateRolePermissions(permissionsToSave, currentUser);
+
       toast({
         title: "Success",
         description: "Permissions updated successfully. Changes may require a refresh to take effect.",
@@ -111,27 +136,57 @@ export function PermissionManagement() {
       </CardHeader>
       <CardContent>
         <Accordion type="multiple" className="w-full" defaultValue={roles.map(r => r)}>
-            {roles.filter(r => r !== 'Developer' && r !== 'Administrator').map(role => (
+            {roles.map(role => {
+                const currentRolePermissions = editablePermissions[role as Role] || [];
+                const allPermissionIds = Object.keys(permissionDescriptions) as Permission[];
+                const areAllSelected = allPermissionIds.every(p => currentRolePermissions.includes(p));
+
+                return (
                  <AccordionItem value={role} key={role}>
-                    <AccordionTrigger className="text-lg font-medium">{role}</AccordionTrigger>
+                    <AccordionTrigger className="text-lg font-medium hover:no-underline">
+                        <span className="flex-1 text-left">{role}</span>
+                         {(role !== 'Developer' && role !== 'Administrator') && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleAll(role as Role);
+                                }}
+                                className="mr-2"
+                            >
+                                {areAllSelected ? "Deselect All" : "Select All"}
+                            </Button>
+                        )}
+                    </AccordionTrigger>
                     <AccordionContent>
+                        {(role === 'Developer' || role === 'Administrator') && (
+                             <Alert>
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>Full Permissions</AlertTitle>
+                                <AlertDescription>
+                                    The {role} role always has all permissions granted.
+                                </AlertDescription>
+                            </Alert>
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
-                            {Object.entries(permissionDescriptions).map(([permissionId, label]) => (
+                            {allPermissionIds.map((permissionId) => (
                                 <div key={permissionId} className="flex items-center space-x-2">
                                     <Checkbox 
                                         id={`${role}-${permissionId}`} 
-                                        checked={editablePermissions[role]?.includes(permissionId as Permission) || false}
-                                        onCheckedChange={(checked) => handlePermissionChange(role, permissionId as Permission, !!checked)}
+                                        checked={currentRolePermissions.includes(permissionId as Permission) || false}
+                                        onCheckedChange={(checked) => handlePermissionChange(role as Role, permissionId as Permission, !!checked)}
+                                        disabled={role === 'Developer' || role === 'Administrator'}
                                     />
-                                    <Label htmlFor={`${role}-${permissionId}`} className="font-normal">
-                                        {label}
+                                    <Label htmlFor={`${role}-${permissionId}`} className="font-normal text-sm">
+                                        {permissionDescriptions[permissionId as Permission]}
                                     </Label>
                                 </div>
                             ))}
                         </div>
                     </AccordionContent>
                 </AccordionItem>
-            ))}
+            )})}
         </Accordion>
       </CardContent>
     </Card>

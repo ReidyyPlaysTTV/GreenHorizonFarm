@@ -37,6 +37,14 @@ export async function getPermissionsMap(): Promise<Record<Role, Permission[]>> {
                 }
             }
         }
+        
+        // Ensure Developer and Administrator always have all permissions from the source of truth
+        const allPermissionIds = Object.keys(initialPermissionsMap).flatMap(role => initialPermissionsMap[role as Role]);
+        const uniquePermissions = [...new Set(allPermissionIds)] as Permission[];
+
+        map.Developer = uniquePermissions;
+        map.Administrator = uniquePermissions;
+
         return map;
 
     } catch (error) {
@@ -58,11 +66,13 @@ export async function updateRolePermissions(newPermissions: Record<Role, Permiss
     try {
         await connection.beginTransaction();
         
-        // Clear existing permissions
-        await connection.query('DELETE FROM role_permissions');
+        // Clear existing permissions for non-admin/dev roles
+        await connection.query("DELETE FROM role_permissions WHERE role NOT IN ('Developer', 'Administrator')");
 
         // Insert new permissions
         for (const role in newPermissions) {
+            if (role === 'Developer' || role === 'Administrator') continue;
+
             const permissions = newPermissions[role as Role];
             for (const permission of permissions) {
                 await connection.query(
@@ -97,6 +107,7 @@ export async function seedRolePermissions(pool: Pool) {
             console.log("No role permissions found. Seeding default permissions...");
 
             for (const role in initialPermissionsMap) {
+                 if (role === 'Developer' || role === 'Administrator') continue;
                 const permissions = initialPermissionsMap[role as Role];
                 for (const permission of permissions) {
                     await connection.query(
