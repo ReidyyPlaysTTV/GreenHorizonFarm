@@ -1,9 +1,7 @@
 
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSidebar } from "@/components/ui/sidebar";
-import { User } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getUsers } from "@/lib/actions";
@@ -44,13 +42,9 @@ export function UserProfile() {
     
     return (
         <Link href={profileLink} className="flex items-center justify-center gap-2 p-2 rounded-md hover:bg-accent transition-colors group-data-[state=expanded]:justify-start">
-            <Avatar>
-                <AvatarImage src={user.avatarUrl} alt={user.username}/>
-                <AvatarFallback><User /></AvatarFallback>
-            </Avatar>
-            <div className="flex-col group-data-[collapsible=icon]:hidden">
+            <div className="flex-col text-center group-data-[collapsible=icon]:text-center group-data-[state=expanded]:text-left">
                 <span className="text-sm font-semibold text-foreground">{user.username}</span>
-                <span className="text-xs text-muted-foreground">{user.role}</span>
+                <p className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">{user.role}</p>
             </div>
         </Link>
     )

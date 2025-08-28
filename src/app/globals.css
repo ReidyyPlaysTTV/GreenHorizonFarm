@@ -32,32 +32,6 @@
     --chart-5: 27 87% 67%;
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 217.2 32.6% 17.5%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 100% 40%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 25.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 210 100% 50%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-  }
 }
 
 @layer base {
@@ -80,6 +54,9 @@
     .animate-co-text {
         animation: co-text-animation 3s ease infinite;
     }
+     .animate-co-text-yellow {
+        animation: co-text-yellow-animation 3s ease infinite;
+    }
     .animate-hc-text {
         animation: hc-text-animation 3s ease infinite;
     }
@@ -89,17 +66,8 @@
     .animate-nco-text {
         animation: nco-text-animation 3s ease infinite;
     }
-    .animate-co-text-yellow {
-        animation: co-text-yellow-animation 3s ease infinite;
-    }
     .animate-user-text {
         animation: user-text-animation 2s ease infinite;
-    }
-    .animate-cuff-swing {
-        animation: cuff-swing 1.5s ease-in-out infinite alternate;
-    }
-    .animate-donut-bounce {
-        animation: donut-bounce 1s ease-in-out infinite;
     }
 
     @keyframes rainbow-text-animation {
@@ -115,7 +83,7 @@
         0%, 100% { color: #FFFFFF; }
         50% { color: #9CA3AF; } /* gray-400 */
     }
-     @keyframes co-text-yellow-animation {
+    @keyframes co-text-yellow-animation {
         0%, 100% { color: #FFFFFF; }
         50% { color: #EAB308; } /* yellow-500 */
     }
@@ -134,19 +102,5 @@
     @keyframes user-text-animation {
         0%, 100% { color: #FFFFFF; opacity: 1; }
         50% { opacity: 0.7; }
-    }
-    @keyframes cuff-swing {
-        0% { transform: rotate(-15deg); }
-        100% { transform: rotate(15deg); }
-    }
-    @keyframes donut-bounce {
-      0%, 100% {
-        transform: translateY(-20%);
-        animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
-      }
-      50% {
-        transform: translateY(0);
-        animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
-      }
     }
 }
