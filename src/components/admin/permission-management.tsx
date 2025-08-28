@@ -145,19 +145,6 @@ export function PermissionManagement() {
                  <AccordionItem value={role} key={role}>
                     <AccordionTrigger className="text-lg font-medium hover:no-underline">
                         <span className="flex-1 text-left">{role}</span>
-                         {(role !== 'Developer' && role !== 'Administrator') && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleAll(role as Role);
-                                }}
-                                className="mr-2"
-                            >
-                                {areAllSelected ? "Deselect All" : "Select All"}
-                            </Button>
-                        )}
                     </AccordionTrigger>
                     <AccordionContent>
                         {(role === 'Developer' || role === 'Administrator') && (
@@ -168,6 +155,17 @@ export function PermissionManagement() {
                                     The {role} role always has all permissions granted.
                                 </AlertDescription>
                             </Alert>
+                        )}
+                        {(role !== 'Developer' && role !== 'Administrator') && (
+                          <div className="mb-4 text-right">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleToggleAll(role as Role)}
+                            >
+                                {areAllSelected ? "Deselect All" : "Select All"}
+                            </Button>
+                          </div>
                         )}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
                             {allPermissionIds.map((permissionId) => (
