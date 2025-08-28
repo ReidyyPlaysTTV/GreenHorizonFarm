@@ -42,24 +42,13 @@ export function UserProfile() {
     
     const profileLink = `/users/${encodeURIComponent(user.username)}`;
     
-    if (state === "collapsed") {
-        return (
-             <Link href={profileLink} className="block p-2">
-                <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.avatarUrl} alt={user.username}/>
-                    <AvatarFallback><User /></AvatarFallback>
-                </Avatar>
-            </Link>
-        )
-    }
-
     return (
-        <Link href={profileLink} className="flex items-center gap-2 p-2 rounded-md hover:bg-accent transition-colors">
+        <Link href={profileLink} className="flex items-center justify-center gap-2 p-2 rounded-md hover:bg-accent transition-colors group-data-[state=expanded]:justify-start">
             <Avatar>
                 <AvatarImage src={user.avatarUrl} alt={user.username}/>
                 <AvatarFallback><User /></AvatarFallback>
             </Avatar>
-            <div className="flex flex-col">
+            <div className="flex-col group-data-[collapsible=icon]:hidden">
                 <span className="text-sm font-semibold text-foreground">{user.username}</span>
                 <span className="text-xs text-muted-foreground">{user.role}</span>
             </div>

@@ -12,7 +12,7 @@ import {
   SidebarFooter,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home, Users, Archive, ShieldAlert, FileText, LogOut, ShieldCheck, User, Contact, History, BookMarked } from "lucide-react";
+import { Home, Users, Archive, ShieldAlert, FileText, LogOut, ShieldCheck, User, Contact, History, BookMarked, Sun, Moon } from "lucide-react";
 import { Button } from "../ui/button";
 import Image from "next/image";
 import { Separator } from "../ui/separator";
@@ -20,6 +20,7 @@ import { BugReportForm } from "./bug-report-form";
 import { SuggestionForm } from "./suggestion-form";
 import { UserProfile } from "./user-profile";
 import { usePermissions } from "@/hooks/use-permissions";
+import { ThemeToggle } from "./theme-toggle";
 
 const mainMenuItems = [
   { href: "/dashboard", label: "Home", icon: Home, permission: 'ACCESS_DASHBOARD' },
@@ -73,11 +74,9 @@ export function SidebarNav() {
   return (
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader>
-        <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg">
-                <Image src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png" alt="DOC Logo" width={24} height={24} className="h-6 w-6" />
-            </div>
-            <span className="text-lg font-semibold">DOC Roster</span>
+        <div className="flex items-center justify-center gap-2 h-10">
+            <Image src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png" alt="DOC Logo" width={28} height={28} className="h-7 w-7" />
+            <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">DOC Roster</span>
         </div>
       </SidebarHeader>
       <SidebarMenu className="flex-1 p-2 space-y-4">
@@ -108,7 +107,10 @@ export function SidebarNav() {
        <Separator className="my-2" />
       <SidebarFooter className="p-2 mt-auto">
         <UserProfile />
-        <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => router.push('/')}>
+         <div className="flex items-center group-data-[collapsible=icon]:justify-center">
+            <ThemeToggle />
+         </div>
+        <Button variant="ghost" className="w-full justify-start gap-2 group-data-[collapsible=icon]:justify-center" onClick={() => router.push('/')}>
             <LogOut className="h-4 w-4"/>
             <span className="group-data-[collapsible=icon]:hidden">Logout</span>
         </Button>
