@@ -23,6 +23,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,7 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { rankOrder } from "@/lib/data";
-import { ArrowUp, ArrowDown, UserX, Edit, Loader2, ShieldHalf, CalendarIcon } from "lucide-react";
+import { ArrowUp, ArrowDown, UserX, Edit, Loader2, ShieldHalf, CalendarIcon, MoreHorizontal } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -192,202 +200,202 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
   }
 
   return (
-    <div className="flex items-center justify-end gap-1">
-      {/* Promote */}
-      <Button variant="ghost" size="icon" onClick={handlePromote} disabled={!canPromote || isPromoting} title="Promote">
-        {isPromoting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4 text-green-500" />}
-      </Button>
-
-      {/* Demote */}
-      <Button variant="ghost" size="icon" onClick={handleDemote} disabled={!canDemote || isDemoting} title="Demote">
-        {isDemoting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowDown className="h-4 w-4 text-orange-500" />}
-      </Button>
-
-      {/* Update Status */}
+    <>
       <Dialog open={isStatusDialogOpen} onOpenChange={setStatusDialogOpen}>
-        <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" title="Update Status">
-                <ShieldHalf className="h-4 w-4"/>
-            </Button>
-        </DialogTrigger>
-        {isStatusDialogOpen && (
-          <DialogContent>
-              <DialogHeader>
-                  <DialogTitle>Update Status for {personnel.name}</DialogTitle>
-              </DialogHeader>
-              <Form {...statusForm}>
-                  <form onSubmit={statusForm.handleSubmit(handleStatusSubmit)} className="space-y-4">
-                      <FormField control={statusForm.control} name="status" render={({field}) => (
-                          <FormItem>
-                              <Label>Status</Label>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                  <SelectContent>
-                                      {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                                  </SelectContent>
-                              </Select>
-                              <FormMessage/>
-                          </FormItem>
-                      )}/>
-                      {watchedStatus === 'LOA' && (
-                          <FormField
-                              control={statusForm.control}
-                              name="loaUntil"
-                              render={({ field }) => (
-                                  <FormItem className="flex flex-col">
-                                      <Label>LOA End Date</Label>
-                                      <Popover>
-                                          <PopoverTrigger asChild>
-                                          <FormControl>
-                                              <Button
-                                              variant={"outline"}
-                                              className={cn(
-                                                  "w-full pl-3 text-left font-normal",
-                                                  !field.value && "text-muted-foreground"
-                                              )}
-                                              >
-                                              {field.value ? (
-                                                  format(field.value, "PPP")
-                                              ) : (
-                                                  <span>Pick a date</span>
-                                              )}
-                                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                              </Button>
-                                          </FormControl>
-                                          </PopoverTrigger>
-                                          <PopoverContent className="w-auto p-0" align="start">
-                                              <Calendar
-                                                  mode="single"
-                                                  selected={field.value ?? undefined}
-                                                  onSelect={field.onChange}
-                                                  disabled={(date) =>
-                                                      date < new Date()
-                                                  }
-                                                  initialFocus
-                                              />
-                                          </PopoverContent>
-                                      </Popover>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
-                      )}
-                      <DialogFooter>
-                        <Button type="button" variant="ghost" onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
-                        <Button type="submit" disabled={isUpdatingStatus}>
-                              {isUpdatingStatus ? <Loader2 className="h-4 w-4 animate-spin"/> : "Update Status"}
-                          </Button>
-                      </DialogFooter>
-                  </form>
-              </Form>
-          </DialogContent>
-        )}
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Update Status for {personnel.name}</DialogTitle>
+            </DialogHeader>
+            <Form {...statusForm}>
+                <form onSubmit={statusForm.handleSubmit(handleStatusSubmit)} className="space-y-4">
+                    <FormField control={statusForm.control} name="status" render={({field}) => (
+                        <FormItem>
+                            <Label>Status</Label>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage/>
+                        </FormItem>
+                    )}/>
+                    {watchedStatus === 'LOA' && (
+                        <FormField
+                            control={statusForm.control}
+                            name="loaUntil"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                    <Label>LOA End Date</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full pl-3 text-left font-normal",
+                                                !field.value && "text-muted-foreground"
+                                            )}
+                                            >
+                                            {field.value ? (
+                                                format(field.value, "PPP")
+                                            ) : (
+                                                <span>Pick a date</span>
+                                            )}
+                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value ?? undefined}
+                                                onSelect={field.onChange}
+                                                disabled={(date) =>
+                                                    date < new Date()
+                                                }
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
+                    <DialogFooter>
+                      <Button type="button" variant="ghost" onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
+                      <Button type="submit" disabled={isUpdatingStatus}>
+                            {isUpdatingStatus ? <Loader2 className="h-4 w-4 animate-spin"/> : "Update Status"}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Edit Personnel: {personnel.name}</DialogTitle>
+            </DialogHeader>
+            <Form {...editForm}>
+                <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4">
+                    <FormField control={editForm.control} name="name" render={({field}) => (
+                        <FormItem>
+                            <Label>Name</Label>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage/>
+                        </FormItem>
+                    )}/>
+                    <FormField control={editForm.control} name="discordUsername" render={({field}) => (
+                        <FormItem>
+                            <Label>Discord Username</Label>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage/>
+                        </FormItem>
+                    )}/>
+                    <FormField control={editForm.control} name="badgeNumber" render={({field}) => (
+                        <FormItem>
+                            <Label>Callsign</Label>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage/>
+                        </FormItem>
+                    )}/>
+                    <FormField control={editForm.control} name="rank" render={({field}) => (
+                        <FormItem>
+                            <Label>Rank</Label>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {rankOrder.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage/>
+                        </FormItem>
+                    )}/>
+                    <DialogFooter>
+                        <Button type="button" variant="ghost" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+                        <Button type="submit" disabled={isEditing}>
+                            {isEditing ? <Loader2 className="h-4 w-4 animate-spin"/> : "Save Changes"}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
       </Dialog>
       
-      {/* Edit */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" title="Edit">
-                <Edit className="h-4 w-4" />
-            </Button>
-        </DialogTrigger>
-        {isEditDialogOpen && (
-          <DialogContent>
-              <DialogHeader>
-                  <DialogTitle>Edit Personnel: {personnel.name}</DialogTitle>
-              </DialogHeader>
-              <Form {...editForm}>
-                  <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4">
-                      <FormField control={editForm.control} name="name" render={({field}) => (
-                          <FormItem>
-                              <Label>Name</Label>
-                              <FormControl><Input {...field} /></FormControl>
-                              <FormMessage/>
-                          </FormItem>
-                      )}/>
-                      <FormField control={editForm.control} name="discordUsername" render={({field}) => (
-                          <FormItem>
-                              <Label>Discord Username</Label>
-                              <FormControl><Input {...field} /></FormControl>
-                              <FormMessage/>
-                          </FormItem>
-                      )}/>
-                      <FormField control={editForm.control} name="badgeNumber" render={({field}) => (
-                          <FormItem>
-                              <Label>Callsign</Label>
-                              <FormControl><Input {...field} /></FormControl>
-                              <FormMessage/>
-                          </FormItem>
-                      )}/>
-                      <FormField control={editForm.control} name="rank" render={({field}) => (
-                          <FormItem>
-                              <Label>Rank</Label>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                  <SelectContent>
-                                      {rankOrder.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                                  </SelectContent>
-                              </Select>
-                              <FormMessage/>
-                          </FormItem>
-                      )}/>
-                      <DialogFooter>
-                          <Button type="submit" disabled={isEditing}>
-                              {isEditing ? <Loader2 className="h-4 w-4 animate-spin"/> : "Save Changes"}
-                          </Button>
-                      </DialogFooter>
-                  </form>
-              </Form>
-          </DialogContent>
-        )}
-      </Dialog>
-
-
-      {/* Fire */}
       <Dialog open={isFireDialogOpen} onOpenChange={setFireDialogOpen}>
-        <DialogTrigger asChild>
-          <Button variant="ghost" size="icon" title="Fire">
-            <UserX className="h-4 w-4 text-destructive" />
-          </Button>
-        </DialogTrigger>
-        {isFireDialogOpen && (
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Fire {personnel.name}?</DialogTitle>
-              <DialogDescription>
-                This action will move the personnel to the Fired/Resigned archive. Please provide a reason.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...fireForm}>
-              <form onSubmit={fireForm.handleSubmit(handleFireSubmit)} className="space-y-4">
-                  <div className="space-y-2">
-                      <Label htmlFor="discordUsername">Discord</Label>
-                      <Input id="discordUsername" value={personnel.discordUsername || 'N/A'} disabled />
-                  </div>
-                  <FormField
-                      control={fireForm.control}
-                      name="reason"
-                      render={({ field }) => (
-                          <FormItem>
-                              <Label>Reason for Firing</Label>
-                              <FormControl>
-                                  <Textarea placeholder="Provide a detailed reason..." {...field} />
-                              </FormControl>
-                              <FormMessage />
-                          </FormItem>
-                      )}
-                  />
-                  <DialogFooter>
-                      <Button type="button" variant="ghost" onClick={() => setFireDialogOpen(false)}>Cancel</Button>
-                      <Button type="submit" variant="destructive" disabled={isFiring}>
-                      {isFiring ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Fire"}
-                      </Button>
-                  </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        )}
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Fire {personnel.name}?</DialogTitle>
+            <DialogDescription>
+              This action will move the personnel to the Fired/Resigned archive. Please provide a reason.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...fireForm}>
+            <form onSubmit={fireForm.handleSubmit(handleFireSubmit)} className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="discordUsername">Discord</Label>
+                    <Input id="discordUsername" value={personnel.discordUsername || 'N/A'} disabled />
+                </div>
+                <FormField
+                    control={fireForm.control}
+                    name="reason"
+                    render={({ field }) => (
+                        <FormItem>
+                            <Label>Reason for Firing</Label>
+                            <FormControl>
+                                <Textarea placeholder="Provide a detailed reason..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <DialogFooter>
+                    <Button type="button" variant="ghost" onClick={() => setFireDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit" variant="destructive" disabled={isFiring}>
+                    {isFiring ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Fire"}
+                    </Button>
+                </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
       </Dialog>
-    </div>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuItem onClick={handlePromote} disabled={!canPromote || isPromoting}>
+            {isPromoting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowUp className="mr-2 h-4 w-4 text-green-500" />}
+            <span>Promote</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleDemote} disabled={!canDemote || isDemoting}>
+            {isDemoting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowDown className="mr-2 h-4 w-4 text-orange-500" />}
+            <span>Demote</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => setStatusDialogOpen(true)}>
+            <ShieldHalf className="mr-2 h-4 w-4" />
+            <span>Update Status</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setEditDialogOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            <span>Edit</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => setFireDialogOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+            <UserX className="mr-2 h-4 w-4" />
+            <span>Fire</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 }
