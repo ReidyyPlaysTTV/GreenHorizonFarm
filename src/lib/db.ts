@@ -9,7 +9,12 @@ if (!DATABASE_URL) {
   throw new Error('DATABASE_URL is not set.');
 }
 
-const pool = mysql.createPool(DATABASE_URL);
+const pool = mysql.createPool({
+    uri: DATABASE_URL,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
 
 // Seed the database on application startup
 Promise.all([
