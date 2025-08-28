@@ -38,7 +38,6 @@ export interface Personnel {
   rank: string;
   badgeNumber: string;
   department: Department;
-  avatarUrl: string;
   discordUsername?: string;
   status: PersonnelStatus;
   loa_until?: string | null;

@@ -15,7 +15,6 @@ async function createPersonnelTableIfNeeded(connection: any) {
             badgeNumber VARCHAR(10) NOT NULL UNIQUE,
             discord_username VARCHAR(255),
             department VARCHAR(255),
-            avatarUrl VARCHAR(255),
             status ENUM('Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended') NOT NULL DEFAULT 'Active',
             loa_until DATE,
             is_rehired BOOLEAN NOT NULL DEFAULT FALSE,
@@ -41,7 +40,6 @@ export async function getPersonnel(): Promise<Personnel[]> {
         const personnel = (rows as any[]).map(p => ({
             ...p,
             department: rankToDepartmentMap[p.rank] || p.department,
-            avatarUrl: p.avatarUrl || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
             status: p.status || 'Active',
             loa_until: p.loa_until ? new Date(p.loa_until).toISOString() : null,
             is_rehired: !!p.is_rehired,

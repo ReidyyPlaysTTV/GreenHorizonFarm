@@ -36,16 +36,7 @@ const getRoleClass = (role: string) => {
 
 export default async function UsersPage() {
   const users: AppUser[] = await getUsers();
-  const personnel = await getPersonnel();
-
-  const usersWithPersonnelData = users.map(user => {
-    const personnelRecord = personnel.find(p => p.name === user.username);
-    return {
-      ...user,
-      personnel: personnelRecord || null,
-    };
-  });
-
+  
   return (
     <div className="container mx-auto p-4 md:p-8">
       <div className="flex items-center justify-between mb-8">
@@ -59,12 +50,11 @@ export default async function UsersPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {usersWithPersonnelData.map((user) => (
+        {users.map((user) => (
           <Card key={user.id} className="flex flex-col">
             <CardHeader className="flex-1">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16 border">
-                  <AvatarImage src={user.personnel?.avatarUrl} />
                   <AvatarFallback className="text-2xl">
                     <User />
                   </AvatarFallback>

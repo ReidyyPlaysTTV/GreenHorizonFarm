@@ -40,15 +40,12 @@ export function UserProfile() {
         return null; // Or a loading skeleton
     }
     
-    // In a real app, you'd fetch the user from an auth context
     const profileLink = `/users/${encodeURIComponent(user.username)}`;
-    const avatarUrl = user.personnel?.avatarUrl;
-
+    
     if (state === "collapsed") {
         return (
              <Link href={profileLink} className="block p-2">
                 <Avatar className="h-8 w-8">
-                    {avatarUrl && <AvatarImage src={avatarUrl} alt={user.username} />}
                     <AvatarFallback>
                         <User className="h-4 w-4" />
                     </AvatarFallback>
@@ -60,7 +57,6 @@ export function UserProfile() {
     return (
         <Link href={profileLink} className="flex items-center gap-2 p-2 rounded-md hover:bg-accent transition-colors">
             <Avatar className="h-10 w-10">
-                 {avatarUrl && <AvatarImage src={avatarUrl} alt={user.username} />}
                  <AvatarFallback>
                     {user.username.charAt(0).toUpperCase()}
                  </AvatarFallback>

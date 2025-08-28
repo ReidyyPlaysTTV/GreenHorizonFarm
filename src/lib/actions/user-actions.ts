@@ -58,18 +58,14 @@ export async function getUsers(): Promise<AppUser[]> {
                 return [];
             }
 
-            const [personnel] = await connection.query('SELECT name, avatarUrl, rank, department, userId FROM personnel');
+            const [personnel] = await connection.query('SELECT name, rank, department, userId FROM personnel');
             const personnelMap = new Map<string, Partial<Personnel>>();
             if (Array.isArray(personnel)) {
                 personnel.forEach((p: any) => {
-                    // Match personnel record to user by checking if the personnel name matches a user's username
                     const matchingUser = (users as AppUser[]).find(u => u.username === p.name);
                     const key = matchingUser?.id;
                     if (key) {
-                        personnelMap.set(key, {
-                            ...p,
-                            avatarUrl: p.avatarUrl || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"
-                        });
+                        personnelMap.set(key, p);
                     }
                 });
             }
@@ -416,51 +412,5 @@ export async function changeUserPassword(data: unknown) {
         connection.release();
     }
 }
-
-const updateProfilePictureSchema = z.object({
-  userId: z.string().uuid(),
-  avatarUrl: z.string().url("Invalid URL format."),
-  loggedInUser: z.string(),
-});
-
-export async function updateProfilePicture(data: unknown) {
-    const validation = updateProfilePictureSchema.safeParse(data);
-    if (!validation.success) {
-        return { success: false, message: validation.error.errors.map(e => e.message).join(', ') };
-    }
-    const { userId, avatarUrl, loggedInUser } = validation.data;
-    const connection = await db.getConnection();
-    try {
-        await connection.beginTransaction();
-
-        // Update avatar in personnel table using the userId
-        const [result] = await connection.query(
-            'UPDATE personnel SET avatarUrl = ? WHERE userId = ?', 
-            [avatarUrl, userId]
-        );
-
-        const updateWasSuccessful = (result as any).affectedRows > 0;
-        if(!updateWasSuccessful) {
-             // This can happen if the user is not a personnel member yet.
-             // We can log this, but it's not a hard error.
-            console.log(`Attempted to update avatar for userId ${userId}, but no matching personnel record was found.`);
-        }
-        
-        await logUserAction(loggedInUser, 'Update Profile Picture', `User '${loggedInUser}' updated their profile picture.`, connection);
-
-        await connection.commit();
-        
-        revalidatePath(`/users/${encodeURIComponent(loggedInUser)}`, 'layout');
-        
-        return { success: true, message: "Profile picture updated." };
-    } catch (error) {
-        await connection.rollback();
-        console.error("Failed to update profile picture:", error);
-        return { success: false, message: "Database operation failed." };
-    } finally {
-        connection.release();
-    }
-}
-
-
     
+
