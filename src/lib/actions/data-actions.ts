@@ -67,8 +67,9 @@ export async function getPersonnel(): Promise<Personnel[]> {
 }
 
 export async function getArchivedPersonnel(): Promise<ArchivedPersonnel[]> {
+    const connection = await db.getConnection();
     try {
-        const [rows] = await db.query('SELECT * FROM archived_personnel ORDER BY date DESC');
+        const [rows] = await connection.query('SELECT * FROM archived_personnel ORDER BY date DESC');
         return (rows as any[]).map(p => ({
             ...p,
             discordUsername: p.discord_username,
@@ -76,7 +77,7 @@ export async function getArchivedPersonnel(): Promise<ArchivedPersonnel[]> {
     } catch (error) {
         console.error("Failed to fetch archived personnel:", error);
          if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
-            await db.query(`
+            await connection.query(`
                 CREATE TABLE archived_personnel (
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
@@ -91,17 +92,20 @@ export async function getArchivedPersonnel(): Promise<ArchivedPersonnel[]> {
          }
           if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_UNKNOWN_COLUMN')) {
              if ((error as any).sqlMessage.includes('discord_username')) {
-                await db.query("ALTER TABLE archived_personnel ADD COLUMN discord_username VARCHAR(255)");
+                await connection.query("ALTER TABLE archived_personnel ADD COLUMN discord_username VARCHAR(255)");
              }
              return getArchivedPersonnel();
          }
         return [];
+    } finally {
+        connection.release();
     }
 }
 
 export async function getBlacklistedPersonnel(): Promise<BlacklistedPersonnel[]> {
+    const connection = await db.getConnection();
      try {
-        const [rows] = await db.query('SELECT * FROM blacklisted_personnel');
+        const [rows] = await connection.query('SELECT * FROM blacklisted_personnel');
         return (rows as any[]).map(p => ({
             ...p, 
             discordUsername: p.discord_username,
@@ -110,7 +114,7 @@ export async function getBlacklistedPersonnel(): Promise<BlacklistedPersonnel[]>
     } catch (error) {
         console.error("Failed to fetch blacklisted personnel:", error);
          if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
-            await db.query(`
+            await connection.query(`
                 CREATE TABLE blacklisted_personnel (
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
@@ -123,11 +127,13 @@ export async function getBlacklistedPersonnel(): Promise<BlacklistedPersonnel[]>
         }
          if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_UNKNOWN_COLUMN')) {
              if ((error as any).sqlMessage.includes('discord_username')) {
-                await db.query("ALTER TABLE blacklisted_personnel ADD COLUMN discord_username VARCHAR(255)");
+                await connection.query("ALTER TABLE blacklisted_personnel ADD COLUMN discord_username VARCHAR(255)");
              }
              return getBlacklistedPersonnel();
          }
         return [];
+    } finally {
+        connection.release();
     }
 }
 
@@ -137,8 +143,9 @@ const findResponse = (responses: any[], label: string) => {
 }
 
 export async function getApplications(): Promise<Application[]> {
+    const connection = await db.getConnection();
     try {
-        const [rows] = await db.query('SELECT * FROM applications ORDER BY submittedAt DESC');
+        const [rows] = await connection.query('SELECT * FROM applications ORDER BY submittedAt DESC');
         
         if (!Array.isArray(rows)) {
             return [];
@@ -173,7 +180,7 @@ export async function getApplications(): Promise<Application[]> {
     } catch (error) {
         console.error("Failed to fetch applications:", error);
          if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
-             await db.query(`
+             await connection.query(`
                 CREATE TABLE applications (
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     responses JSON NOT NULL,
@@ -184,12 +191,15 @@ export async function getApplications(): Promise<Application[]> {
             return [];
         }
         return [];
+    } finally {
+        connection.release();
     }
 }
 
 export async function getRecentActivity(): Promise<PersonnelEvent[]> {
+    const connection = await db.getConnection();
     try {
-        const [rows] = await db.query('SELECT * FROM personnel_events ORDER BY date DESC LIMIT 10');
+        const [rows] = await connection.query('SELECT * FROM personnel_events ORDER BY date DESC LIMIT 10');
         if (!Array.isArray(rows)) {
             return [];
         }
@@ -197,7 +207,7 @@ export async function getRecentActivity(): Promise<PersonnelEvent[]> {
     } catch(error) {
          console.error("Failed to fetch recent activity:", error);
         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
-            await db.query(`
+            await connection.query(`
                 CREATE TABLE IF NOT EXISTS personnel_events (
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     personnel_name VARCHAR(255) NOT NULL,
@@ -210,9 +220,11 @@ export async function getRecentActivity(): Promise<PersonnelEvent[]> {
         }
         // Handle migration for new event_type
         if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_TRUNCATED_WRONG_VALUE_FOR_FIELD')) {
-             await db.query("ALTER TABLE personnel_events MODIFY COLUMN event_type ENUM('Hired', 'Fired', 'Promoted', 'Demoted', 'Rehired') NOT NULL");
+             await connection.query("ALTER TABLE personnel_events MODIFY COLUMN event_type ENUM('Hired', 'Fired', 'Promoted', 'Demoted', 'Rehired') NOT NULL");
              return getRecentActivity(); // Retry
         }
         return [];
+    } finally {
+        connection.release();
     }
 }

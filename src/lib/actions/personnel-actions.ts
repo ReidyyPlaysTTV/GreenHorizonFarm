@@ -14,12 +14,16 @@ import { updateApplicationStatus } from './form-actions';
 import { checkPermissions } from '../permissions';
 
 async function getPersonnelById(id: string, connection?: any): Promise<Personnel | null> {
-    const conn = connection || db;
-    const [rows] = await conn.query('SELECT * FROM personnel WHERE id = ?', [id]);
-    if (Array.isArray(rows) && rows.length > 0) {
-        return (rows as any)[0] as Personnel;
+    const conn = connection || await db.getConnection();
+    try {
+        const [rows] = await conn.query('SELECT * FROM personnel WHERE id = ?', [id]);
+        if (Array.isArray(rows) && rows.length > 0) {
+            return (rows as any)[0] as Personnel;
+        }
+        return null;
+    } finally {
+        if (!connection) conn.release();
     }
-    return null;
 }
 
 async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'Promoted' | 'Demoted' | 'Rehired', description: string, dbConnection?: any) {
@@ -240,15 +244,11 @@ export async function addPersonnel(data: unknown) {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
-
-        // Check for an existing user account to link, but don't require it.
-        const [userRows] = await connection.query('SELECT id FROM users WHERE username = ?', [name]);
-        const targetUserId = (userRows as any[])?.[0]?.id || null;
         
         const personnelId = randomUUID();
         await connection.query(
-            'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, status, loa_until, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [personnelId, name, rank, callsign.toString(), discordUsername, 'Active', null, targetUserId]
+            'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, status, loa_until) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [personnelId, name, rank, callsign.toString(), discordUsername, 'Active', null]
         );
         await logEvent(name, 'Hired', `Hired as ${rank}`, connection);
         await logCallsignChange(callsign.toString(), name, 'Assigned', connection);
@@ -306,15 +306,11 @@ export async function rehirePersonnel(data: unknown) {
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
-    
-    // Check for an existing user account to link, but don't require it.
-    const [userRows] = await connection.query('SELECT id FROM users WHERE username = ?', [name]);
-    const targetUserId = (userRows as any[])?.[0]?.id || null;
 
     const newId = randomUUID();
     await connection.query(
-      'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, is_rehired, userId) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [newId, name, rank, callsign.toString(), discordUsername, true, targetUserId]
+      'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, is_rehired) VALUES (?, ?, ?, ?, ?, ?)',
+      [newId, name, rank, callsign.toString(), discordUsername, true]
     );
 
     await connection.query('DELETE FROM archived_personnel WHERE id = ?', [archivedId]);

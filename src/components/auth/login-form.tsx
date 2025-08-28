@@ -58,34 +58,43 @@ export function LoginForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     
-    const result = await loginUser(values);
+    try {
+        const result = await loginUser(values);
 
-    if (result.success) {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('loggedInUser', values.username);
-            
-            if (values.rememberMe) {
-                localStorage.setItem('rememberedCredentials', JSON.stringify({username: values.username, password: values.password}));
-            } else {
-                localStorage.removeItem('rememberedCredentials');
+        if (result.success) {
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('loggedInUser', values.username);
+                
+                if (values.rememberMe) {
+                    localStorage.setItem('rememberedCredentials', JSON.stringify({username: values.username, password: values.password}));
+                } else {
+                    localStorage.removeItem('rememberedCredentials');
+                }
             }
-        }
-        
-        await logUserAction(values.username, "Login", `User '${values.username}' signed in.`);
+            
+            await logUserAction(values.username, "Login", `User '${values.username}' signed in.`);
 
-        toast({
-            title: "Login Successful",
-            description: `Welcome back, ${values.username}!`,
-        });
-        
-        router.push("/dashboard");
-    } else {
-        toast({
+            toast({
+                title: "Login Successful",
+                description: `Welcome back, ${values.username}!`,
+            });
+            
+            router.push("/dashboard");
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Login Failed",
+                description: result.message || "An unknown error occurred.",
+            });
+        }
+    } catch (error) {
+         toast({
             variant: "destructive",
-            title: "Login Failed",
-            description: result.message || "An unknown error occurred.",
+            title: "Login Error",
+            description: "An unexpected error occurred during login.",
         });
     }
+
 
     setIsLoading(false);
   }

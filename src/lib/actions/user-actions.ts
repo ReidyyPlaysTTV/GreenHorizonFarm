@@ -22,14 +22,9 @@ async function createUsersTableIfNeeded() {
                     username VARCHAR(255) NOT NULL UNIQUE,
                     password_hash VARCHAR(255) NOT NULL,
                     role VARCHAR(50) NOT NULL DEFAULT 'User',
-                    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    avatarUrl VARCHAR(255)
+                    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
             `);
-            const [columns] = await connection.query("SHOW COLUMNS FROM users LIKE 'avatarUrl'");
-            if (Array.isArray(columns) && columns.length === 0) {
-                await connection.query("ALTER TABLE users ADD COLUMN avatarUrl VARCHAR(255)");
-            }
         } finally {
             connection.release();
         }
@@ -67,8 +62,9 @@ export async function getUsers(): Promise<AppUser[]> {
             const personnelMap = new Map<string, Partial<Personnel>>();
             if (Array.isArray(personnel)) {
                 personnel.forEach((p: any) => {
-                    if (p.userId) {
-                        personnelMap.set(p.userId, {
+                    const key = p.userId;
+                    if (key) {
+                        personnelMap.set(key, {
                             ...p,
                             avatarUrl: p.avatarUrl || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"
                         });
