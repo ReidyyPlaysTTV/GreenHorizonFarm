@@ -104,18 +104,18 @@ export default function UserProfilePage() {
         <div className="container mx-auto p-4 md:p-8">
             <div className="flex items-center space-x-6 mb-8">
                 <Skeleton className="h-24 w-24 rounded-full" />
-                <div>
-                    <Skeleton className="h-10 w-48 mb-2" />
+                <div className="space-y-2">
+                    <Skeleton className="h-10 w-48" />
                     <Skeleton className="h-6 w-32" />
                 </div>
             </div>
-             <div className="grid md:grid-cols-3 gap-8">
-                <div className="md:col-span-1 space-y-6">
+             <div className="grid lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-1 space-y-6">
                     <Skeleton className="h-48 w-full" />
-                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-48 w-full" />
                 </div>
-                <div className="md:col-span-2">
-                    <Skeleton className="h-80 w-full" />
+                <div className="lg:col-span-2">
+                    <Skeleton className="h-96 w-full" />
                 </div>
              </div>
         </div>
@@ -237,7 +237,7 @@ export default function UserProfilePage() {
                     </div>
                         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                         <div className="w-6 h-6 flex items-center justify-center">
-                            <Image src={userAvatar || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"} alt="Insignia" width={20} height={20} className="object-contain" />
+                            <Image src={"https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"} alt="Insignia" width={20} height={20} className="object-contain" />
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Status</p>
@@ -293,5 +293,3 @@ export default function UserProfilePage() {
     </div>
   );
 }
-
-    

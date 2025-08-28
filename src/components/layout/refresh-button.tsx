@@ -6,13 +6,21 @@ import { Button } from "../ui/button";
 import { RefreshCcw } from "lucide-react";
 import { useState } from "react";
 
-export function RefreshButton() {
+interface RefreshButtonProps {
+    onRefresh?: () => void;
+}
+
+export function RefreshButton({ onRefresh }: RefreshButtonProps) {
     const router = useRouter();
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const handleRefresh = () => {
         setIsRefreshing(true);
-        router.refresh();
+        if (onRefresh) {
+            onRefresh();
+        } else {
+            router.refresh();
+        }
         // A short timeout to give visual feedback
         setTimeout(() => setIsRefreshing(false), 500);
     }

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -211,76 +210,78 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
                 <ShieldHalf className="h-4 w-4"/>
             </Button>
         </DialogTrigger>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Update Status for {personnel.name}</DialogTitle>
-            </DialogHeader>
-            <Form {...statusForm}>
-                <form onSubmit={statusForm.handleSubmit(handleStatusSubmit)} className="space-y-4">
-                    <FormField control={statusForm.control} name="status" render={({field}) => (
-                        <FormItem>
-                            <Label>Status</Label>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage/>
-                        </FormItem>
-                    )}/>
-                    {watchedStatus === 'LOA' && (
-                         <FormField
-                            control={statusForm.control}
-                            name="loaUntil"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <Label>LOA End Date</Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button
-                                            variant={"outline"}
-                                            className={cn(
-                                                "w-full pl-3 text-left font-normal",
-                                                !field.value && "text-muted-foreground"
-                                            )}
-                                            >
-                                            {field.value ? (
-                                                format(field.value, "PPP")
-                                            ) : (
-                                                <span>Pick a date</span>
-                                            )}
-                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value ?? undefined}
-                                                onSelect={field.onChange}
-                                                disabled={(date) =>
-                                                    date < new Date()
-                                                }
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    )}
-                    <DialogFooter>
-                       <Button type="button" variant="ghost" onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
-                       <Button type="submit" disabled={isUpdatingStatus}>
-                            {isUpdatingStatus ? <Loader2 className="h-4 w-4 animate-spin"/> : "Update Status"}
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </Form>
-        </DialogContent>
+        {isStatusDialogOpen && (
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Update Status for {personnel.name}</DialogTitle>
+              </DialogHeader>
+              <Form {...statusForm}>
+                  <form onSubmit={statusForm.handleSubmit(handleStatusSubmit)} className="space-y-4">
+                      <FormField control={statusForm.control} name="status" render={({field}) => (
+                          <FormItem>
+                              <Label>Status</Label>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                  <SelectContent>
+                                      {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                  </SelectContent>
+                              </Select>
+                              <FormMessage/>
+                          </FormItem>
+                      )}/>
+                      {watchedStatus === 'LOA' && (
+                          <FormField
+                              control={statusForm.control}
+                              name="loaUntil"
+                              render={({ field }) => (
+                                  <FormItem className="flex flex-col">
+                                      <Label>LOA End Date</Label>
+                                      <Popover>
+                                          <PopoverTrigger asChild>
+                                          <FormControl>
+                                              <Button
+                                              variant={"outline"}
+                                              className={cn(
+                                                  "w-full pl-3 text-left font-normal",
+                                                  !field.value && "text-muted-foreground"
+                                              )}
+                                              >
+                                              {field.value ? (
+                                                  format(field.value, "PPP")
+                                              ) : (
+                                                  <span>Pick a date</span>
+                                              )}
+                                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                              </Button>
+                                          </FormControl>
+                                          </PopoverTrigger>
+                                          <PopoverContent className="w-auto p-0" align="start">
+                                              <Calendar
+                                                  mode="single"
+                                                  selected={field.value ?? undefined}
+                                                  onSelect={field.onChange}
+                                                  disabled={(date) =>
+                                                      date < new Date()
+                                                  }
+                                                  initialFocus
+                                              />
+                                          </PopoverContent>
+                                      </Popover>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                      )}
+                      <DialogFooter>
+                        <Button type="button" variant="ghost" onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
+                        <Button type="submit" disabled={isUpdatingStatus}>
+                              {isUpdatingStatus ? <Loader2 className="h-4 w-4 animate-spin"/> : "Update Status"}
+                          </Button>
+                      </DialogFooter>
+                  </form>
+              </Form>
+          </DialogContent>
+        )}
       </Dialog>
       
       {/* Edit */}
@@ -290,53 +291,55 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
                 <Edit className="h-4 w-4" />
             </Button>
         </DialogTrigger>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Edit Personnel: {personnel.name}</DialogTitle>
-            </DialogHeader>
-            <Form {...editForm}>
-                <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4">
-                    <FormField control={editForm.control} name="name" render={({field}) => (
-                        <FormItem>
-                            <Label>Name</Label>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage/>
-                        </FormItem>
-                    )}/>
-                    <FormField control={editForm.control} name="discordUsername" render={({field}) => (
-                        <FormItem>
-                            <Label>Discord Username</Label>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage/>
-                        </FormItem>
-                    )}/>
-                     <FormField control={editForm.control} name="badgeNumber" render={({field}) => (
-                        <FormItem>
-                            <Label>Callsign</Label>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage/>
-                        </FormItem>
-                    )}/>
-                     <FormField control={editForm.control} name="rank" render={({field}) => (
-                        <FormItem>
-                            <Label>Rank</Label>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {rankOrder.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage/>
-                        </FormItem>
-                    )}/>
-                    <DialogFooter>
-                        <Button type="submit" disabled={isEditing}>
-                            {isEditing ? <Loader2 className="h-4 w-4 animate-spin"/> : "Save Changes"}
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </Form>
-        </DialogContent>
+        {isEditDialogOpen && (
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Edit Personnel: {personnel.name}</DialogTitle>
+              </DialogHeader>
+              <Form {...editForm}>
+                  <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4">
+                      <FormField control={editForm.control} name="name" render={({field}) => (
+                          <FormItem>
+                              <Label>Name</Label>
+                              <FormControl><Input {...field} /></FormControl>
+                              <FormMessage/>
+                          </FormItem>
+                      )}/>
+                      <FormField control={editForm.control} name="discordUsername" render={({field}) => (
+                          <FormItem>
+                              <Label>Discord Username</Label>
+                              <FormControl><Input {...field} /></FormControl>
+                              <FormMessage/>
+                          </FormItem>
+                      )}/>
+                      <FormField control={editForm.control} name="badgeNumber" render={({field}) => (
+                          <FormItem>
+                              <Label>Callsign</Label>
+                              <FormControl><Input {...field} /></FormControl>
+                              <FormMessage/>
+                          </FormItem>
+                      )}/>
+                      <FormField control={editForm.control} name="rank" render={({field}) => (
+                          <FormItem>
+                              <Label>Rank</Label>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                  <SelectContent>
+                                      {rankOrder.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                  </SelectContent>
+                              </Select>
+                              <FormMessage/>
+                          </FormItem>
+                      )}/>
+                      <DialogFooter>
+                          <Button type="submit" disabled={isEditing}>
+                              {isEditing ? <Loader2 className="h-4 w-4 animate-spin"/> : "Save Changes"}
+                          </Button>
+                      </DialogFooter>
+                  </form>
+              </Form>
+          </DialogContent>
+        )}
       </Dialog>
 
 
@@ -347,41 +350,43 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
             <UserX className="h-4 w-4 text-destructive" />
           </Button>
         </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Fire {personnel.name}?</DialogTitle>
-            <DialogDescription>
-              This action will move the personnel to the Fired/Resigned archive. Please provide a reason.
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...fireForm}>
-            <form onSubmit={fireForm.handleSubmit(handleFireSubmit)} className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="discordUsername">Discord</Label>
-                    <Input id="discordUsername" value={personnel.discordUsername || 'N/A'} disabled />
-                </div>
-                <FormField
-                    control={fireForm.control}
-                    name="reason"
-                    render={({ field }) => (
-                        <FormItem>
-                            <Label>Reason for Firing</Label>
-                            <FormControl>
-                                <Textarea placeholder="Provide a detailed reason..." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <DialogFooter>
-                    <Button type="button" variant="ghost" onClick={() => setFireDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit" variant="destructive" disabled={isFiring}>
-                    {isFiring ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Fire"}
-                    </Button>
-                </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
+        {isFireDialogOpen && (
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Fire {personnel.name}?</DialogTitle>
+              <DialogDescription>
+                This action will move the personnel to the Fired/Resigned archive. Please provide a reason.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...fireForm}>
+              <form onSubmit={fireForm.handleSubmit(handleFireSubmit)} className="space-y-4">
+                  <div className="space-y-2">
+                      <Label htmlFor="discordUsername">Discord</Label>
+                      <Input id="discordUsername" value={personnel.discordUsername || 'N/A'} disabled />
+                  </div>
+                  <FormField
+                      control={fireForm.control}
+                      name="reason"
+                      render={({ field }) => (
+                          <FormItem>
+                              <Label>Reason for Firing</Label>
+                              <FormControl>
+                                  <Textarea placeholder="Provide a detailed reason..." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+                  <DialogFooter>
+                      <Button type="button" variant="ghost" onClick={() => setFireDialogOpen(false)}>Cancel</Button>
+                      <Button type="submit" variant="destructive" disabled={isFiring}>
+                      {isFiring ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Fire"}
+                      </Button>
+                  </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        )}
       </Dialog>
     </div>
   );

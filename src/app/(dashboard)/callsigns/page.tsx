@@ -8,26 +8,36 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { User, Check, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { RefreshButton } from "@/components/layout/refresh-button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const usePersonnelData = () => {
     const [personnel, setPersonnel] = useState<Awaited<ReturnType<typeof getPersonnel>>>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
+    const fetchData = async () => {
+        setLoading(true);
+        setError(null);
+        try {
             const personnelData = await getPersonnel();
             setPersonnel(personnelData);
+        } catch (err) {
+            setError("Failed to load personnel data.");
+            console.error(err);
+        } finally {
             setLoading(false);
-        };
+        }
+    };
+
+    useEffect(() => {
         fetchData();
     }, []);
 
-    return { personnel, loading };
+    return { personnel, loading, error, refresh: fetchData };
 }
 
 export default function CallsignsPage() {
-  const { personnel, loading } = usePersonnelData();
+  const { personnel, loading, error, refresh } = usePersonnelData();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 500;
@@ -75,12 +85,20 @@ export default function CallsignsPage() {
             onChange={handleSearchChange}
             className="md:w-[250px]"
           />
-          <RefreshButton />
+          <RefreshButton onRefresh={refresh} />
         </div>
       </div>
 
       {loading ? (
-        <div className="text-center text-muted-foreground">Loading callsigns...</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+            {Array.from({length: 24}).map((_, index) => (
+                <Skeleton key={index} className="h-[120px] w-full" />
+            ))}
+        </div>
+      ) : error ? (
+        <div className="flex items-center justify-center h-40 rounded-lg border border-dashed border-destructive">
+            <p className="text-destructive-foreground">{error}</p>
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
