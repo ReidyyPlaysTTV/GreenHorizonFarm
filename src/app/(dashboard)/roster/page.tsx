@@ -98,7 +98,13 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
                       {p.status === 'LOA' && p.loa_until && ` until ${format(new Date(p.loa_until), 'MM/dd/yyyy')}`}
                   </Badge>
                 </TableCell>
-                <TableCell>{p.discordUsername || 'N/A'}</TableCell>
+                <TableCell>
+                    {p.discordUsername ? (
+                        <Badge variant="outline">{p.discordUsername}</Badge>
+                    ) : (
+                        <Badge variant="destructive" className="border-transparent">N/A</Badge>
+                    )}
+                </TableCell>
                 <TableCell className="text-right">
                   <PersonnelActions personnel={p} />
                 </TableCell>
