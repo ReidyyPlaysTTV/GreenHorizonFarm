@@ -70,7 +70,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
               <TableRow key={p.id} className={cn(getStatusRowClass(p))}>
                 <TableCell>
                   <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted p-1">
-                    <Image src={rankInsignias[p.rank] || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"} alt={`${p.rank} insignia`} width={p.rank === "Lieutenant" ? 15 : 25} height={p.rank === "Lieutenant" ? 15 : 25} className="rounded-md object-contain" />
+                    <Image src={rankInsignias[p.rank] || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"} alt={`${p.rank} insignia`} width={p.rank === "Lieutenant" ? 10 : 25} height={p.rank === "Lieutenant" ? 10 : 25} className="rounded-md object-contain" />
                   </div>
                 </TableCell>
                 <TableCell className="font-medium">
