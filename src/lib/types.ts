@@ -28,6 +28,7 @@ export const permissions = [
     'MANAGE_ACCESS_REQUESTS',
     'MANAGE_APP_SETTINGS',
     'MANAGE_ANNOUNCEMENTS',
+    'MANAGE_GALLERY',
 ] as const;
 export type Permission = typeof permissions[number];
 
@@ -161,4 +162,12 @@ export interface Announcement {
         username: string;
         avatarUrl?: string;
     }
+}
+
+export interface GalleryImage {
+    id: string;
+    src: string;
+    alt: string;
+    hint?: string;
+    createdAt: Date;
 }

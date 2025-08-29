@@ -76,6 +76,7 @@ export const permissions: Permission[] = [
     'MANAGE_ACCESS_REQUESTS',
     'MANAGE_APP_SETTINGS',
     'MANAGE_ANNOUNCEMENTS',
+    'MANAGE_GALLERY',
 ];
 
 export const permissionDescriptions: Record<Permission, string> = {
@@ -100,6 +101,7 @@ export const permissionDescriptions: Record<Permission, string> = {
     MANAGE_APP_SETTINGS: "Manage Application Settings (e.g. SOPs)",
     VIEW_ANNOUNCEMENTS: "View Dashboard Announcements",
     MANAGE_ANNOUNCEMENTS: "Create and Delete Announcements",
+    MANAGE_GALLERY: "Manage Dashboard Photo Gallery",
 };
 
 
@@ -159,6 +161,7 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'MANAGE_APP_SETTINGS',
         'VIEW_ANNOUNCEMENTS',
         'MANAGE_ANNOUNCEMENTS',
+        'MANAGE_GALLERY',
     ],
     "Commissioners Office": [
         'ACCESS_DASHBOARD',
@@ -181,6 +184,7 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'MANAGE_APP_SETTINGS',
         'VIEW_ANNOUNCEMENTS',
         'MANAGE_ANNOUNCEMENTS',
+        'MANAGE_GALLERY',
     ],
     // Administrator and Developer have all permissions, handled separately.
     Administrator: [...permissions],

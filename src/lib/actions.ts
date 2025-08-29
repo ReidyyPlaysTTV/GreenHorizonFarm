@@ -15,3 +15,4 @@ export * from './actions/status-actions';
 export * from './actions/permission-actions';
 export * from './actions/settings-actions';
 export * from './actions/announcement-actions';
+export * from './actions/gallery-actions';

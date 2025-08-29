@@ -43,6 +43,16 @@ async function createCoreTables(pool: Pool) {
                 INDEX (user_id)
             );
         `);
+
+         await connection.query(`
+            CREATE TABLE IF NOT EXISTS gallery_images (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                src VARCHAR(255) NOT NULL,
+                alt VARCHAR(255) NOT NULL,
+                hint VARCHAR(100),
+                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
         
     } catch (error) {
         console.error("Failed to create core tables:", error);
