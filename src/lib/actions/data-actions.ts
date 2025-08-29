@@ -5,6 +5,7 @@
 import type { Personnel, ArchivedPersonnel, BlacklistedPersonnel, Application, PersonnelEvent } from "../types";
 import db from '../db';
 import { rankToDepartmentMap, rankOrder } from "../data";
+import { addPersonnel } from "./personnel-actions";
 
 async function createPersonnelTableIfNeeded(connection: any) {
     await connection.query(`
@@ -32,6 +33,31 @@ export async function getPersonnel(): Promise<Personnel[]> {
     const connection = await db.getConnection();
     try {
         await createPersonnelTableIfNeeded(connection);
+
+        // START Temporary logic to update Liam Evans
+        const [users] = await connection.query('SELECT id, username FROM users WHERE username = ?', ['Liam Evans']);
+        if (Array.isArray(users) && users.length > 0) {
+            const liamEvansUser = (users[0] as any);
+            const [personnelRecord] = await connection.query('SELECT id FROM personnel WHERE userId = ?', [liamEvansUser.id]);
+
+            if (!Array.isArray(personnelRecord) || personnelRecord.length === 0) {
+                 // Liam Evans does not have a personnel record, so we create one.
+                 // This assumes a callsign that is unlikely to be taken.
+                 await addPersonnel({
+                     name: 'Liam Evans',
+                     rank: 'Sheriff',
+                     callsign: 1000,
+                     discordUsername: '', // Add discord if known
+                     user: 'System', // Action performed by system/dev
+                 });
+            } else {
+                // If he already has a record, update it.
+                const personnelId = (personnelRecord[0] as any).id;
+                await connection.query('UPDATE personnel SET rank = ?, department = ? WHERE id = ?', ['Sheriff', 'BCSO', personnelId]);
+            }
+        }
+        // END Temporary logic
+
         const [rows] = await connection.query('SELECT * FROM personnel');
         if (!Array.isArray(rows)) {
             return [];

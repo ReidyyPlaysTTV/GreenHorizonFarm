@@ -28,7 +28,7 @@ export const permissions = [
 ] as const;
 export type Permission = typeof permissions[number];
 
-export type Department = "Commissioners Office" | "High Command" | "Command" | "NCOS" | "Corrections" | "Training";
+export type Department = "Commissioners Office" | "High Command" | "Command" | "NCOS" | "Corrections" | "Training" | "BCSO";
 export type PersonnelStatus = 'Active' | 'LOA' | 'Inactive' | 'Low Activity' | 'Medical Leave' | 'Suspended';
 
 

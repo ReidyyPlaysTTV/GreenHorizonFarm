@@ -1,9 +1,10 @@
 
 import type { Department, Permission, Role } from "./types";
 
-export const departments: Department[] = ["Commissioners Office", "High Command", "Command", "NCOS", "Corrections", "Training"];
+export const departments: Department[] = ["Commissioners Office", "High Command", "Command", "NCOS", "Corrections", "Training", "BCSO"];
 
 export const rankInsignias: Record<string, string> = {
+    "Sheriff": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/gota.png",
     "Commissioner": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/gota.png",
     "Deputy Comissioner": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/gota.png",
     "Warden": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/general.png",
@@ -18,6 +19,7 @@ export const rankInsignias: Record<string, string> = {
 };
 
 export const rankToDepartmentMap: Record<string, Department> = {
+    "Sheriff": "BCSO",
     "Commissioner": "Commissioners Office",
     "Deputy Comissioner": "Commissioners Office",
     "Warden": "High Command",
@@ -32,6 +34,7 @@ export const rankToDepartmentMap: Record<string, Department> = {
 };
 
 export const rankOrder = [
+    "Sheriff",
     "Commissioner",
     "Deputy Comissioner",
     "Warden",
