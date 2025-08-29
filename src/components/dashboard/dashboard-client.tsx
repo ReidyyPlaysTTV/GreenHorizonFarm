@@ -9,6 +9,7 @@ import { Users, FileText, UserCheck, UserX, ArrowUp, ArrowDown, UserPlus, UserMi
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "../ui/badge";
 import { RefreshButton } from "../layout/refresh-button";
+import { ScrollArea } from "../ui/scroll-area";
 
 const chartConfig = {
   total: {
@@ -133,29 +134,31 @@ export function DashboardClient({ personnel, applications, recentActivity }: Das
                 <CardDescription>Latest personnel changes.</CardDescription>
             </CardHeader>
             <CardContent>
-                {recentActivity.length > 0 ? (
-                <div className="space-y-4">
-                    {recentActivity.map(event => (
-                        <div key={event.id} className="flex items-start gap-4">
-                           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                                {eventIcons[event.event_type] || <ShieldAlert className="h-4 w-4" />}
+                <ScrollArea className="h-72">
+                    {recentActivity.length > 0 ? (
+                    <div className="space-y-4 pr-4">
+                        {recentActivity.map(event => (
+                            <div key={event.id} className="flex items-start gap-4">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                                    {eventIcons[event.event_type] || <ShieldAlert className="h-4 w-4" />}
+                                </div>
+                                <div className="flex-1 text-sm">
+                                    <p className="font-medium">{event.personnel_name}</p>
+                                    <p className="text-muted-foreground">{event.description}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        {formatDistanceToNow(event.date, { addSuffix: true })}
+                                    </p>
+                                </div>
+                                <Badge variant={eventColors[event.event_type]} className="text-xs">{event.event_type}</Badge>
                             </div>
-                            <div className="flex-1 text-sm">
-                                <p className="font-medium">{event.personnel_name}</p>
-                                <p className="text-muted-foreground">{event.description}</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    {formatDistanceToNow(event.date, { addSuffix: true })}
-                                </p>
-                            </div>
-                             <Badge variant={eventColors[event.event_type]} className="text-xs">{event.event_type}</Badge>
-                        </div>
-                    ))}
-                </div>
-                 ) : (
-                    <div className="flex items-center justify-center h-40 rounded-lg border border-dashed">
-                        <p className="text-muted-foreground">No recent activity.</p>
+                        ))}
                     </div>
-                )}
+                    ) : (
+                        <div className="flex items-center justify-center h-40 rounded-lg border border-dashed">
+                            <p className="text-muted-foreground">No recent activity.</p>
+                        </div>
+                    )}
+                </ScrollArea>
             </CardContent>
         </Card>
       </div>

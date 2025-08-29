@@ -16,6 +16,7 @@ import { ChangePasswordDialog } from "@/components/user/change-password-dialog";
 import { ChangeProfilePictureDialog } from "@/components/user/change-profile-picture-dialog";
 import { formatDistanceToNow } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 
 const getRoleClass = (role: string) => {
@@ -259,30 +260,32 @@ export default function UserProfilePage() {
                     <CardDescription>Recent actions performed by this user.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {activityLogs.length > 0 ? (
-                        <ul className="space-y-4">
-                            {activityLogs.map(log => (
-                                <li key={log.id} className="flex items-start gap-3">
-                                    <div className="flex-shrink-0">
-                                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                                            <Activity className="h-4 w-4 text-muted-foreground" />
+                    <ScrollArea className="h-72">
+                        {activityLogs.length > 0 ? (
+                            <ul className="space-y-4 pr-4">
+                                {activityLogs.map(log => (
+                                    <li key={log.id} className="flex items-start gap-3">
+                                        <div className="flex-shrink-0">
+                                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                                                <Activity className="h-4 w-4 text-muted-foreground" />
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium">{log.actionType}</p>
-                                        <p className="text-sm text-muted-foreground">{log.description}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
-                                        </p>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <div className="text-center text-muted-foreground py-8">
-                            <p>No activity recorded for this user.</p>
-                        </div>
-                    )}
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium">{log.actionType}</p>
+                                            <p className="text-sm text-muted-foreground">{log.description}</p>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
+                                            </p>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <div className="text-center text-muted-foreground py-8">
+                                <p>No activity recorded for this user.</p>
+                            </div>
+                        )}
+                    </ScrollArea>
                 </CardContent>
             </Card>
 

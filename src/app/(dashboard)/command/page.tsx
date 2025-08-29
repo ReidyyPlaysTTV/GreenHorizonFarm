@@ -7,6 +7,7 @@ import { AddToBlacklistForm } from "@/components/command/add-to-blacklist-form";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { RemoveFromBlacklistDialog } from "@/components/command/remove-from-blacklist-dialog";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default async function CommandPage() {
   const blacklistedPersonnel = await getBlacklistedPersonnel();
@@ -75,37 +76,39 @@ export default async function CommandPage() {
             <CardDescription>Recent callsign assignment changes.</CardDescription>
         </CardHeader>
         <CardContent>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Callsign</TableHead>
-                        <TableHead>Action</TableHead>
-                        <TableHead>Personnel</TableHead>
-                        <TableHead>Date</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {callsignLogs.length === 0 && (
-                         <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center">
-                                No callsign logs found.
-                            </TableCell>
+            <ScrollArea className="h-72">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Callsign</TableHead>
+                            <TableHead>Action</TableHead>
+                            <TableHead>Personnel</TableHead>
+                            <TableHead>Date</TableHead>
                         </TableRow>
-                    )}
-                    {callsignLogs.map(log => (
-                        <TableRow key={log.id}>
-                            <TableCell><Badge variant="secondary">{log.callsign}</Badge></TableCell>
-                            <TableCell>
-                                <Badge variant={log.action === 'Assigned' ? 'default' : 'destructive'}>
-                                    {log.action}
-                                </Badge>
-                            </TableCell>
-                            <TableCell>{log.personnel_name}</TableCell>
-                            <TableCell>{formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}</TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+                    </TableHeader>
+                    <TableBody>
+                        {callsignLogs.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={4} className="h-24 text-center">
+                                    No callsign logs found.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                        {callsignLogs.map(log => (
+                            <TableRow key={log.id}>
+                                <TableCell><Badge variant="secondary">{log.callsign}</Badge></TableCell>
+                                <TableCell>
+                                    <Badge variant={log.action === 'Assigned' ? 'default' : 'destructive'}>
+                                        {log.action}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>{log.personnel_name}</TableCell>
+                                <TableCell>{formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </ScrollArea>
         </CardContent>
       </Card>
 
