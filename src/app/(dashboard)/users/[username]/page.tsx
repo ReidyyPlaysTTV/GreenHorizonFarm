@@ -221,7 +221,9 @@ export default function UserProfilePage() {
                         <Hash className="h-6 w-6 text-muted-foreground" />
                             <div>
                             <p className="text-sm text-muted-foreground">Callsign</p>
-                            <p className="font-semibold">#{personnelRecord.badgeNumber}</p>
+                            <p className="font-semibold">
+                                <Badge variant="secondary">#{personnelRecord.badgeNumber}</Badge>
+                            </p>
                         </div>
                     </div>
                         <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
