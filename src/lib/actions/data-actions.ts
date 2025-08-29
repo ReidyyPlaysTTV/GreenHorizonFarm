@@ -39,6 +39,7 @@ export async function getPersonnel(): Promise<Personnel[]> {
 
         const personnel = (rows as any[]).map(p => ({
             ...p,
+            discordUsername: p.discord_username,
             department: rankToDepartmentMap[p.rank] || p.department,
             status: p.status || 'Active',
             loa_until: p.loa_until ? new Date(p.loa_until).toISOString() : null,
@@ -89,7 +90,7 @@ export async function getArchivedPersonnel(): Promise<ArchivedPersonnel[]> {
             return [];
          }
           if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_UNKNOWN_COLUMN')) {
-             if ((error as any).sqlMessage.includes('discord_username')) {
+             if (!(error as any).sqlMessage.includes('discord_username')) {
                 await connection.query("ALTER TABLE archived_personnel ADD COLUMN discord_username VARCHAR(255)");
              }
              return getArchivedPersonnel();
@@ -124,7 +125,7 @@ export async function getBlacklistedPersonnel(): Promise<BlacklistedPersonnel[]>
             return [];
         }
          if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_UNKNOWN_COLUMN')) {
-             if ((error as any).sqlMessage.includes('discord_username')) {
+             if (!(error as any).sqlMessage.includes('discord_username')) {
                 await connection.query("ALTER TABLE blacklisted_personnel ADD COLUMN discord_username VARCHAR(255)");
              }
              return getBlacklistedPersonnel();
