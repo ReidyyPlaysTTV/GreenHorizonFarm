@@ -4,21 +4,15 @@
 
 import type { Personnel, Application, PersonnelEvent, Announcement } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Users, FileText, UserCheck, UserX, ArrowUp, ArrowDown, UserPlus, UserMinus, ShieldAlert } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "../ui/badge";
 import { RefreshButton } from "../layout/refresh-button";
 import { ScrollArea } from "../ui/scroll-area";
 import { Announcements } from "./announcements";
-
-const chartConfig = {
-  total: {
-    label: "Personnel",
-    color: "hsl(var(--primary))",
-  },
-};
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import Autoplay from "embla-carousel-autoplay";
+import Image from "next/image";
 
 interface DashboardClientProps {
   personnel: Personnel[];
@@ -41,14 +35,16 @@ const eventColors = {
     Demoted: "secondary",
 } as const;
 
+const galleryImages = [
+    { src: "https://i.imgur.com/G53P09O.png", alt: "Group of officers standing in a line", hint: "officer group" },
+    { src: "https://i.imgur.com/gG943d2.png", alt: "Officer talking to an inmate in a cell", hint: "officer inmate" },
+    { src: "https://i.imgur.com/2MAbA7k.png", alt: "Inmates in the prison yard", hint: "prison yard" },
+    { src: "https://i.imgur.com/gRMA9v0.png", alt: "Medical staff attending to a person on a stretcher", hint: "medical emergency" },
+    { src: "https://i.imgur.com/5L9yXG9.png", alt: "Prison bus driving away from the facility", hint: "prison bus" },
+];
+
+
 export function DashboardClient({ personnel, applications, recentActivity, announcements }: DashboardClientProps) {
-  const departmentCounts = personnel.reduce((acc, p) => {
-    acc[p.department] = (acc[p.department] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const chartData = Object.entries(departmentCounts).map(([name, total]) => ({ name, total }));
-
   const pendingApplications = applications.filter(app => app.status === "Pending").length;
 
   return (
@@ -109,28 +105,31 @@ export function DashboardClient({ personnel, applications, recentActivity, annou
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 mt-8">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Department Strength</CardTitle>
-            <CardDescription>Number of personnel in each department.</CardDescription>
+            <CardTitle>Photo Gallery</CardTitle>
+            <CardDescription>Highlights from the Department of Corrections.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <BarChart accessibilityLayer data={chartData}>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  tickFormatter={(value) => value.length > 12 ? value.slice(0, 10) + '...' : value}
-                />
-                <YAxis />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent indicator="dot" />}
-                />
-                <Bar dataKey="total" fill="var(--color-total)" radius={4} />
-              </BarChart>
-            </ChartContainer>
+            <Carousel 
+                opts={{ loop: true }} 
+                plugins={[Autoplay({ delay: 5000, stopOnInteraction: false })]}
+                className="w-full"
+            >
+                <CarouselContent>
+                    {galleryImages.map((image, index) => (
+                        <CarouselItem key={index}>
+                            <div className="aspect-video relative overflow-hidden rounded-lg">
+                                <Image 
+                                    src={image.src} 
+                                    alt={image.alt}
+                                    fill
+                                    className="object-cover"
+                                    data-ai-hint={image.hint}
+                                />
+                            </div>
+                        </CarouselItem>
+                    ))}
+                </CarouselContent>
+            </Carousel>
           </CardContent>
         </Card>
         <Card>
