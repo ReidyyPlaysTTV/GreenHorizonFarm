@@ -94,7 +94,7 @@ export default async function CommandPage() {
                     )}
                     {callsignLogs.map(log => (
                         <TableRow key={log.id}>
-                            <TableCell><Badge variant="secondary">#{log.callsign}</Badge></TableCell>
+                            <TableCell><Badge variant="secondary">{log.callsign}</Badge></TableCell>
                             <TableCell>
                                 <Badge variant={log.action === 'Assigned' ? 'default' : 'destructive'}>
                                     {log.action}

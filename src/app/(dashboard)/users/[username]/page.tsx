@@ -222,7 +222,7 @@ export default function UserProfilePage() {
                             <div>
                             <p className="text-sm text-muted-foreground">Callsign</p>
                             <p className="font-semibold">
-                                <Badge variant="secondary">#{personnelRecord.badgeNumber}</Badge>
+                                <Badge variant="secondary">{personnelRecord.badgeNumber}</Badge>
                             </p>
                         </div>
                     </div>

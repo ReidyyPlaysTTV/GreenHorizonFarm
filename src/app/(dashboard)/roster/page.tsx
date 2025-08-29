@@ -90,7 +90,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
                 </TableCell>
                 <TableCell>{p.rank}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary">#{p.badgeNumber}</Badge>
+                  <Badge variant="secondary">{p.badgeNumber}</Badge>
                 </TableCell>
                 <TableCell>
                   <Badge variant={getStatusBadgeVariant(p.status)}>
