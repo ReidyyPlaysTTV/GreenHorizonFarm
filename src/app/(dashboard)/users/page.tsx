@@ -70,7 +70,7 @@ export default async function UsersPage() {
             <CardContent className="space-y-3">
                <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Department</span>
-                    <span className="font-medium">{user.personnel?.department || "N/A"}</span>
+                    <span className="font-medium">{user.personnel?.department || "Department of Corrections"}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground flex items-center gap-1.5">
