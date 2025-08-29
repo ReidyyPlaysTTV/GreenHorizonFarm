@@ -9,23 +9,9 @@ import { checkPermissions } from '../permissions';
 import { logUserAction } from './audit-log-actions';
 import type { Announcement } from '../types';
 
-async function createAnnouncementsTableIfNeeded(connection: any) {
-    await connection.query(`
-        CREATE TABLE IF NOT EXISTS announcements (
-            id VARCHAR(36) NOT NULL PRIMARY KEY,
-            content TEXT NOT NULL,
-            is_urgent TINYINT(1) NOT NULL DEFAULT 0,
-            user_id VARCHAR(36) NOT NULL,
-            createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        );
-    `);
-}
-
 export async function getAnnouncements(): Promise<Announcement[]> {
     const connection = await db.getConnection();
     try {
-        await createAnnouncementsTableIfNeeded(connection);
         const [rows] = await connection.query(`
             SELECT 
                 a.id, a.content, a.is_urgent, a.createdAt,
@@ -53,6 +39,10 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         }));
     } catch (error) {
         console.error("Failed to fetch announcements:", error);
+         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
+            console.log("Announcements table does not exist yet. It will be created on app start.");
+            return [];
+        }
         return [];
     } finally {
         connection.release();
@@ -87,7 +77,6 @@ export async function addAnnouncement(data: unknown) {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
-        await createAnnouncementsTableIfNeeded(connection);
 
         await connection.query(
             'INSERT INTO announcements (id, content, is_urgent, user_id) VALUES (?, ?, ?, ?)',
