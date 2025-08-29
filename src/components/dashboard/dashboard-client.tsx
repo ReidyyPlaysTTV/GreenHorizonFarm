@@ -18,6 +18,7 @@ import { Button } from "../ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { deleteGalleryImage } from "@/lib/actions/gallery-actions";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
 interface DashboardClientProps {
   personnel: Personnel[];
@@ -27,19 +28,49 @@ interface DashboardClientProps {
   galleryImages: GalleryImage[];
 }
 
-const eventIcons = {
+const eventIcons: Record<PersonnelEvent['event_type'], React.ReactNode> = {
     Hired: <UserPlus className="h-4 w-4 text-green-500" />,
     Fired: <UserMinus className="h-4 w-4 text-red-500" />,
     Promoted: <ArrowUp className="h-4 w-4 text-blue-500" />,
     Demoted: <ArrowDown className="h-4 w-4 text-orange-500" />,
+    Rehired: <UserPlus className="h-4 w-4 text-green-500" />,
 }
 
-const eventColors = {
+const eventColors: Record<PersonnelEvent['event_type'], "default" | "secondary" | "destructive"> = {
     Hired: "secondary",
     Fired: "destructive",
     Promoted: "default",
     Demoted: "secondary",
+    Rehired: "secondary",
 } as const;
+
+const ActivityList = ({ events }: { events: PersonnelEvent[] }) => (
+    <ScrollArea className="h-72">
+        {events.length > 0 ? (
+        <div className="space-y-4 pr-4">
+            {events.map(event => (
+                <div key={event.id} className="flex items-start gap-4">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                        {eventIcons[event.event_type] || <ShieldAlert className="h-4 w-4" />}
+                    </div>
+                    <div className="flex-1 text-sm">
+                        <p className="font-medium">{event.personnel_name}</p>
+                        <p className="text-muted-foreground">{event.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            {formatDistanceToNow(event.date, { addSuffix: true })}
+                        </p>
+                    </div>
+                    <Badge variant={eventColors[event.event_type]} className="text-xs">{event.event_type}</Badge>
+                </div>
+            ))}
+        </div>
+        ) : (
+            <div className="flex items-center justify-center h-full">
+                <p className="text-muted-foreground">No activity of this type.</p>
+            </div>
+        )}
+    </ScrollArea>
+)
 
 export function DashboardClient({ personnel, applications, recentActivity, announcements, galleryImages: initialGalleryImages }: DashboardClientProps) {
   const pendingApplications = applications.filter(app => app.status === "Pending").length;
@@ -63,6 +94,11 @@ export function DashboardClient({ personnel, applications, recentActivity, annou
       setIsDeleting(prev => ({ ...prev, [id]: false }));
     }
   }
+  
+  const hires = recentActivity.filter(e => e.event_type === 'Hired' || e.event_type === 'Rehired');
+  const fires = recentActivity.filter(e => e.event_type === 'Fired');
+  const promotions = recentActivity.filter(e => e.event_type === 'Promoted');
+  const demotions = recentActivity.filter(e => e.event_type === 'Demoted');
 
 
   return (
@@ -168,31 +204,26 @@ export function DashboardClient({ personnel, applications, recentActivity, annou
                 <CardDescription>Latest personnel changes.</CardDescription>
             </CardHeader>
             <CardContent>
-                <ScrollArea className="h-72">
-                    {recentActivity.length > 0 ? (
-                    <div className="space-y-4 pr-4">
-                        {recentActivity.map(event => (
-                            <div key={event.id} className="flex items-start gap-4">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                                    {eventIcons[event.event_type] || <ShieldAlert className="h-4 w-4" />}
-                                </div>
-                                <div className="flex-1 text-sm">
-                                    <p className="font-medium">{event.personnel_name}</p>
-                                    <p className="text-muted-foreground">{event.description}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        {formatDistanceToNow(event.date, { addSuffix: true })}
-                                    </p>
-                                </div>
-                                <Badge variant={eventColors[event.event_type]} className="text-xs">{event.event_type}</Badge>
-                            </div>
-                        ))}
-                    </div>
-                    ) : (
-                        <div className="flex items-center justify-center h-40 rounded-lg border border-dashed">
-                            <p className="text-muted-foreground">No recent activity.</p>
-                        </div>
-                    )}
-                </ScrollArea>
+                 <Tabs defaultValue="hired" className="w-full">
+                    <TabsList className="grid w-full grid-cols-4">
+                        <TabsTrigger value="hired">Hired</TabsTrigger>
+                        <TabsTrigger value="fired">Fired</TabsTrigger>
+                        <TabsTrigger value="promoted">Promoted</TabsTrigger>
+                        <TabsTrigger value="demoted">Demoted</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="hired" className="mt-4">
+                        <ActivityList events={hires} />
+                    </TabsContent>
+                    <TabsContent value="fired" className="mt-4">
+                         <ActivityList events={fires} />
+                    </TabsContent>
+                     <TabsContent value="promoted" className="mt-4">
+                         <ActivityList events={promotions} />
+                    </TabsContent>
+                     <TabsContent value="demoted" className="mt-4">
+                         <ActivityList events={demotions} />
+                    </TabsContent>
+                </Tabs>
             </CardContent>
         </Card>
       </div>
