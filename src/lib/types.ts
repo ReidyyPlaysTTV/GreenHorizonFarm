@@ -1,4 +1,5 @@
 
+
 export const roles = ["Developer", "Administrator", "Commissioners Office", "High Command", "Command", "NCOs", "User"] as const;
 export type Role = typeof roles[number];
 
@@ -14,6 +15,7 @@ export const permissions = [
     'VIEW_APPLICATIONS',
     'VIEW_LOGS',
     'ACCESS_ADMIN_PANEL',
+    'VIEW_ANNOUNCEMENTS',
     
     // Actions
     'MANAGE_PERSONNEL', // Promote, Demote, Fire, Edit Status
@@ -25,6 +27,7 @@ export const permissions = [
     'MANAGE_ROLES_PERMISSIONS',
     'MANAGE_ACCESS_REQUESTS',
     'MANAGE_APP_SETTINGS',
+    'MANAGE_ANNOUNCEMENTS',
 ] as const;
 export type Permission = typeof permissions[number];
 
@@ -146,4 +149,16 @@ export interface AuditLog {
     actionType: string;
     description: string;
     timestamp: Date;
+}
+
+export interface Announcement {
+    id: string;
+    content: string;
+    is_urgent: boolean;
+    createdAt: Date;
+    author: {
+        id: string;
+        username: string;
+        avatarUrl?: string;
+    }
 }

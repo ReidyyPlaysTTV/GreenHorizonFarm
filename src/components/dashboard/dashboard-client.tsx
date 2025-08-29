@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import type { Personnel, Application, PersonnelEvent } from "@/lib/types";
+import type { Personnel, Application, PersonnelEvent, Announcement } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
@@ -10,6 +11,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Badge } from "../ui/badge";
 import { RefreshButton } from "../layout/refresh-button";
 import { ScrollArea } from "../ui/scroll-area";
+import { Announcements } from "./announcements";
 
 const chartConfig = {
   total: {
@@ -22,6 +24,7 @@ interface DashboardClientProps {
   personnel: Personnel[];
   applications: Application[];
   recentActivity: PersonnelEvent[];
+  announcements: Announcement[];
 }
 
 const eventIcons = {
@@ -38,7 +41,7 @@ const eventColors = {
     Demoted: "secondary",
 } as const;
 
-export function DashboardClient({ personnel, applications, recentActivity }: DashboardClientProps) {
+export function DashboardClient({ personnel, applications, recentActivity, announcements }: DashboardClientProps) {
   const departmentCounts = personnel.reduce((acc, p) => {
     acc[p.department] = (acc[p.department] || 0) + 1;
     return acc;
@@ -58,7 +61,9 @@ export function DashboardClient({ personnel, applications, recentActivity }: Das
         <RefreshButton />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Announcements initialAnnouncements={announcements} />
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Personnel</CardTitle>

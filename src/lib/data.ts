@@ -1,4 +1,5 @@
 
+
 import type { Department, Permission, Role } from "./types";
 
 export const departments: Department[] = ["Commissioners Office", "High Command", "Command", "NCOS", "Corrections", "Training", "BCSO"];
@@ -62,6 +63,7 @@ export const permissions: Permission[] = [
     'VIEW_APPLICATIONS',
     'VIEW_LOGS',
     'ACCESS_ADMIN_PANEL',
+    'VIEW_ANNOUNCEMENTS',
     
     // Actions
     'MANAGE_PERSONNEL', // Promote, Demote, Fire, Edit Status
@@ -73,6 +75,7 @@ export const permissions: Permission[] = [
     'MANAGE_ROLES_PERMISSIONS',
     'MANAGE_ACCESS_REQUESTS',
     'MANAGE_APP_SETTINGS',
+    'MANAGE_ANNOUNCEMENTS',
 ];
 
 export const permissionDescriptions: Record<Permission, string> = {
@@ -95,6 +98,8 @@ export const permissionDescriptions: Record<Permission, string> = {
     MANAGE_ROLES_PERMISSIONS: "Manage Permission Groups",
     MANAGE_ACCESS_REQUESTS: "Manage Access Requests",
     MANAGE_APP_SETTINGS: "Manage Application Settings (e.g. SOPs)",
+    VIEW_ANNOUNCEMENTS: "View Dashboard Announcements",
+    MANAGE_ANNOUNCEMENTS: "Create and Delete Announcements",
 };
 
 
@@ -107,6 +112,7 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'VIEW_USERS',
         'VIEW_CALLSIGNS',
         'VIEW_SOPS',
+        'VIEW_ANNOUNCEMENTS',
     ],
     NCOs: [
         'ACCESS_DASHBOARD',
@@ -116,6 +122,7 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'VIEW_SOPS',
         'VIEW_LOGS',
         'VIEW_APPLICATIONS',
+        'VIEW_ANNOUNCEMENTS',
     ],
     Command: [
         'ACCESS_DASHBOARD',
@@ -131,6 +138,8 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'ACCESS_COMMAND_CENTER',
         'MANAGE_BLACKLIST',
         'VIEW_ARCHIVE',
+        'VIEW_ANNOUNCEMENTS',
+        'MANAGE_ANNOUNCEMENTS',
     ],
     "High Command": [
         'ACCESS_DASHBOARD',
@@ -148,6 +157,8 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'MANAGE_BLACKLIST',
         'VIEW_ARCHIVE',
         'MANAGE_APP_SETTINGS',
+        'VIEW_ANNOUNCEMENTS',
+        'MANAGE_ANNOUNCEMENTS',
     ],
     "Commissioners Office": [
         'ACCESS_DASHBOARD',
@@ -168,6 +179,8 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'MANAGE_USERS',
         'MANAGE_ACCESS_REQUESTS',
         'MANAGE_APP_SETTINGS',
+        'VIEW_ANNOUNCEMENTS',
+        'MANAGE_ANNOUNCEMENTS',
     ],
     // Administrator and Developer have all permissions, handled separately.
     Administrator: [...permissions],
