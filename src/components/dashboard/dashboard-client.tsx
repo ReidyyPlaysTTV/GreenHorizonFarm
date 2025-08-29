@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { Personnel, Application, PersonnelEvent, Announcement, GalleryImage } from "@/lib/types";
@@ -10,7 +9,7 @@ import { Badge } from "../ui/badge";
 import { RefreshButton } from "../layout/refresh-button";
 import { ScrollArea } from "../ui/scroll-area";
 import { Announcements } from "./announcements";
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import { AddGalleryImageDialog } from "./add-gallery-image-dialog";
@@ -134,7 +133,7 @@ export function DashboardClient({ personnel, applications, recentActivity, annou
              {initialGalleryImages.length > 0 ? (
                 <Carousel 
                     opts={{ loop: true }} 
-                    plugins={[Autoplay({ delay: 5000, stopOnInteraction: false })]}
+                    plugins={[Autoplay({ delay: 5000, stopOnInteraction: true })]}
                     className="w-full"
                 >
                     <CarouselContent>
@@ -163,6 +162,8 @@ export function DashboardClient({ personnel, applications, recentActivity, annou
                             </CarouselItem>
                         ))}
                     </CarouselContent>
+                    <CarouselPrevious className="left-4" />
+                    <CarouselNext className="right-4" />
                 </Carousel>
              ) : (
                 <div className="flex items-center justify-center h-40 rounded-lg border border-dashed aspect-video">
