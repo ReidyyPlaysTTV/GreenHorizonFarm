@@ -20,7 +20,7 @@ const pool = mysql.createPool({
 async function createCoreTables(pool: Pool) {
     const connection = await pool.getConnection();
     try {
-        // Create users table first as other tables depend on it
+        // Create users table first as other tables may depend on it
         await connection.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -40,7 +40,7 @@ async function createCoreTables(pool: Pool) {
                 is_urgent TINYINT(1) NOT NULL DEFAULT 0,
                 user_id VARCHAR(36) NOT NULL,
                 createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                INDEX (user_id)
             );
         `);
         
