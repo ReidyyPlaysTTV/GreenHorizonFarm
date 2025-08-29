@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import { getUsers } from "@/lib/actions";
 import type { AppUser } from "@/lib/types";
 import { usePathname } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { User } from "lucide-react";
 
 
 export function UserProfile() {
@@ -42,9 +44,12 @@ export function UserProfile() {
     
     return (
         <Link href={profileLink} className="flex items-center justify-center gap-2 p-2 rounded-md hover:bg-accent transition-colors group-data-[state=expanded]:justify-start">
-            <div className="flex-col text-center group-data-[collapsible=icon]:text-center group-data-[state=expanded]:text-left">
+             <Avatar className="h-8 w-8 text-lg">
+                <AvatarImage src={user.avatarUrl} alt={user.username} />
+                <AvatarFallback><User className="h-5 w-5"/></AvatarFallback>
+            </Avatar>
+            <div className="flex-col text-left group-data-[collapsible=icon]:hidden">
                 <span className="text-sm font-semibold text-foreground">{user.username}</span>
-                <p className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">{user.role}</p>
             </div>
         </Link>
     )
