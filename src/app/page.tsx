@@ -17,10 +17,10 @@ export default function LoginPage() {
             <div className="text-center text-foreground">
             <Image src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png" alt="DOC Logo" width={96} height={96} className="mx-auto h-24 w-24 object-contain" />
             <h1 className="mt-4 text-3xl font-bold tracking-tight">
-                DOC Roster
+                Department of Corrections
             </h1>
             <p className="mt-2 text-muted-foreground">
-                Department of Corrections Portal
+                Personnel Portal
             </p>
             </div>
             <Card className="bg-card/80 backdrop-blur-sm">

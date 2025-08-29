@@ -75,7 +75,7 @@ export function SidebarNav() {
       <SidebarHeader>
         <div className="flex items-center justify-center gap-2 h-10">
             <Image src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png" alt="DOC Logo" width={28} height={28} className="h-7 w-7" />
-            <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">DOC Roster</span>
+            <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">DOC</span>
         </div>
       </SidebarHeader>
       <SidebarMenu className="flex-1 p-2 space-y-4">
