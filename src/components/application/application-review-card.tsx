@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { Application } from "@/lib/types";
@@ -16,6 +15,8 @@ import { useState, useEffect } from "react";
 import { ApproveApplicationDialog } from "./approve-application-dialog";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Textarea } from "../ui/textarea";
+import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 interface ApplicationReviewCardProps {
   application: Application;
@@ -141,44 +142,67 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
           Submitted {formatDistanceToNow(new Date(application.submittedAt), { addSuffix: true })}
         </p>
         {application.status === "Pending" && canManageApplications && (
-            <div className="flex justify-end gap-2">
-                 <Button size="sm" variant="secondary" className="gap-1" disabled={isUpdating} onClick={() => handleStatusUpdate('Under Review')}>
-                    {isUpdating ? <Loader2 className="h-4 w-4 animate-spin"/> : <><Eye className="h-4 w-4" /> Mark in Review</>}
-                 </Button>
-
-                 <Dialog open={isRejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" className="gap-1" disabled={isUpdating}>
-                             <X className="h-4 w-4" /> Reject
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Reject Application for {application.name}</DialogTitle>
-                            <DialogDescription>
-                                Provide a reason for the denial. This will be visible to the applicant. If left blank, a default message will be used.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <Textarea 
-                            placeholder="Reason for denial..."
-                            value={rejectionReason}
-                            onChange={(e) => setRejectionReason(e.target.value)}
-                        />
-                        <DialogFooter>
-                            <Button variant="ghost" onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
-                            <Button variant="destructive" onClick={() => handleStatusUpdate('Rejected')} disabled={isUpdating}>
-                                {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Rejection'}
+            <TooltipProvider>
+                <div className="flex justify-end gap-2">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button size="icon" variant="secondary" disabled={isUpdating} onClick={() => handleStatusUpdate('Under Review')}>
+                                {isUpdating ? <Loader2 className="h-4 w-4 animate-spin"/> : <Eye className="h-4 w-4" />}
                             </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Mark as Under Review</p>
+                        </TooltipContent>
+                    </Tooltip>
 
-                <ApproveApplicationDialog application={application} currentUser={currentUser}>
-                  <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700" disabled={isUpdating}>
-                      <Check className="h-4 w-4" /> Approve
-                  </Button>
-                </ApproveApplicationDialog>
-            </div>
+                    <Dialog open={isRejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <DialogTrigger asChild>
+                                    <Button size="icon" variant="outline" disabled={isUpdating}>
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </DialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Reject Application</p>
+                            </TooltipContent>
+                        </Tooltip>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Reject Application for {application.name}</DialogTitle>
+                                <DialogDescription>
+                                    Provide a reason for the denial. This will be visible to the applicant. If left blank, a default message will be used.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <Textarea 
+                                placeholder="Reason for denial..."
+                                value={rejectionReason}
+                                onChange={(e) => setRejectionReason(e.target.value)}
+                            />
+                            <DialogFooter>
+                                <Button variant="ghost" onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
+                                <Button variant="destructive" onClick={() => handleStatusUpdate('Rejected')} disabled={isUpdating}>
+                                    {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Rejection'}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                             <ApproveApplicationDialog application={application} currentUser={currentUser}>
+                               <Button size="icon" className="bg-green-600 hover:bg-green-700" disabled={isUpdating}>
+                                   <Check className="h-4 w-4" />
+                               </Button>
+                             </ApproveApplicationDialog>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Approve Application</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
+            </TooltipProvider>
         )}
       </CardFooter>
     </Card>
