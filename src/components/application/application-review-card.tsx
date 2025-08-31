@@ -9,12 +9,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast";
 import { Check, X, FileText, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "../ui/label";
 import { updateApplicationStatus } from "@/lib/actions";
 import { useState, useEffect } from "react";
 import { ApproveApplicationDialog } from "./approve-application-dialog";
 import { usePermissions } from "@/hooks/use-permissions";
+import { Textarea } from "../ui/textarea";
 
 interface ApplicationReviewCardProps {
   application: Application;
@@ -26,6 +27,8 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
   const [currentUser, setCurrentUser] = useState("System");
   const { hasPermission } = usePermissions();
   const canManageApplications = hasPermission('MANAGE_APPLICATIONS');
+  const [isRejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -36,12 +39,17 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
   const handleStatusUpdate = async (status: 'Rejected') => {
     setIsUpdating(true);
     try {
-      // We only handle rejection here now. Approval is via the dialog.
-      await updateApplicationStatus(application.id, status, currentUser);
+      await updateApplicationStatus({
+        applicationId: application.id, 
+        status, 
+        comment: rejectionReason || "Unfortunately, your application was not successful at this time. You are welcome to re-apply in the future.",
+        user: currentUser
+      });
       toast({
         title: `Application ${status}`,
         description: `${application.name}'s application has been ${status.toLowerCase()}.`,
       });
+      setRejectDialogOpen(false);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -108,9 +116,33 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
         </p>
         {application.status === "Pending" && canManageApplications && (
             <div className="flex justify-end gap-2">
-                <Button size="sm" variant="outline" className="gap-1" onClick={() => handleStatusUpdate('Rejected')} disabled={isUpdating}>
-                    {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><X className="h-4 w-4" /> Reject</>}
-                </Button>
+                 <Dialog open={isRejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button size="sm" variant="outline" className="gap-1" disabled={isUpdating}>
+                             <X className="h-4 w-4" /> Reject
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Reject Application for {application.name}</DialogTitle>
+                            <DialogDescription>
+                                Provide a reason for the denial. This will be visible to the applicant. If left blank, a default message will be used.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <Textarea 
+                            placeholder="Reason for denial..."
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                        />
+                        <DialogFooter>
+                            <Button variant="ghost" onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
+                            <Button variant="destructive" onClick={() => handleStatusUpdate('Rejected')} disabled={isUpdating}>
+                                {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Rejection'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
                 <ApproveApplicationDialog application={application} currentUser={currentUser}>
                   <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700" disabled={isUpdating}>
                       <Check className="h-4 w-4" /> Approve

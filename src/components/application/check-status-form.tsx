@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -117,16 +118,10 @@ export function CheckStatusForm() {
                     <span className="text-muted-foreground">Status</span>
                     <Badge variant={getStatusBadgeVariant(application.status)}>{application.status}</Badge>
                 </div>
-                {application.status === 'Rejected' && (
-                     <Alert variant="destructive">
-                        <AlertTitle>Update</AlertTitle>
-                        <AlertDescription>Unfortunately, your application was not successful at this time. You are welcome to re-apply in the future.</AlertDescription>
-                    </Alert>
-                )}
-                 {application.status === 'Approved' && (
-                     <Alert>
-                        <AlertTitle>Congratulations!</AlertTitle>
-                        <AlertDescription>Your application has been approved. Please contact command staff on Discord to proceed with your onboarding.</AlertDescription>
+                {application.reviewer_comment && (
+                     <Alert variant={application.status === 'Rejected' ? 'destructive' : 'default'}>
+                        <AlertTitle>Update from Reviewer</AlertTitle>
+                        <AlertDescription className="whitespace-pre-wrap">{application.reviewer_comment}</AlertDescription>
                     </Alert>
                 )}
             </div>

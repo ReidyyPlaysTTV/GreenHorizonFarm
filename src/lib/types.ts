@@ -75,6 +75,7 @@ export interface Application {
   reasonForApplying: string;
   status: "Pending" | "Approved" | "Rejected";
   submittedAt: Date;
+  reviewer_comment?: string;
   responses: {
     fieldId: string;
     label: string;

@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { z } from 'zod';
@@ -154,36 +155,52 @@ export async function submitApplication(responses: Record<string, any>) {
     }
 }
 
-const applicationStatusSchema = z.enum(['Approved', 'Rejected']);
+const updateApplicationStatusSchema = z.object({
+  applicationId: z.string(),
+  status: z.enum(['Approved', 'Rejected']),
+  comment: z.string().optional(),
+  user: z.string(),
+});
 
-export async function updateApplicationStatus(applicationId: string, status: 'Approved' | 'Rejected', user: string) {
+export async function updateApplicationStatus(data: unknown) {
+  const validation = updateApplicationStatusSchema.safeParse(data);
+  if (!validation.success) {
+      return { success: false, message: validation.error.errors[0].message };
+  }
+  const { applicationId, status, comment, user } = validation.data;
+
+
   const hasPermission = await checkPermissions(user, 'MANAGE_APPLICATIONS');
   if (!hasPermission) {
     throw new Error('You do not have permission to perform this action.');
   }
 
-  const validatedStatus = applicationStatusSchema.parse(status);
-
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
 
+    // Ensure the new column exists before trying to update it.
+    const [columns] = await connection.query("SHOW COLUMNS FROM applications LIKE 'reviewer_comment'");
+    if (Array.isArray(columns) && columns.length === 0) {
+        await connection.query("ALTER TABLE applications ADD COLUMN reviewer_comment TEXT NULL");
+    }
+
     await connection.query(
-      'UPDATE applications SET status = ? WHERE id = ?',
-      [validatedStatus, applicationId]
+      'UPDATE applications SET status = ?, reviewer_comment = ? WHERE id = ?',
+      [status, comment, applicationId]
     );
 
     const [appRows]: any[] = await connection.query('SELECT responses FROM applications WHERE id = ?', [applicationId]);
     const responses = JSON.parse(appRows[0].responses);
     const applicantName = responses.find((r: any) => r.label.toLowerCase().includes('name'))?.answer || 'Unknown Applicant';
     
-    await logUserAction(user, 'Update Application Status', `${validatedStatus} application for ${applicantName}.`, connection);
+    await logUserAction(user, 'Update Application Status', `${status} application for ${applicantName}.`, connection);
     
     await connection.commit();
 
   } catch (error) {
     await connection.rollback();
-    console.error(`Failed to update application status to ${validatedStatus}:`, error);
+    console.error(`Failed to update application status to ${status}:`, error);
     throw new Error('Database operation failed.');
   } finally {
     connection.release();
@@ -191,6 +208,9 @@ export async function updateApplicationStatus(applicationId: string, status: 'Ap
 
   revalidatePath('/applications');
   revalidatePath('/logs');
+  revalidatePath('/check-status');
+
+  return { success: true };
 }
 
 export async function getApplicationById(id: string) {
@@ -212,6 +232,7 @@ export async function getApplicationById(id: string) {
             status: app.status,
             submittedAt: new Date(app.submittedAt),
             name: appName,
+            reviewer_comment: app.reviewer_comment,
             responses: parsedResponses,
             discordUsername: parsedResponses.find((r: any) => r.label.toLowerCase().includes('discord'))?.answer,
             reasonForApplying: parsedResponses.find((r: any) => r.type === 'textarea')?.answer || 'No reason provided.',

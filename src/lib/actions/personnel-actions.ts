@@ -255,8 +255,14 @@ export async function addPersonnel(data: unknown) {
         
         let logDescription = `Added ${name} to the roster as ${rank} with callsign ${callsign}.`;
         if (applicationId) {
-            logDescription += ` (Approved from application).`
-            await updateApplicationStatus(applicationId, 'Approved', user);
+            logDescription += ` (Approved from application).`;
+            const approvalComment = "Congratulations! Your application has been approved. We will be in contact shortly to proceed with your onboarding.";
+            await updateApplicationStatus({
+              applicationId,
+              status: 'Approved',
+              comment: approvalComment,
+              user,
+            });
         }
         
         await logUserAction(user, "Add Personnel", logDescription, connection);
