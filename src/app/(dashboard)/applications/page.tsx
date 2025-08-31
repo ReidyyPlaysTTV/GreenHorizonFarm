@@ -5,6 +5,7 @@ import { ApplicationFormEditor } from "@/components/application/application-form
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { Badge } from "@/components/ui/badge";
+import { ToggleApplicationStatus } from "@/components/application/toggle-application-status";
 
 export default async function ApplicationsPage() {
   const [applications, applicationsOpen] = await Promise.all([
@@ -47,7 +48,10 @@ export default async function ApplicationsPage() {
             Review and manage incoming applications and the application form itself.
           </p>
         </div>
-        <RefreshButton />
+        <div className="flex items-center gap-2">
+            <ToggleApplicationStatus initialStatus={applicationsOpen} />
+            <RefreshButton />
+        </div>
       </div>
 
       <Tabs defaultValue="pending" className="w-full">
