@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, FileText, Loader2 } from "lucide-react";
+import { Check, X, FileText, Loader2, ClipboardCopy } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "../ui/label";
@@ -74,6 +74,20 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
             <div>
                 <CardTitle>{application.name}</CardTitle>
                 <CardDescription>Discord: {application.discordUsername || 'N/A'}</CardDescription>
+                <div className="flex items-center gap-2 mt-2">
+                    <Badge variant="outline">ID: {application.id}</Badge>
+                     <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6"
+                        onClick={() => {
+                            navigator.clipboard.writeText(application.id);
+                            toast({ title: "Copied ID to clipboard!" });
+                        }}
+                    >
+                        <ClipboardCopy className="h-3 w-3" />
+                    </Button>
+                </div>
             </div>
             <Badge variant={statusColors[application.status]}>{application.status}</Badge>
         </div>
