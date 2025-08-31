@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { Application } from "@/lib/types";
@@ -6,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, FileText, Loader2, ClipboardCopy, Minus } from "lucide-react";
+import { Check, X, FileText, Loader2, ClipboardCopy, Minus, User } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "../ui/label";
@@ -16,6 +17,7 @@ import { ApproveApplicationDialog } from "./approve-application-dialog";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Textarea } from "../ui/textarea";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 
 interface ApplicationReviewCardProps {
@@ -138,9 +140,25 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
       </CardContent>
      
       <CardFooter className="flex justify-between items-center">
-        <p className="text-xs text-muted-foreground mt-4">
-          Submitted {formatDistanceToNow(new Date(application.submittedAt), { addSuffix: true })}
-        </p>
+        <div className="text-xs text-muted-foreground mt-4">
+            {application.reviewer ? (
+                 <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                        <AvatarImage src={application.reviewer.avatarUrl} alt={application.reviewer.username} />
+                        <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
+                    </Avatar>
+                    <div className="text-xs">
+                        Reviewed by {application.reviewer.username}
+                        <br/>
+                        {formatDistanceToNow(new Date(application.reviewedAt!), { addSuffix: true })}
+                    </div>
+                </div>
+            ) : (
+                <span>
+                    Submitted {formatDistanceToNow(new Date(application.submittedAt), { addSuffix: true })}
+                </span>
+            )}
+        </div>
         {application.status === "Pending" && canManageApplications && (
             <TooltipProvider>
                 <div className="flex justify-end gap-2">

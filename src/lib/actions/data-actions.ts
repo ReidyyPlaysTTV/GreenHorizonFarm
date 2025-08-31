@@ -171,7 +171,16 @@ export async function getApplications(): Promise<Application[]> {
     return withRetry(async () => {
         const connection = await db.getConnection();
         try {
-            const [rows] = await connection.query('SELECT * FROM applications ORDER BY submittedAt DESC');
+            const [rows] = await connection.query(`
+              SELECT
+                a.*,
+                u.id as reviewerId,
+                u.username as reviewerUsername,
+                u.avatarUrl as reviewerAvatarUrl
+              FROM applications a
+              LEFT JOIN users u ON a.reviewer_id = u.id
+              ORDER BY a.submittedAt DESC
+            `);
             
             if (!Array.isArray(rows)) {
                 return [];
@@ -200,6 +209,12 @@ export async function getApplications(): Promise<Application[]> {
                     discordUsername: appDiscord,
                     reasonForApplying: reason,
                     submittedAt: new Date(app.submittedAt),
+                    reviewedAt: app.reviewedAt ? new Date(app.reviewedAt) : null,
+                    reviewer: app.reviewerId ? {
+                        id: app.reviewerId,
+                        username: app.reviewerUsername,
+                        avatarUrl: app.reviewerAvatarUrl,
+                    } : null,
                     responses: parsedResponses,
                 }
             });
@@ -210,8 +225,11 @@ export async function getApplications(): Promise<Application[]> {
                     CREATE TABLE applications (
                         id VARCHAR(36) NOT NULL PRIMARY KEY,
                         responses JSON NOT NULL,
-                        status ENUM('Pending', 'Approved', 'Rejected') NOT NULL DEFAULT 'Pending',
-                        submittedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        status ENUM('Pending', 'Approved', 'Rejected', 'Under Review') NOT NULL DEFAULT 'Pending',
+                        submittedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        reviewer_comment TEXT,
+                        reviewer_id VARCHAR(36),
+                        reviewedAt DATETIME
                     );
                 `);
                 return [];

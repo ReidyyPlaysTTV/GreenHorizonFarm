@@ -76,6 +76,12 @@ export interface Application {
   status: "Pending" | "Under Review" | "Approved" | "Rejected";
   submittedAt: Date;
   reviewer_comment?: string;
+  reviewedAt?: Date | null;
+  reviewer?: {
+    id: string;
+    username: string;
+    avatarUrl?: string;
+  } | null;
   responses: {
     fieldId: string;
     label: string;
