@@ -157,7 +157,7 @@ export async function submitApplication(responses: Record<string, any>) {
 
 const updateApplicationStatusSchema = z.object({
   applicationId: z.string(),
-  status: z.enum(['Under Review', 'Approved', 'Rejected']),
+  status: z.enum(['Under Review', 'Approved', 'Rejected', 'Pending']),
   comment: z.string().optional(),
   user: z.string(),
 });
@@ -184,10 +184,14 @@ export async function updateApplicationStatus(data: unknown) {
     if (!userId) {
         throw new Error('Reviewer user not found.');
     }
+    
+    // Reset reviewer if sent back to pending
+    const reviewerIdToSet = status === 'Pending' ? null : userId;
+    const reviewedAtToSet = status === 'Pending' ? null : new Date();
 
     await connection.query(
       'UPDATE applications SET status = ?, reviewer_comment = ?, reviewer_id = ?, reviewedAt = ? WHERE id = ?',
-      [status, comment, userId, new Date(), applicationId]
+      [status, comment, reviewerIdToSet, reviewedAtToSet, applicationId]
     );
 
     const [appRows]: any[] = await connection.query('SELECT responses FROM applications WHERE id = ?', [applicationId]);
