@@ -12,7 +12,7 @@ import {
   SidebarFooter,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home, Users, Archive, ShieldAlert, FileText, LogOut, ShieldCheck, User, Contact, History, BookMarked, Sun, Moon } from "lucide-react";
+import { Home, Users, Archive, ShieldAlert, FileText, LogOut, ShieldCheck, User, Contact, History, BookMarked, Sun, Moon, GitMerge } from "lucide-react";
 import { Button } from "../ui/button";
 import Image from "next/image";
 import { Separator } from "../ui/separator";
@@ -27,6 +27,7 @@ const mainMenuItems = [
   { href: "/users", label: "Users", icon: User, permission: 'VIEW_USERS' },
   { href: "/callsigns", label: "Callsigns", icon: Contact, permission: 'VIEW_CALLSIGNS' },
   { href: "/sops", label: "DOC SOPs", icon: BookMarked, permission: 'VIEW_SOPS' },
+  { href: "/changelogs", label: "Changelogs", icon: GitMerge, permission: 'VIEW_CHANGELOGS' },
 ];
 
 const commandMenuItems = [

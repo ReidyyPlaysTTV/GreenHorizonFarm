@@ -1,4 +1,5 @@
 
+
 import mysql from 'mysql2/promise';
 import { seedDatabase } from './db-seed';
 import { seedRolePermissions } from './actions/permission-actions';
@@ -51,6 +52,20 @@ async function createCoreTables(pool: Pool) {
                 alt VARCHAR(255) NOT NULL,
                 hint VARCHAR(100),
                 createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS changelogs (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                version VARCHAR(50) NOT NULL,
+                added_features TEXT,
+                fixes TEXT,
+                removed_features TEXT,
+                other TEXT,
+                author_id VARCHAR(36) NOT NULL,
+                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX (author_id)
             );
         `);
         

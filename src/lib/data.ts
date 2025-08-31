@@ -64,6 +64,7 @@ export const permissions: Permission[] = [
     'VIEW_LOGS',
     'ACCESS_ADMIN_PANEL',
     'VIEW_ANNOUNCEMENTS',
+    'VIEW_CHANGELOGS',
     
     // Actions
     'MANAGE_PERSONNEL', // Promote, Demote, Fire, Edit Status
@@ -77,6 +78,7 @@ export const permissions: Permission[] = [
     'MANAGE_APP_SETTINGS',
     'MANAGE_ANNOUNCEMENTS',
     'MANAGE_GALLERY',
+    'MANAGE_CHANGELOGS',
 ];
 
 export const permissionDescriptions: Record<Permission, string> = {
@@ -102,6 +104,8 @@ export const permissionDescriptions: Record<Permission, string> = {
     VIEW_ANNOUNCEMENTS: "View Dashboard Announcements",
     MANAGE_ANNOUNCEMENTS: "Create and Delete Announcements",
     MANAGE_GALLERY: "Manage Dashboard Photo Gallery",
+    VIEW_CHANGELOGS: "View Changelogs Page",
+    MANAGE_CHANGELOGS: "Create and Delete Changelogs",
 };
 
 
@@ -115,6 +119,7 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'VIEW_CALLSIGNS',
         'VIEW_SOPS',
         'VIEW_ANNOUNCEMENTS',
+        'VIEW_CHANGELOGS',
     ],
     NCOs: [
         'ACCESS_DASHBOARD',
@@ -125,6 +130,7 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'VIEW_LOGS',
         'VIEW_APPLICATIONS',
         'VIEW_ANNOUNCEMENTS',
+        'VIEW_CHANGELOGS',
     ],
     Command: [
         'ACCESS_DASHBOARD',
@@ -142,6 +148,7 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'VIEW_ARCHIVE',
         'VIEW_ANNOUNCEMENTS',
         'MANAGE_ANNOUNCEMENTS',
+        'VIEW_CHANGELOGS',
     ],
     "High Command": [
         'ACCESS_DASHBOARD',
@@ -162,6 +169,7 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'VIEW_ANNOUNCEMENTS',
         'MANAGE_ANNOUNCEMENTS',
         'MANAGE_GALLERY',
+        'VIEW_CHANGELOGS',
     ],
     "Commissioners Office": [
         'ACCESS_DASHBOARD',
@@ -185,6 +193,7 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'VIEW_ANNOUNCEMENTS',
         'MANAGE_ANNOUNCEMENTS',
         'MANAGE_GALLERY',
+        'VIEW_CHANGELOGS',
     ],
     // Administrator and Developer have all permissions, handled separately.
     Administrator: [...permissions],

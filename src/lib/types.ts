@@ -16,6 +16,7 @@ export const permissions = [
     'VIEW_LOGS',
     'ACCESS_ADMIN_PANEL',
     'VIEW_ANNOUNCEMENTS',
+    'VIEW_CHANGELOGS',
     
     // Actions
     'MANAGE_PERSONNEL', // Promote, Demote, Fire, Edit Status
@@ -29,6 +30,7 @@ export const permissions = [
     'MANAGE_APP_SETTINGS',
     'MANAGE_ANNOUNCEMENTS',
     'MANAGE_GALLERY',
+    'MANAGE_CHANGELOGS',
 ] as const;
 export type Permission = typeof permissions[number];
 
@@ -170,4 +172,19 @@ export interface GalleryImage {
     alt: string;
     hint?: string;
     createdAt: Date;
+}
+
+export interface Changelog {
+    id: string;
+    version: string;
+    added_features: string | null;
+    fixes: string | null;
+    removed_features: string | null;
+    other: string | null;
+    createdAt: Date;
+    author: {
+        id: string;
+        username: string;
+        avatarUrl?: string;
+    }
 }
