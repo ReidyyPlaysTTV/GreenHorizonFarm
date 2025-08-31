@@ -17,6 +17,7 @@ export const rankInsignias: Record<string, string> = {
     "Senior Corrections Officer": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/corporal.png",
     "Correctional Officer": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
     "Probationary Correctional Officer": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
+    "Developer": "https://i.imgur.com/FxJ5c2v.png",
 };
 
 export const rankToDepartmentMap: Record<string, Department> = {
@@ -32,9 +33,11 @@ export const rankToDepartmentMap: Record<string, Department> = {
     "Senior Corrections Officer": "Corrections",
     "Correctional Officer": "Corrections",
     "Probationary Correctional Officer": "Training",
+    "Developer": "BCSO",
 };
 
 export const rankOrder = [
+    "Developer",
     "Sheriff",
     "Commissioner",
     "Deputy Comissioner",

@@ -63,20 +63,16 @@ export async function getUsers(): Promise<AppUser[]> {
                 return [];
             }
 
-            const [personnel] = await connection.query('SELECT name, rank, department, userId FROM personnel');
+            const [personnel] = await connection.query('SELECT name, rank, department FROM personnel');
             const personnelMap = new Map<string, Partial<Personnel>>();
             if (Array.isArray(personnel)) {
                 personnel.forEach((p: any) => {
-                    const matchingUser = (users as AppUser[]).find(u => u.username === p.name);
-                    const key = matchingUser?.id;
-                    if (key) {
-                        personnelMap.set(key, p);
-                    }
+                    personnelMap.set(p.name, p);
                 });
             }
 
             return (users as any[]).map((u: any) => {
-                const pRecord = personnelMap.get(u.id);
+                const pRecord = personnelMap.get(u.username);
                 return {
                     ...u,
                     createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined,

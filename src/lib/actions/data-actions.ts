@@ -34,26 +34,25 @@ export async function getPersonnel(): Promise<Personnel[]> {
     try {
         await createPersonnelTableIfNeeded(connection);
 
-        // START Temporary logic to update Liam Evans
+        // START Temporary logic to ensure Liam Evans has a personnel record
         const [users] = await connection.query('SELECT id, username FROM users WHERE username = ?', ['Liam Evans']);
         if (Array.isArray(users) && users.length > 0) {
             const liamEvansUser = (users[0] as any);
-            const [personnelRecord] = await connection.query('SELECT id FROM personnel WHERE userId = ?', [liamEvansUser.id]);
+            const [personnelRecord] = await connection.query('SELECT id FROM personnel WHERE name = ?', [liamEvansUser.username]);
 
             if (!Array.isArray(personnelRecord) || personnelRecord.length === 0) {
                  // Liam Evans does not have a personnel record, so we create one.
                  // This assumes a callsign that is unlikely to be taken.
                  await addPersonnel({
                      name: 'Liam Evans',
-                     rank: 'Sheriff',
+                     rank: 'Developer', // Correct rank for special tag
                      callsign: 1000,
-                     discordUsername: '', // Add discord if known
-                     user: 'System', // Action performed by system/dev
+                     discordUsername: '',
+                     user: 'System', 
                  });
             } else {
-                // If he already has a record, update it.
-                const personnelId = (personnelRecord[0] as any).id;
-                await connection.query('UPDATE personnel SET rank = ?, department = ? WHERE id = ?', ['Sheriff', 'BCSO', personnelId]);
+                // If he already has a record, ensure rank is correct
+                await connection.query('UPDATE personnel SET rank = ?, department = ? WHERE name = ?', ['Developer', 'BCSO', 'Liam Evans']);
             }
         }
         // END Temporary logic
