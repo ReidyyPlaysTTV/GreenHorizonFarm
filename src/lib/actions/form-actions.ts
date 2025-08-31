@@ -113,7 +113,7 @@ export async function submitApplication(responses: Record<string, any>) {
 
     const discordField = fields.find(f => f.label.toLowerCase().includes('discord'));
     const discordUsername = discordField ? responses[discordField.id!] : null;
-    const applicationId = randomUUID();
+    const applicationId = `DOC${Math.floor(10000000 + Math.random() * 90000000)}`;
 
     const connection = await db.getConnection();
     try {

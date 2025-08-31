@@ -24,7 +24,7 @@ import { Badge } from "../ui/badge";
 import { format } from "date-fns";
 
 const formSchema = z.object({
-  applicationId: z.string().uuid("Please enter a valid Application ID."),
+  applicationId: z.string().regex(/^DOC\d{8}$/, "Please enter a valid Application ID (e.g., DOC12345678)."),
 });
 
 export function CheckStatusForm() {
@@ -77,7 +77,7 @@ export function CheckStatusForm() {
                 <FormItem>
                 <FormLabel>Application ID</FormLabel>
                 <FormControl>
-                    <Input placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" {...field} />
+                    <Input placeholder="DOC12345678" {...field} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -134,4 +134,3 @@ export function CheckStatusForm() {
     </div>
   );
 }
-
