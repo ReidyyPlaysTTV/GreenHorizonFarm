@@ -456,3 +456,22 @@ export async function updateProfilePicture(data: unknown) {
         connection.release();
     }
 }
+
+export async function getReviewedApplicationsCount(userId: string): Promise<number> {
+    const connection = await db.getConnection();
+    try {
+        const [rows] = await connection.query(
+            "SELECT COUNT(*) as count FROM applications WHERE reviewer_id = ? AND status IN ('Approved', 'Rejected')",
+            [userId]
+        );
+        if (Array.isArray(rows) && rows.length > 0) {
+            return (rows[0] as any).count;
+        }
+        return 0;
+    } catch (error) {
+        console.error("Failed to fetch reviewed applications count:", error);
+        return 0;
+    } finally {
+        connection.release();
+    }
+}

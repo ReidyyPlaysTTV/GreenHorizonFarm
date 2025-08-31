@@ -6,10 +6,10 @@ import { notFound, useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, Shield, Briefcase, Star, Hash, Mail, Activity, KeySquare, Image as ImageIcon } from "lucide-react";
+import { User, Shield, Briefcase, Star, Hash, Mail, Activity, KeySquare, Image as ImageIcon, FileCheck2 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { getAuditLogs, getUsers } from "@/lib/actions";
+import { getAuditLogs, getUsers, getReviewedApplicationsCount } from "@/lib/actions";
 import type { AppUser, Personnel, AuditLog } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ChangePasswordDialog } from "@/components/user/change-password-dialog";
@@ -66,6 +66,7 @@ export default function UserProfilePage() {
   const [user, setUser] = useState<AppUser | null>(null);
   const [personnelRecord, setPersonnelRecord] = useState<Personnel | null>(null);
   const [activityLogs, setActivityLogs] = useState<AuditLog[]>([]);
+  const [reviewedAppsCount, setReviewedAppsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loggedInUser, setLoggedInUser] = useState<string | null>(null);
 
@@ -86,8 +87,13 @@ export default function UserProfilePage() {
         setUser(foundUser);
         setPersonnelRecord(foundUser.personnel || null);
 
-        const logs = await getAuditLogs({ username: decodedUsername });
+        const [logs, reviewedCount] = await Promise.all([
+            getAuditLogs({ username: decodedUsername }),
+            getReviewedApplicationsCount(foundUser.id),
+        ]);
+        
         setActivityLogs(logs);
+        setReviewedAppsCount(reviewedCount);
 
       } catch (error) {
         console.error("Failed to fetch user data:", error);
@@ -227,20 +233,27 @@ export default function UserProfilePage() {
                             </p>
                         </div>
                     </div>
-                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                         <Briefcase className="h-6 w-6 text-muted-foreground" />
                         <div>
                             <p className="text-sm text-muted-foreground">Department</p>
                             <p className="font-semibold">{personnelRecord.department}</p>
                         </div>
                     </div>
-                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                         <div className="w-6 h-6 flex items-center justify-center">
                             <Image src={"https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"} alt="Insignia" width={20} height={20} className="object-contain" />
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Status</p>
                             <Badge variant={getStatusBadgeVariant(personnelRecord.status)}>{personnelRecord.status}</Badge>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                        <FileCheck2 className="h-6 w-6 text-muted-foreground" />
+                        <div>
+                            <p className="text-sm text-muted-foreground">Reviewed Apps</p>
+                            <p className="font-semibold">{reviewedAppsCount}</p>
                         </div>
                     </div>
                 </CardContent>
