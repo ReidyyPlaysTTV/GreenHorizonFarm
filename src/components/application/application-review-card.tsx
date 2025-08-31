@@ -15,7 +15,7 @@ import { useState, useEffect } from "react";
 import { ApproveApplicationDialog } from "./approve-application-dialog";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Textarea } from "../ui/textarea";
-import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 
 interface ApplicationReviewCardProps {
