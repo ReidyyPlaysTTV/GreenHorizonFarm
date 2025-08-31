@@ -5,7 +5,7 @@ import { z } from 'zod';
 import db from '../db';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
-import type { FormFieldData, BlacklistedPersonnel } from '../types';
+import type { FormFieldData, BlacklistedPersonnel, Application } from '../types';
 import { logUserAction } from './audit-log-actions';
 import { checkPermissions } from '../permissions';
 
@@ -113,6 +113,7 @@ export async function submitApplication(responses: Record<string, any>) {
 
     const discordField = fields.find(f => f.label.toLowerCase().includes('discord'));
     const discordUsername = discordField ? responses[discordField.id!] : null;
+    const applicationId = randomUUID();
 
     const connection = await db.getConnection();
     try {
@@ -137,20 +138,20 @@ export async function submitApplication(responses: Record<string, any>) {
 
         await connection.query(
             'INSERT INTO applications (id, responses, status) VALUES (?, ?, ?)',
-            [randomUUID(), JSON.stringify(formattedResponses), status]
+            [applicationId, JSON.stringify(formattedResponses), status]
         );
         
         await connection.commit();
+        revalidatePath('/applications');
+        revalidatePath('/logs');
+        return { success: true, applicationId };
     } catch(error) {
         await connection.rollback();
         console.error("Failed to submit application:", error);
-        throw new Error("Could not save application to the database.");
+        return { success: false, message: "Could not save application to the database." };
     } finally {
         connection.release();
     }
-
-    revalidatePath('/applications');
-    revalidatePath('/logs');
 }
 
 const applicationStatusSchema = z.enum(['Approved', 'Rejected']);
@@ -190,4 +191,36 @@ export async function updateApplicationStatus(applicationId: string, status: 'Ap
 
   revalidatePath('/applications');
   revalidatePath('/logs');
+}
+
+export async function getApplicationById(id: string) {
+    if (!id) {
+        return { success: false, message: "Application ID is required." };
+    }
+    const connection = await db.getConnection();
+    try {
+        const [rows] = await connection.query('SELECT * FROM applications WHERE id = ?', [id]);
+        if (!Array.isArray(rows) || rows.length === 0) {
+            return { success: false, message: "Application not found." };
+        }
+        const app = (rows as any)[0];
+        const parsedResponses = JSON.parse(app.responses);
+        const appName = parsedResponses.find((r: any) => r.label.toLowerCase().includes('name'))?.answer || "Unknown Applicant";
+
+        const result: Application = {
+            id: app.id,
+            status: app.status,
+            submittedAt: new Date(app.submittedAt),
+            name: appName,
+            responses: parsedResponses,
+            discordUsername: parsedResponses.find((r: any) => r.label.toLowerCase().includes('discord'))?.answer,
+            reasonForApplying: parsedResponses.find((r: any) => r.type === 'textarea')?.answer || 'No reason provided.',
+        };
+        return { success: true, application: result };
+    } catch (error) {
+        console.error("Failed to fetch application by ID:", error);
+        return { success: false, message: "Database operation failed." };
+    } finally {
+        connection.release();
+    }
 }

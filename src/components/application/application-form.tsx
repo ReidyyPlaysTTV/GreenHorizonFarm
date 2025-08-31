@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, ClipboardCopy } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { getApplicationFormFields, submitApplication } from "@/lib/actions";
 import type { FormFieldData } from "@/lib/types";
@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 function buildZodSchema(fields: FormFieldData[]) {
   const schemaShape: { [key: string]: z.ZodTypeAny } = {};
@@ -74,6 +75,7 @@ export function ApplicationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [formFields, setFormFields] = useState<FormFieldData[]>([]);
+  const [submittedApplicationId, setSubmittedApplicationId] = useState<string | null>(null);
 
   // Initialize form at the top level
   const form = useForm({
@@ -116,17 +118,21 @@ export function ApplicationForm() {
   async function onSubmit(values: z.infer<z.ZodObject<any>>) {
     setIsSubmitting(true);
     try {
-        await submitApplication(values);
-        toast({
-            title: "Application Submitted",
-            description: "Thank you for your interest. We will review your application shortly.",
-        });
-        router.push("/");
-    } catch(err) {
+        const result = await submitApplication(values);
+        if (result.success && result.applicationId) {
+             setSubmittedApplicationId(result.applicationId);
+             toast({
+                title: "Application Submitted",
+                description: "Your application has been received successfully.",
+            });
+        } else {
+             throw new Error(result.message || "An unknown error occurred during submission.");
+        }
+    } catch(err: any) {
         toast({
             variant: "destructive",
             title: "Submission Error",
-            description: "There was an error submitting your application. Please try again."
+            description: err.message || "There was an error submitting your application. Please try again."
         });
     } finally {
         setIsSubmitting(false);
@@ -209,6 +215,33 @@ export function ApplicationForm() {
       )
   }
   
+  if (submittedApplicationId) {
+      return (
+          <Alert>
+              <AlertTitle className="text-xl font-bold">Application Received!</AlertTitle>
+              <AlertDescription className="mt-2">
+                  Thank you for your interest. Please save your Application ID below. You can use it to check the status of your application later.
+              </AlertDescription>
+              <div className="my-4 p-3 bg-muted rounded-md flex items-center justify-between">
+                <code className="text-sm font-semibold">{submittedApplicationId}</code>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => {
+                        navigator.clipboard.writeText(submittedApplicationId);
+                        toast({ title: "Copied to clipboard!" });
+                    }}
+                >
+                    <ClipboardCopy className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button className="w-full" onClick={() => router.push('/check-status')}>
+                  Check Status Now
+              </Button>
+          </Alert>
+      )
+  }
+  
   if (formFields.length === 0) {
       return (
            <div className="flex justify-center items-center h-48 text-center text-muted-foreground">
@@ -233,3 +266,4 @@ export function ApplicationForm() {
     </Form>
   );
 }
+

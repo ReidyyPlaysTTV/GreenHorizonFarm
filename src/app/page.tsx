@@ -1,3 +1,4 @@
+
 import { LoginForm } from "@/components/auth/login-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,12 +36,12 @@ export default function LoginPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="bg-card/80 backdrop-blur-sm text-center">
                     <CardHeader>
-                        <CardTitle className="text-base">Need an account?</CardTitle>
+                        <CardTitle className="text-base">Check Application Status</CardTitle>
                     </CardHeader>
                     <CardContent>
                          <Button variant="link" asChild className="text-primary">
-                            <Link href="/request-access">
-                                Request Access
+                            <Link href="/check-status">
+                                Check Status
                             </Link>
                         </Button>
                     </CardContent>
@@ -58,7 +59,15 @@ export default function LoginPage() {
                     </CardContent>
                 </Card>
             </div>
+             <div className="text-center">
+                 <Button variant="link" asChild className="text-sm text-muted-foreground">
+                    <Link href="/request-access">
+                        Need an account? Request Access
+                    </Link>
+                </Button>
+            </div>
         </div>
     </div>
   );
 }
+
