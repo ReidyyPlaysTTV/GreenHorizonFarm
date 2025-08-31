@@ -87,5 +87,25 @@ Promise.all([
     console.error("Failed to setup and seed database:", err);
 });
 
+// Helper function to retry database operations
+export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 100): Promise<T> {
+  let lastError: Error | undefined;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      if (error.code === 'ECONNRESET') {
+        console.warn(`ECONNRESET detected. Retry attempt ${i + 1}/${retries}...`);
+        await new Promise(res => setTimeout(res, delay * (i + 1))); // Incremental backoff
+      } else {
+        // Don't retry on other errors
+        throw error;
+      }
+    }
+  }
+  throw lastError;
+}
+
 
 export default pool;

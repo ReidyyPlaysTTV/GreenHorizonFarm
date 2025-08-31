@@ -3,7 +3,7 @@
 'use server';
 
 import type { Personnel, ArchivedPersonnel, BlacklistedPersonnel, Application, PersonnelEvent } from "../types";
-import db from '../db';
+import db, { withRetry } from '../db';
 import { rankToDepartmentMap, rankOrder } from "../data";
 import { addPersonnel } from "./personnel-actions";
 
@@ -168,57 +168,64 @@ const findResponse = (responses: any[], label: string) => {
 }
 
 export async function getApplications(): Promise<Application[]> {
-    const connection = await db.getConnection();
-    try {
-        const [rows] = await connection.query('SELECT * FROM applications ORDER BY submittedAt DESC');
-        
-        if (!Array.isArray(rows)) {
-            return [];
-        }
+    return withRetry(async () => {
+        const connection = await db.getConnection();
+        try {
+            const [rows] = await connection.query('SELECT * FROM applications ORDER BY submittedAt DESC');
+            
+            if (!Array.isArray(rows)) {
+                return [];
+            }
 
-        return (rows as any[]).map(app => {
-            let parsedResponses = [];
-            if (typeof app.responses === 'string') {
-                try {
-                    parsedResponses = JSON.parse(app.responses);
-                } catch (e) {
-                    console.error(`Failed to parse responses for application ${app.id}:`, e);
+            return (rows as any[]).map(app => {
+                let parsedResponses = [];
+                if (typeof app.responses === 'string') {
+                    try {
+                        parsedResponses = JSON.parse(app.responses);
+                    } catch (e) {
+                        console.error(`Failed to parse responses for application ${app.id}:`, e);
+                    }
+                } else if (Array.isArray(app.responses)) {
+                    parsedResponses = app.responses;
                 }
-            } else if (Array.isArray(app.responses)) {
-                parsedResponses = app.responses;
-            }
 
-            // Extract key information
-            const appName = findResponse(parsedResponses, 'name') || "Unknown Applicant";
-            const appDiscord = findResponse(parsedResponses, 'discord');
-            const reason = parsedResponses.find(r => r.type === 'textarea')?.answer || 'No reason provided.';
+                // Extract key information
+                const appName = findResponse(parsedResponses, 'name') || "Unknown Applicant";
+                const appDiscord = findResponse(parsedResponses, 'discord');
+                const reason = parsedResponses.find(r => r.type === 'textarea')?.answer || 'No reason provided.';
 
-            return {
-                ...app,
-                name: appName,
-                discordUsername: appDiscord,
-                reasonForApplying: reason,
-                submittedAt: new Date(app.submittedAt),
-                responses: parsedResponses,
+                return {
+                    ...app,
+                    name: appName,
+                    discordUsername: appDiscord,
+                    reasonForApplying: reason,
+                    submittedAt: new Date(app.submittedAt),
+                    responses: parsedResponses,
+                }
+            });
+        } catch (error) {
+            console.error("Failed to fetch applications:", error);
+             if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
+                 await connection.query(`
+                    CREATE TABLE applications (
+                        id VARCHAR(36) NOT NULL PRIMARY KEY,
+                        responses JSON NOT NULL,
+                        status ENUM('Pending', 'Approved', 'Rejected') NOT NULL DEFAULT 'Pending',
+                        submittedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                `);
+                return [];
             }
-        });
-    } catch (error) {
-        console.error("Failed to fetch applications:", error);
-         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
-             await connection.query(`
-                CREATE TABLE applications (
-                    id VARCHAR(36) NOT NULL PRIMARY KEY,
-                    responses JSON NOT NULL,
-                    status ENUM('Pending', 'Approved', 'Rejected') NOT NULL DEFAULT 'Pending',
-                    submittedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-                );
-            `);
-            return [];
+             // Re-throw other errors to be caught by withRetry
+            throw error;
+        } finally {
+            connection.release();
         }
+    }).catch(error => {
+        // If retries fail, return an empty array to prevent crashing the page.
+        console.error("getApplications failed after multiple retries:", error);
         return [];
-    } finally {
-        connection.release();
-    }
+    });
 }
 
 export async function getRecentActivity(): Promise<PersonnelEvent[]> {
