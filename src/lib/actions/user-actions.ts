@@ -106,6 +106,8 @@ export async function loginUser(credentials: unknown) {
 
     const connection = await db.getConnection();
     try {
+        await connection.beginTransaction();
+
         const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', [username]);
         if (!Array.isArray(rows) || rows.length === 0) {
             return { success: false, message: 'Incorrect username or password. Please try again.' };
@@ -117,10 +119,15 @@ export async function loginUser(credentials: unknown) {
         if (!passwordMatch) {
             return { success: false, message: 'Incorrect username or password. Please try again.' };
         }
+        
+        await logUserAction(username, "Login", `User '${username}' signed in.`, connection);
+        
+        await connection.commit();
 
         return { success: true, user: { id: user.id, username: user.username, role: user.role } };
 
     } catch (error) {
+        await connection.rollback();
         console.error("Login failed:", error);
         return { success: false, message: 'An internal server error occurred.' };
     } finally {

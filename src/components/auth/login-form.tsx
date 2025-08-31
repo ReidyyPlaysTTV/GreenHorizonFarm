@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { logUserAction, loginUser } from "@/lib/actions";
+import { loginUser } from "@/lib/actions";
 import { Checkbox } from "../ui/checkbox";
 
 const formSchema = z.object({
@@ -72,8 +72,6 @@ export function LoginForm() {
                 }
             }
             
-            await logUserAction(values.username, "Login", `User '${values.username}' signed in.`);
-
             toast({
                 title: "Login Successful",
                 description: `Welcome back, ${values.username}!`,
