@@ -24,7 +24,7 @@ const getRoleClass = (role: string) => {
         case "Administrator":
             return "animate-rainbow-text bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500 bg-clip-text text-transparent";
         case "Developer":
-            return "animate-dev-text";
+            return "animate-dev-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent";
         case "Commissioners Office":
             return "animate-co-text";
         case "High Command":

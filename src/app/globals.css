@@ -49,7 +49,8 @@
         animation: rainbow-text-animation 5s ease infinite;
     }
     .animate-dev-text {
-        animation: dev-text-animation 3s ease infinite;
+        background-size: 400% 400%;
+        animation: dev-text-animation 4s ease infinite;
     }
     .animate-co-text {
         animation: co-text-animation 3s ease infinite;
@@ -76,8 +77,9 @@
         100%{background-position:0% 50%}
     }
     @keyframes dev-text-animation {
-        0%, 100% { color: #A855F7; } /* purple-500 */
-        50% { color: #FFFFFF; }
+        0%{background-position:0% 50%}
+        50%{background-position:100% 50%}
+        100%{background-position:0% 50%}
     }
     @keyframes co-text-animation {
         0%, 100% { color: #FFFFFF; }
