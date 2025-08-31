@@ -171,6 +171,12 @@ export async function getApplications(): Promise<Application[]> {
     return withRetry(async () => {
         const connection = await db.getConnection();
         try {
+            // Ensure the columns exist before trying to update them.
+            const [reviewerIdCol] = await connection.query("SHOW COLUMNS FROM applications LIKE 'reviewer_id'");
+            if (Array.isArray(reviewerIdCol) && reviewerIdCol.length === 0) {
+                await connection.query("ALTER TABLE applications ADD COLUMN reviewer_id VARCHAR(36) NULL, ADD COLUMN reviewedAt DATETIME NULL, ADD COLUMN reviewer_comment TEXT NULL");
+            }
+
             const [rows] = await connection.query(`
               SELECT
                 a.*,

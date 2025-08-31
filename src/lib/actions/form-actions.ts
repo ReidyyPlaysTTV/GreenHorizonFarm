@@ -185,12 +185,6 @@ export async function updateApplicationStatus(data: unknown) {
         throw new Error('Reviewer user not found.');
     }
 
-    // Ensure the columns exist before trying to update them.
-    const [reviewerIdCol] = await connection.query("SHOW COLUMNS FROM applications LIKE 'reviewer_id'");
-    if (Array.isArray(reviewerIdCol) && reviewerIdCol.length === 0) {
-        await connection.query("ALTER TABLE applications ADD COLUMN reviewer_id VARCHAR(36) NULL, ADD COLUMN reviewedAt DATETIME NULL, ADD COLUMN reviewer_comment TEXT NULL");
-    }
-
     await connection.query(
       'UPDATE applications SET status = ?, reviewer_comment = ?, reviewer_id = ?, reviewedAt = ? WHERE id = ?',
       [status, comment, userId, new Date(), applicationId]
