@@ -3,7 +3,7 @@ import { UserManagement } from "@/components/admin/user-management";
 import { PermissionManagement } from "@/components/admin/permission-management";
 import { DeveloperPanel } from "@/components/admin/developer-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getUsers, getBugReports, getSuggestions, getAccessRequests, getSopLink } from "@/lib/actions";
+import { getUsers, getBugReports, getSuggestions, getAccessRequests, getSopLink, getApplicationStatus } from "@/lib/actions";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { AccessRequestManagement } from "@/components/admin/access-request-management";
 import { SettingsManagement } from "@/components/admin/settings-management";
@@ -11,11 +11,14 @@ import { SettingsManagement } from "@/components/admin/settings-management";
 export default async function AdminPage() {
   // Note: In a real application, you would protect this page to ensure
   // only users with an 'Admin' or 'Developer' role can access it.
-  const users = await getUsers();
-  const bugReports = await getBugReports();
-  const suggestions = await getSuggestions();
-  const accessRequests = await getAccessRequests();
-  const sopLink = await getSopLink();
+  const [users, bugReports, suggestions, accessRequests, sopLink, applicationsOpen] = await Promise.all([
+      getUsers(),
+      getBugReports(),
+      getSuggestions(),
+      getAccessRequests(),
+      getSopLink(),
+      getApplicationStatus(),
+  ]);
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -47,7 +50,7 @@ export default async function AdminPage() {
             <PermissionManagement />
         </TabsContent>
         <TabsContent value="settings" className="mt-6">
-            <SettingsManagement currentSopLink={sopLink} />
+            <SettingsManagement currentSopLink={sopLink} applicationsOpen={applicationsOpen} />
         </TabsContent>
         <TabsContent value="developer" className="mt-6">
             <DeveloperPanel bugReports={bugReports} suggestions={suggestions} />

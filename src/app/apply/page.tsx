@@ -1,10 +1,14 @@
 import { ApplicationForm } from "@/components/application/application-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, FileText } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ArrowLeft, FileText, XCircle } from "lucide-react";
 import Link from "next/link";
+import { getApplicationStatus } from "@/lib/actions";
 
-export default function ApplyPage() {
+export default async function ApplyPage() {
+  const applicationsOpen = await getApplicationStatus();
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-2xl space-y-6">
@@ -14,16 +18,32 @@ export default function ApplyPage() {
             DOC Application
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Complete the form below to apply to the Department of Corrections.
+            {applicationsOpen
+              ? "Complete the form below to apply to the Department of Corrections."
+              : "Applications are currently closed."}
           </p>
         </div>
         <Card className="bg-card">
           <CardHeader>
             <CardTitle>Application Form</CardTitle>
-            <CardDescription>All fields are required. Please be truthful and concise.</CardDescription>
+            <CardDescription>
+              {applicationsOpen
+                ? "All fields are required. Please be truthful and concise."
+                : "Check back at a later date."}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <ApplicationForm />
+            {applicationsOpen ? (
+              <ApplicationForm />
+            ) : (
+              <Alert variant="destructive">
+                <XCircle className="h-4 w-4" />
+                <AlertTitle>Applications Closed</AlertTitle>
+                <AlertDescription>
+                  Unfortunately, Department of Corrections Applications are Currently Closed and we cannot give you a time frame before you will be able to Apply.
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
         <div className="text-center">

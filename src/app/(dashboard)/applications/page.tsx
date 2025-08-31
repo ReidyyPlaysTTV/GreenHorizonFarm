@@ -1,12 +1,17 @@
 
-import { getApplications } from "@/lib/actions";
+import { getApplications, getApplicationStatus } from "@/lib/actions";
 import { ApplicationReviewCard } from "@/components/application/application-review-card";
 import { ApplicationFormEditor } from "@/components/application/application-form-editor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RefreshButton } from "@/components/layout/refresh-button";
+import { Badge } from "@/components/ui/badge";
 
 export default async function ApplicationsPage() {
-  const applications = await getApplications();
+  const [applications, applicationsOpen] = await Promise.all([
+    getApplications(),
+    getApplicationStatus(),
+  ]);
+  
   const pendingApplications = applications.filter(a => a.status === "Pending");
   const approvedApplications = applications.filter(a => a.status === "Approved");
   const rejectedApplications = applications.filter(a => a.status === "Rejected");
@@ -31,7 +36,12 @@ export default async function ApplicationsPage() {
     <div className="container mx-auto p-4 md:p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Application Center</h1>
+          <div className="flex items-center gap-4">
+             <h1 className="text-3xl font-bold tracking-tight">Application Center</h1>
+             <Badge variant={applicationsOpen ? "secondary" : "destructive"}>
+                Applications are {applicationsOpen ? "Open" : "Closed"}
+             </Badge>
+          </div>
           <p className="text-muted-foreground">
             Review and manage incoming applications and the application form itself.
           </p>
