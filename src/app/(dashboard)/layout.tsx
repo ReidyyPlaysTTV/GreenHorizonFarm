@@ -7,6 +7,35 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { useIdleTimeout } from "@/hooks/use-idle-timeout";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
+import Loading from "./loading";
+
+function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const [isVerified, setIsVerified] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      if (typeof window !== 'undefined') {
+        const loggedInUser = localStorage.getItem('loggedInUser');
+        if (!loggedInUser) {
+          router.replace('/');
+        } else {
+          setIsVerified(true);
+        }
+      }
+    };
+    checkAuth();
+  }, [router]);
+
+  if (!isVerified) {
+    // You can render a loading spinner here while checking auth
+    return <Loading />;
+  }
+
+  return <>{children}</>;
+}
+
 
 function TimedOutProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -35,16 +64,18 @@ export default function DashboardLayout({
 }) {
   return (
     <PermissionsProvider>
-      <SidebarProvider>
-        <TimedOutProvider>
-          <div className="flex min-h-screen">
-            <SidebarNav />
-            <main className="flex-1 overflow-auto">
-              {children}
-            </main>
-          </div>
-        </TimedOutProvider>
-      </SidebarProvider>
+        <SidebarProvider>
+            <AuthProvider>
+                <TimedOutProvider>
+                    <div className="flex min-h-screen">
+                        <SidebarNav />
+                        <main className="flex-1 overflow-auto">
+                        {children}
+                        </main>
+                    </div>
+                </TimedOutProvider>
+            </AuthProvider>
+        </SidebarProvider>
     </PermissionsProvider>
   );
 }
