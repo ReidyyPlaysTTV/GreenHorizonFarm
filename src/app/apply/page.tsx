@@ -36,7 +36,7 @@ export default async function ApplyPage() {
             {applicationsOpen ? (
               <ApplicationForm />
             ) : (
-              <Alert variant="destructive">
+              <Alert variant="warning">
                 <XCircle className="h-4 w-4" />
                 <AlertTitle>Applications Closed</AlertTitle>
                 <AlertDescription>
