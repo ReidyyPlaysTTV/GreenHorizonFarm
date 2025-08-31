@@ -73,7 +73,7 @@ export interface Application {
   name: string;
   discordUsername?: string;
   reasonForApplying: string;
-  status: "Pending" | "Approved" | "Rejected";
+  status: "Pending" | "Under Review" | "Approved" | "Rejected";
   submittedAt: Date;
   reviewer_comment?: string;
   responses: {

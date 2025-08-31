@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, FileText, Loader2, ClipboardCopy } from "lucide-react";
+import { Check, X, FileText, Loader2, ClipboardCopy, Eye } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "../ui/label";
@@ -36,18 +36,26 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
     }
   }, []);
 
-  const handleStatusUpdate = async (status: 'Rejected') => {
+  const handleStatusUpdate = async (status: 'Rejected' | 'Under Review') => {
     setIsUpdating(true);
+    let comment: string | undefined;
+
+    if (status === 'Rejected') {
+        comment = rejectionReason || "Unfortunately, your application was not successful at this time. You are welcome to re-apply in the future.";
+    } else if (status === 'Under Review') {
+        comment = "Your application is currently under review by our command team."
+    }
+
     try {
       await updateApplicationStatus({
         applicationId: application.id, 
         status, 
-        comment: rejectionReason || "Unfortunately, your application was not successful at this time. You are welcome to re-apply in the future.",
+        comment,
         user: currentUser
       });
       toast({
         title: `Application ${status}`,
-        description: `${application.name}'s application has been ${status.toLowerCase()}.`,
+        description: `${application.name}'s application has been updated.`,
       });
       setRejectDialogOpen(false);
     } catch (error) {
@@ -61,11 +69,15 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
     }
   };
 
-  const statusColors = {
+  const statusColors: Record<Application['status'], "default" | "secondary" | "destructive"> = {
     Pending: "default",
+    'Under Review': "secondary",
     Approved: "secondary",
     Rejected: "destructive",
-  } as const;
+  };
+  
+  const statusVariant = statusColors[application.status] || 'default';
+
 
   return (
     <Card className="flex flex-col">
@@ -89,7 +101,7 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
                     </Button>
                 </div>
             </div>
-            <Badge variant={statusColors[application.status]}>{application.status}</Badge>
+            <Badge variant={statusVariant}>{application.status}</Badge>
         </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-4">
@@ -130,6 +142,10 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
         </p>
         {application.status === "Pending" && canManageApplications && (
             <div className="flex justify-end gap-2">
+                 <Button size="sm" variant="secondary" className="gap-1" disabled={isUpdating} onClick={() => handleStatusUpdate('Under Review')}>
+                    {isUpdating ? <Loader2 className="h-4 w-4 animate-spin"/> : <><Eye className="h-4 w-4" /> Mark in Review</>}
+                 </Button>
+
                  <Dialog open={isRejectDialogOpen} onOpenChange={setRejectDialogOpen}>
                     <DialogTrigger asChild>
                         <Button size="sm" variant="outline" className="gap-1" disabled={isUpdating}>

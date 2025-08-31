@@ -157,7 +157,7 @@ export async function submitApplication(responses: Record<string, any>) {
 
 const updateApplicationStatusSchema = z.object({
   applicationId: z.string(),
-  status: z.enum(['Approved', 'Rejected']),
+  status: z.enum(['Under Review', 'Approved', 'Rejected']),
   comment: z.string().optional(),
   user: z.string(),
 });
@@ -198,9 +198,17 @@ export async function updateApplicationStatus(data: unknown) {
     
     await connection.commit();
 
-  } catch (error) {
+  } catch (error: any) {
     await connection.rollback();
     console.error(`Failed to update application status to ${status}:`, error);
+
+     if (error.code === 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD' && error.sqlMessage.includes("status")) {
+        await connection.query("ALTER TABLE applications MODIFY COLUMN status ENUM('Pending', 'Under Review', 'Approved', 'Rejected') NOT NULL DEFAULT 'Pending'");
+        await connection.commit();
+        // Retry the original operation
+        return updateApplicationStatus(data);
+    }
+    
     throw new Error('Database operation failed.');
   } finally {
     connection.release();

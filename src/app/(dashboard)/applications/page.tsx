@@ -13,6 +13,7 @@ export default async function ApplicationsPage() {
   ]);
   
   const pendingApplications = applications.filter(a => a.status === "Pending");
+  const underReviewApplications = applications.filter(a => a.status === "Under Review");
   const approvedApplications = applications.filter(a => a.status === "Approved");
   const rejectedApplications = applications.filter(a => a.status === "Rejected");
 
@@ -50,14 +51,18 @@ export default async function ApplicationsPage() {
       </div>
 
       <Tabs defaultValue="pending" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="pending">Pending ({pendingApplications.length})</TabsTrigger>
+          <TabsTrigger value="review">Under Review ({underReviewApplications.length})</TabsTrigger>
           <TabsTrigger value="approved">Approved ({approvedApplications.length})</TabsTrigger>
           <TabsTrigger value="denied">Denied ({rejectedApplications.length})</TabsTrigger>
           <TabsTrigger value="edit">Edit Form</TabsTrigger>
         </TabsList>
         <TabsContent value="pending" className="mt-6">
             <ApplicationList applications={pendingApplications} />
+        </TabsContent>
+         <TabsContent value="review" className="mt-6">
+            <ApplicationList applications={underReviewApplications} />
         </TabsContent>
         <TabsContent value="approved" className="mt-6">
             <ApplicationList applications={approvedApplications} />

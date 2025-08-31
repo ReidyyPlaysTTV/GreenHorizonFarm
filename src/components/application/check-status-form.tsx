@@ -57,6 +57,7 @@ export function CheckStatusForm() {
   const getStatusBadgeVariant = (status: Application['status']) => {
     switch (status) {
       case "Pending":
+      case "Under Review":
         return "secondary";
       case "Approved":
         return "default";
