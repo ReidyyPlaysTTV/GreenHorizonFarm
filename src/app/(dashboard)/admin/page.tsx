@@ -3,7 +3,7 @@ import { UserManagement } from "@/components/admin/user-management";
 import { PermissionManagement } from "@/components/admin/permission-management";
 import { DeveloperPanel } from "@/components/admin/developer-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getUsers, getBugReports, getSuggestions, getAccessRequests, getSopLink, getApplicationStatus } from "@/lib/actions";
+import { getUsers, getBugReports, getSuggestions, getAccessRequests, getSopLink, getApplicationStatus, getLoginBackgroundImage } from "@/lib/actions";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { AccessRequestManagement } from "@/components/admin/access-request-management";
 import { SettingsManagement } from "@/components/admin/settings-management";
@@ -11,13 +11,14 @@ import { SettingsManagement } from "@/components/admin/settings-management";
 export default async function AdminPage() {
   // Note: In a real application, you would protect this page to ensure
   // only users with an 'Admin' or 'Developer' role can access it.
-  const [users, bugReports, suggestions, accessRequests, sopLink, applicationsOpen] = await Promise.all([
+  const [users, bugReports, suggestions, accessRequests, sopLink, applicationsOpen, loginBgImage] = await Promise.all([
       getUsers(),
       getBugReports(),
       getSuggestions(),
       getAccessRequests(),
       getSopLink(),
       getApplicationStatus(),
+      getLoginBackgroundImage(),
   ]);
 
   return (
@@ -50,7 +51,11 @@ export default async function AdminPage() {
             <PermissionManagement />
         </TabsContent>
         <TabsContent value="settings" className="mt-6">
-            <SettingsManagement currentSopLink={sopLink} applicationsOpen={applicationsOpen} />
+            <SettingsManagement 
+                currentSopLink={sopLink} 
+                applicationsOpen={applicationsOpen}
+                currentLoginBgImage={loginBgImage}
+            />
         </TabsContent>
         <TabsContent value="developer" className="mt-6">
             <DeveloperPanel bugReports={bugReports} suggestions={suggestions} />

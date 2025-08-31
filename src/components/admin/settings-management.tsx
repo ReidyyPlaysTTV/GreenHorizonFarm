@@ -7,10 +7,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
-import { updateSopLink, updateApplicationStatusSetting } from "@/lib/actions";
+import { updateSopLink, updateApplicationStatusSetting, updateLoginBackgroundImage } from "@/lib/actions";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Save, AlertCircle } from "lucide-react";
@@ -23,12 +23,20 @@ const sopFormSchema = z.object({
   sopLink: z.string().url("Please enter a valid URL."),
 });
 
+const bgImageFormSchema = z.object({
+    bgImageUrl: z.string().url("Please enter a valid URL.").refine(
+        (url) => /^https:\/\/i\.imgur\.com\//.test(url) || /^https:\/\/r2\.fivemanage\.com\//.test(url),
+        "URL must be from i.imgur.com or r2.fivemanage.com"
+    ),
+});
+
 interface SettingsManagementProps {
     currentSopLink: string | null;
     applicationsOpen: boolean;
+    currentLoginBgImage: string;
 }
 
-export function SettingsManagement({ currentSopLink, applicationsOpen }: SettingsManagementProps) {
+export function SettingsManagement({ currentSopLink, applicationsOpen, currentLoginBgImage }: SettingsManagementProps) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [currentUser, setCurrentUser] = useState("System");
@@ -40,11 +48,18 @@ export function SettingsManagement({ currentSopLink, applicationsOpen }: Setting
     }
   }, []);
 
-  const form = useForm<z.infer<typeof sopFormSchema>>({
+  const sopForm = useForm<z.infer<typeof sopFormSchema>>({
     resolver: zodResolver(sopFormSchema),
     defaultValues: {
       sopLink: currentSopLink || "",
     },
+  });
+
+  const bgImageForm = useForm<z.infer<typeof bgImageFormSchema>>({
+    resolver: zodResolver(bgImageFormSchema),
+    defaultValues: {
+        bgImageUrl: currentLoginBgImage || "",
+    }
   });
 
   const onSopSubmit = async (data: z.infer<typeof sopFormSchema>) => {
@@ -64,6 +79,29 @@ export function SettingsManagement({ currentSopLink, applicationsOpen }: Setting
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to update SOP link.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const onBgImageSubmit = async (data: z.infer<typeof bgImageFormSchema>) => {
+    setIsSaving(true);
+    try {
+        const result = await updateLoginBackgroundImage(data.bgImageUrl, currentUser);
+        if (result.success) {
+            toast({
+                title: "Success",
+                description: "Login background image updated.",
+            });
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update background image.",
       });
     } finally {
       setIsSaving(false);
@@ -122,10 +160,10 @@ export function SettingsManagement({ currentSopLink, applicationsOpen }: Setting
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSopSubmit)} className="space-y-6 max-w-lg">
+        <Form {...sopForm}>
+            <form onSubmit={sopForm.handleSubmit(onSopSubmit)} className="space-y-6 max-w-lg">
                 <FormField
-                    control={form.control}
+                    control={sopForm.control}
                     name="sopLink"
                     render={({ field }) => (
                         <FormItem>
@@ -143,6 +181,36 @@ export function SettingsManagement({ currentSopLink, applicationsOpen }: Setting
                  <Button type="submit" disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
                     Save SOP Link
+                </Button>
+            </form>
+        </Form>
+
+        <Separator />
+
+        <Form {...bgImageForm}>
+            <form onSubmit={bgImageForm.handleSubmit(onBgImageSubmit)} className="space-y-6 max-w-lg">
+                <FormField
+                    control={bgImageForm.control}
+                    name="bgImageUrl"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Login Background Image URL</FormLabel>
+                            <FormControl>
+                                <Input 
+                                    placeholder="https://i.imgur.com/..." 
+                                    {...field}
+                                />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                                Must be a direct link from i.imgur.com or r2.fivemanage.com.
+                            </FormDescription>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <Button type="submit" disabled={isSaving}>
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+                    Save Background Image
                 </Button>
             </form>
         </Form>

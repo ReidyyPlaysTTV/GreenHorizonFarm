@@ -8,6 +8,7 @@ import { logUserAction } from './audit-log-actions';
 
 const SOP_LINK_KEY = 'sop_link';
 const APPLICATIONS_OPEN_KEY = 'applications_open';
+const LOGIN_BACKGROUND_IMAGE_KEY = 'login_background_image';
 
 
 async function createSettingsTableIfNeeded(connection: any) {
@@ -139,6 +140,67 @@ export async function updateApplicationStatusSetting(isOpen: boolean, user: stri
     } catch (error) {
         await connection.rollback();
         console.error("Failed to update application status setting:", error);
+        return { success: false, message: 'Database operation failed.' };
+    } finally {
+        connection.release();
+    }
+}
+
+
+export async function getLoginBackgroundImage(): Promise<string> {
+    const connection = await db.getConnection();
+    try {
+        await createSettingsTableIfNeeded(connection);
+        const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [LOGIN_BACKGROUND_IMAGE_KEY]);
+
+        if (Array.isArray(rows) && rows.length > 0 && (rows[0] as any).setting_value) {
+            return (rows[0] as any).setting_value;
+        }
+        
+        const defaultUrl = "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/e1b8daf9b26a971543cc901fc4fcec33ab7af144.png";
+        await connection.query(
+            'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
+            [LOGIN_BACKGROUND_IMAGE_KEY, defaultUrl, defaultUrl]
+        );
+        return defaultUrl;
+
+    } catch (error) {
+        console.error("Failed to get login background image:", error);
+        return "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/e1b8daf9b26a971543cc901fc4fcec33ab7af144.png";
+    } finally {
+        connection.release();
+    }
+}
+
+
+export async function updateLoginBackgroundImage(newUrl: string, user: string) {
+    const hasPermission = await checkPermissions(user, 'MANAGE_APP_SETTINGS');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        await createSettingsTableIfNeeded(connection);
+
+        await connection.query(
+            `INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE setting_value = ?`,
+            [LOGIN_BACKGROUND_IMAGE_KEY, newUrl, newUrl]
+        );
+        
+        await logUserAction(user, 'Update Settings', 'Updated the login page background image.', connection);
+
+        await connection.commit();
+        
+        revalidatePath('/');
+        revalidatePath('/admin');
+
+        return { success: true };
+    } catch (error) {
+        await connection.rollback();
+        console.error("Failed to update login background image:", error);
         return { success: false, message: 'Database operation failed.' };
     } finally {
         connection.release();

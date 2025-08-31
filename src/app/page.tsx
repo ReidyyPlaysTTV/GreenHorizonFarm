@@ -2,15 +2,18 @@
 import { LoginForm } from "@/components/auth/login-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getLoginBackgroundImage } from "@/lib/actions";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const bgImageUrl = await getLoginBackgroundImage();
+
   return (
     <div 
       className="relative flex min-h-screen items-center justify-center bg-background p-4 bg-cover bg-center"
       style={{
-        backgroundImage: "url('https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/e1b8daf9b26a971543cc901fc4fcec33ab7af144.png')"
+        backgroundImage: `url('${bgImageUrl}')`
       }}
     >
         <div className="absolute inset-0 bg-black/60 z-0" />
@@ -70,4 +73,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
