@@ -1,6 +1,6 @@
 
 
-import { getUsers, getPersonnel } from "@/lib/actions";
+import { getUsers } from "@/lib/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import type { AppUser } from "@/lib/types";
@@ -9,6 +9,7 @@ import { User, Shield } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { roles } from "@/lib/data";
 
 const getRoleClass = (role: string) => {
     switch (role) {
@@ -35,6 +36,41 @@ const getRoleClass = (role: string) => {
     }
 }
 
+const UserCard = ({ user }: { user: AppUser }) => (
+    <Card className="flex flex-col">
+        <CardHeader className="flex-row items-center gap-4">
+            <Avatar className="h-12 w-12">
+                <AvatarImage src={user.avatarUrl} alt={user.username} />
+                <AvatarFallback><User /></AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+                <CardTitle>
+                    <Link href={`/users/${encodeURIComponent(user.username)}`} className={cn(buttonVariants({ variant: "link" }), "p-0 h-auto text-xl")}>
+                    {user.username}
+                    </Link>
+                </CardTitle>
+                <CardDescription>{user.personnel?.rank || 'Civilian'}</CardDescription>
+            </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Department</span>
+                <span className="font-medium">{user.personnel?.department || "Department of Corrections"}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                    <Shield className="h-4 w-4" />
+                    Permission Group
+                </span>
+                <span className={cn("font-bold text-base", getRoleClass(user.role))}>
+                    {user.role}
+                </span>
+            </div>
+        </CardContent>
+    </Card>
+);
+
+
 export default async function UsersPage() {
   const users: AppUser[] = await getUsers();
   
@@ -50,40 +86,22 @@ export default async function UsersPage() {
         <RefreshButton />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {users.map((user) => (
-          <Card key={user.id} className="flex flex-col">
-            <CardHeader className="flex-row items-center gap-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={user.avatarUrl} alt={user.username} />
-                  <AvatarFallback><User /></AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <CardTitle>
-                     <Link href={`/users/${encodeURIComponent(user.username)}`} className={cn(buttonVariants({ variant: "link" }), "p-0 h-auto text-xl")}>
-                      {user.username}
-                    </Link>
-                  </CardTitle>
-                  <CardDescription>{user.personnel?.rank || 'Civilian'}</CardDescription>
-                </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-               <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Department</span>
-                    <span className="font-medium">{user.personnel?.department || "Department of Corrections"}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground flex items-center gap-1.5">
-                        <Shield className="h-4 w-4" />
-                        Permission Group
-                    </span>
-                    <span className={cn("font-bold text-base", getRoleClass(user.role))}>
-                        {user.role}
-                    </span>
-                </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="space-y-8">
+        {roles.map((role) => {
+          const usersInRole = users.filter(user => user.role === role);
+          if (usersInRole.length === 0) return null;
+
+          return (
+            <div key={role}>
+              <h2 className="text-2xl font-semibold tracking-tight mb-4">{role} ({usersInRole.length})</h2>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {usersInRole.map((user) => (
+                  <UserCard key={user.id} user={user} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
        {users.length === 0 && (
