@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, FileText, Loader2, ClipboardCopy, Eye } from "lucide-react";
+import { Check, X, FileText, Loader2, ClipboardCopy, Minus } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "../ui/label";
@@ -146,8 +146,8 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
                 <div className="flex justify-end gap-2">
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button size="icon" variant="secondary" disabled={isUpdating} onClick={() => handleStatusUpdate('Under Review')}>
-                                {isUpdating ? <Loader2 className="h-4 w-4 animate-spin"/> : <Eye className="h-4 w-4" />}
+                            <Button size="icon" className="bg-orange-600 hover:bg-orange-700 rounded-full" disabled={isUpdating} onClick={() => handleStatusUpdate('Under Review')}>
+                                {isUpdating ? <Loader2 className="h-4 w-4 animate-spin"/> : <Minus className="h-4 w-4" />}
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -159,7 +159,7 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <DialogTrigger asChild>
-                                    <Button size="icon" variant="outline" disabled={isUpdating}>
+                                    <Button size="icon" variant="destructive" className="rounded-full" disabled={isUpdating}>
                                         <X className="h-4 w-4" />
                                     </Button>
                                 </DialogTrigger>
@@ -192,7 +192,7 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
                     <Tooltip>
                         <TooltipTrigger asChild>
                              <ApproveApplicationDialog application={application} currentUser={currentUser}>
-                               <Button size="icon" className="bg-green-600 hover:bg-green-700" disabled={isUpdating}>
+                               <Button size="icon" className="bg-green-600 hover:bg-green-700 rounded-full" disabled={isUpdating}>
                                    <Check className="h-4 w-4" />
                                </Button>
                              </ApproveApplicationDialog>
