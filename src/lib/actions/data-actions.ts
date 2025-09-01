@@ -283,3 +283,4 @@ export async function getRecentActivity(): Promise<PersonnelEvent[]> {
         connection.release();
     }
 }
+
