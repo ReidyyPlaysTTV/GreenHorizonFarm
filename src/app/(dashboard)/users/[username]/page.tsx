@@ -225,31 +225,6 @@ export default function UserProfilePage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Hash className="h-6 w-6 text-muted-foreground" />
-                            <div>
-                            <p className="text-sm text-muted-foreground">Callsign</p>
-                            <p className="font-semibold">
-                                <Badge variant="secondary">{personnelRecord.badgeNumber}</Badge>
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <Briefcase className="h-6 w-6 text-muted-foreground" />
-                        <div>
-                            <p className="text-sm text-muted-foreground">Department</p>
-                            <p className="font-semibold">{personnelRecord.department}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <div className="w-6 h-6 flex items-center justify-center">
-                            <Image src={"https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"} alt="Insignia" width={20} height={20} className="object-contain" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Status</p>
-                            <Badge variant={getStatusBadgeVariant(personnelRecord.status)}>{personnelRecord.status}</Badge>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                         <FileCheck2 className="h-6 w-6 text-muted-foreground" />
                         <div>
                             <p className="text-sm text-muted-foreground">Reviewed Apps</p>
