@@ -124,21 +124,4 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 10
   throw lastError;
 }
 
-export async function testConnection(): Promise<{ success: boolean; message: string; }> {
-    let connection;
-    try {
-        connection = await pool.getConnection();
-        await connection.ping();
-        return { success: true, message: "Database connection successful!" };
-    } catch (error: any) {
-        console.error("Database connection test failed:", error);
-        return { success: false, message: error.message };
-    } finally {
-        if (connection) {
-            connection.release();
-        }
-    }
-}
-
-
 export default pool;
