@@ -22,6 +22,7 @@ export const permissions = [
     'MANAGE_PERSONNEL', // Promote, Demote, Fire, Edit Status
     'HIRE_PERSONNEL', // Add new personnel from roster or rehire
     'MANAGE_APPLICATIONS', // Approve, Deny
+    'DELETE_APPLICATIONS',
     'EDIT_APPLICATION_FORM',
     'MANAGE_BLACKLIST',
     'MANAGE_USERS', // Create users, assign roles

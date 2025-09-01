@@ -7,17 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, FileText, Loader2, ClipboardCopy, Minus, User, Undo2 } from "lucide-react";
+import { Check, X, FileText, Loader2, ClipboardCopy, Minus, User, Undo2, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "../ui/label";
-import { updateApplicationStatus } from "@/lib/actions";
+import { updateApplicationStatus, deleteApplication } from "@/lib/actions";
 import { useState, useEffect } from "react";
 import { ApproveApplicationDialog } from "./approve-application-dialog";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Textarea } from "../ui/textarea";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription as AlertDialogDesc, AlertDialogTrigger } from "../ui/alert-dialog";
 
 
 interface ApplicationReviewCardProps {
@@ -27,9 +28,11 @@ interface ApplicationReviewCardProps {
 export function ApplicationReviewCard({ application }: ApplicationReviewCardProps) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [currentUser, setCurrentUser] = useState("System");
   const { hasPermission } = usePermissions();
   const canManageApplications = hasPermission('MANAGE_APPLICATIONS');
+  const canDeleteApplications = hasPermission('DELETE_APPLICATIONS');
   const [isRejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
@@ -74,6 +77,29 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
       setIsUpdating(false);
     }
   };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+        const result = await deleteApplication(application.id, currentUser);
+        if (result.success) {
+            toast({
+                title: "Application Deleted",
+                description: `The application for ${application.name} has been permanently deleted.`
+            });
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+         toast({
+            variant: "destructive",
+            title: "Deletion Failed",
+            description: "Could not delete the application."
+        });
+    } finally {
+        setIsDeleting(false);
+    }
+  }
 
   const statusColors: Record<Application['status'], "default" | "secondary" | "destructive"> = {
     Pending: "default",
@@ -137,6 +163,32 @@ export function ApplicationReviewCard({ application }: ApplicationReviewCardProp
                         </div>
                     ))}
                 </div>
+                 {canDeleteApplications && application.status !== 'Approved' && (
+                    <DialogFooter>
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" disabled={isDeleting}>
+                                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
+                                    <span className="ml-2">Delete Application</span>
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDesc>
+                                        This action will permanently delete the application for <span className="font-bold">{application.name}</span>. This cannot be undone.
+                                    </AlertDialogDesc>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/80">
+                                        Yes, delete it
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </DialogFooter>
+                )}
             </DialogContent>
         </Dialog>
 

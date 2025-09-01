@@ -73,6 +73,7 @@ export const permissions: Permission[] = [
     'MANAGE_PERSONNEL', // Promote, Demote, Fire, Edit Status
     'HIRE_PERSONNEL', // Add new personnel from roster or rehire
     'MANAGE_APPLICATIONS', // Approve, Deny
+    'DELETE_APPLICATIONS',
     'EDIT_APPLICATION_FORM',
     'MANAGE_BLACKLIST',
     'MANAGE_USERS', // Create users, assign roles
@@ -99,6 +100,7 @@ export const permissionDescriptions: Record<Permission, string> = {
     MANAGE_PERSONNEL: "Manage Personnel (Promote, Demote, Fire, Status)",
     HIRE_PERSONNEL: "Hire & Rehire Personnel",
     MANAGE_APPLICATIONS: "Manage Applications (Approve/Deny)",
+    DELETE_APPLICATIONS: "Delete Applications",
     EDIT_APPLICATION_FORM: "Edit Application Form",
     MANAGE_BLACKLIST: "Manage DOC Blacklist",
     MANAGE_USERS: "Manage Users & Roles",
@@ -164,6 +166,7 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'VIEW_LOGS',
         'VIEW_APPLICATIONS',
         'MANAGE_APPLICATIONS',
+        'DELETE_APPLICATIONS',
         'EDIT_APPLICATION_FORM',
         'MANAGE_PERSONNEL',
         'HIRE_PERSONNEL',
@@ -185,6 +188,7 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'VIEW_LOGS',
         'VIEW_APPLICATIONS',
         'MANAGE_APPLICATIONS',
+        'DELETE_APPLICATIONS',
         'EDIT_APPLICATION_FORM',
         'MANAGE_PERSONNEL',
         'HIRE_PERSONNEL',

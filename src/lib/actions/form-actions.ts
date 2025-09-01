@@ -255,3 +255,38 @@ export async function getApplicationById(id: string) {
         connection.release();
     }
 }
+
+export async function deleteApplication(applicationId: string, user: string) {
+    const hasPermission = await checkPermissions(user, 'DELETE_APPLICATIONS');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        const [appRows]: any[] = await connection.query('SELECT responses FROM applications WHERE id = ?', [applicationId]);
+        if (appRows.length === 0) {
+            throw new Error("Application not found.");
+        }
+        const responses = JSON.parse(appRows[0].responses);
+        const applicantName = responses.find((r: any) => r.label.toLowerCase().includes('name'))?.answer || 'Unknown Applicant';
+        
+        await connection.query('DELETE FROM applications WHERE id = ?', [applicationId]);
+
+        await logUserAction(user, 'Delete Application', `Deleted application for '${applicantName}' (ID: ${applicationId}).`, connection);
+
+        await connection.commit();
+    } catch (error) {
+        await connection.rollback();
+        console.error("Failed to delete application:", error);
+        return { success: false, message: 'Database operation failed.' };
+    } finally {
+        connection.release();
+    }
+    
+    revalidatePath('/applications');
+    revalidatePath('/logs');
+    return { success: true };
+}
