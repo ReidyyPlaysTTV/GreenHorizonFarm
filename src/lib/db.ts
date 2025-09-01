@@ -11,11 +11,12 @@ if (!DATABASE_URL) {
   throw new Error('DATABASE_URL is not set.');
 }
 
-const pool = mysql.createPool({
+const pool: Pool = mysql.createPool({
     uri: DATABASE_URL,
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    connectTimeout: 10000,
 });
 
 async function createCoreTables(pool: Pool) {
@@ -96,23 +97,23 @@ async function createCoreTables(pool: Pool) {
 
 // Seed the database on application startup
 Promise.all([
-    seedDatabase(pool),
     createCoreTables(pool),
+    seedDatabase(pool),
     seedRolePermissions(pool)
 ]).catch(err => {
     console.error("Failed to setup and seed database:", err);
 });
 
 // Helper function to retry database operations
-export async function withRetry<T>(fn: () => Promise<T>, retries = 5, delay = 100): Promise<T> {
+export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 50): Promise<T> {
   let lastError: Error | undefined;
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
     } catch (error: any) {
       lastError = error;
-      if (error.code === 'ECONNRESET') {
-        console.warn(`ECONNRESET detected. Retry attempt ${i + 1}/${retries}...`);
+      if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'PROTOCOL_CONNECTION_LOST') {
+        console.warn(`Database connection issue (${error.code}). Retry attempt ${i + 1}/${retries}...`);
         await new Promise(res => setTimeout(res, delay * (i + 1))); // Incremental backoff
       } else {
         // Don't retry on other errors
@@ -120,6 +121,7 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = 5, delay = 10
       }
     }
   }
+  console.error("Database operation failed after all retries.", lastError);
   throw lastError;
 }
 
