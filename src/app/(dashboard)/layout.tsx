@@ -9,10 +9,10 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <PermissionsProvider>
+    
       <RouteProtectionProvider>
         <DashboardClientLayout>{children}</DashboardClientLayout>
       </RouteProtectionProvider>
-    </PermissionsProvider>
+    
   );
 }

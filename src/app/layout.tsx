@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { PermissionsProvider } from "@/hooks/use-permissions";
 
 export const metadata: Metadata = {
   title: "DOC Roster",
@@ -24,8 +25,10 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        {children}
-        <Toaster />
+        <PermissionsProvider>
+          {children}
+          <Toaster />
+        </PermissionsProvider>
       </body>
     </html>
   );
