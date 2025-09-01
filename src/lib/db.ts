@@ -27,11 +27,27 @@ async function createCoreTables(pool: Pool) {
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 username VARCHAR(255) NOT NULL UNIQUE,
                 password_hash VARCHAR(255) NOT NULL,
-                role VARCHAR(50) NOT NULL DEFAULT 'User',
+                roles JSON,
                 createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                avatarUrl VARCHAR(255)
+                avatarUrl VARCHAR(255),
+                status ENUM('Active', 'Banned') NOT NULL DEFAULT 'Active'
             );
         `);
+        
+        // This is a migration from a single 'role' to a JSON array 'roles'
+        const [roleColumns] = await connection.query("SHOW COLUMNS FROM users LIKE 'role'");
+         if (Array.isArray(roleColumns) && roleColumns.length > 0) {
+            const [oldRoleUsers] = await connection.query('SELECT id, role FROM users WHERE role IS NOT NULL');
+            if(Array.isArray(oldRoleUsers) && oldRoleUsers.length > 0) {
+                await connection.query("ALTER TABLE users ADD COLUMN roles JSON;");
+                for (const user of (oldRoleUsers as any[])) {
+                    await connection.query('UPDATE users SET roles = ? WHERE id = ?', [JSON.stringify([user.role]), user.id]);
+                }
+                await connection.query("ALTER TABLE users DROP COLUMN role;");
+                console.log("Successfully migrated 'role' column to 'roles' JSON array.")
+            }
+        }
+
 
         // Then create other tables
         await connection.query(`
@@ -80,8 +96,8 @@ async function createCoreTables(pool: Pool) {
 
 // Seed the database on application startup
 Promise.all([
-    createCoreTables(pool),
     seedDatabase(pool),
+    createCoreTables(pool),
     seedRolePermissions(pool)
 ]).catch(err => {
     console.error("Failed to setup and seed database:", err);
@@ -105,6 +121,22 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 10
     }
   }
   throw lastError;
+}
+
+export async function testConnection(): Promise<{ success: boolean; message: string; }> {
+    let connection;
+    try {
+        connection = await pool.getConnection();
+        await connection.ping();
+        return { success: true, message: "Database connection successful!" };
+    } catch (error: any) {
+        console.error("Database connection test failed:", error);
+        return { success: false, message: error.message };
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
 }
 
 

@@ -1,13 +1,18 @@
 
+
 import { LoginForm } from "@/components/auth/login-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getLoginBackgroundImage } from "@/lib/actions";
+import { testConnection } from "@/lib/db";
 import Image from "next/image";
 import Link from "next/link";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 export default async function LoginPage() {
   const bgImageUrl = await getLoginBackgroundImage();
+  const dbStatus = await testConnection();
 
   return (
     <div 
@@ -17,6 +22,17 @@ export default async function LoginPage() {
       }}
     >
         <div className="absolute inset-0 bg-black/60 z-0" />
+        
+        <div className="absolute top-4 left-4 right-4 z-20">
+            <Alert variant={dbStatus.success ? "default" : "destructive"}>
+                {dbStatus.success ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                <AlertTitle>{dbStatus.success ? "Database Connected" : "Database Connection Failed"}</AlertTitle>
+                <AlertDescription>
+                    {dbStatus.message}
+                </AlertDescription>
+            </Alert>
+        </div>
+
         <div className="relative z-10 w-full max-w-md space-y-6">
             <div className="text-center text-foreground">
             <Image src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png" alt="DOC Logo" width={96} height={96} className="mx-auto h-24 w-24 object-contain" />
