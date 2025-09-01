@@ -34,29 +34,6 @@ export async function getPersonnel(): Promise<Personnel[]> {
     try {
         await createPersonnelTableIfNeeded(connection);
 
-        // START Temporary logic to ensure Liam Evans has a personnel record
-        const [users] = await connection.query('SELECT id, username FROM users WHERE username = ?', ['Liam Evans']);
-        if (Array.isArray(users) && users.length > 0) {
-            const liamEvansUser = (users[0] as any);
-            const [personnelRecord] = await connection.query('SELECT id FROM personnel WHERE name = ?', [liamEvansUser.username]);
-
-            if (!Array.isArray(personnelRecord) || personnelRecord.length === 0) {
-                 // Liam Evans does not have a personnel record, so we create one.
-                 // This assumes a callsign that is unlikely to be taken.
-                 await addPersonnel({
-                     name: 'Liam Evans',
-                     rank: 'Developer', // Correct rank for special tag
-                     callsign: 1000,
-                     discordUsername: '',
-                     user: 'System', 
-                 });
-            } else {
-                // If he already has a record, ensure rank is correct
-                await connection.query('UPDATE personnel SET rank = ?, department = ? WHERE name = ?', ['Developer', 'BCSO', 'Liam Evans']);
-            }
-        }
-        // END Temporary logic
-
         const [rows] = await connection.query('SELECT * FROM personnel');
         if (!Array.isArray(rows)) {
             return [];
@@ -283,4 +260,5 @@ export async function getRecentActivity(): Promise<PersonnelEvent[]> {
         connection.release();
     }
 }
+
 
