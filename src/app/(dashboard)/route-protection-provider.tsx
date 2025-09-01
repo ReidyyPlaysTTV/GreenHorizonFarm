@@ -6,7 +6,10 @@ import { checkPermissions } from "@/lib/permissions";
 
 export async function RouteProtectionProvider({ children }: { children: React.ReactNode }) {
     const headersList = headers();
-    const loggedInUserCookie = headersList.get('cookie')?.split('; ').find(row => row.startsWith('loggedInUser='))?.split('=')[1];
+    const cookieHeader = headersList.get('cookie');
+    const loggedInUserCookie = cookieHeader
+        ? cookieHeader.split('; ').find(row => row.startsWith('loggedInUser='))?.split('=')[1]
+        : undefined;
     
     const isMaintenanceMode = await getMaintenanceMode();
 
