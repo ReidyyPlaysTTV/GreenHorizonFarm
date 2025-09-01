@@ -584,3 +584,50 @@ export async function setUserStatus(data: unknown) {
         connection.release();
     }
 }
+
+
+const resetPasswordSchema = z.object({
+    userId: z.string(),
+    newPassword: z.string().min(8, "New password must be at least 8 characters."),
+    adminUser: z.string(),
+});
+
+export async function resetUserPassword(data: unknown) {
+    const validation = resetPasswordSchema.safeParse(data);
+    if (!validation.success) {
+        return { success: false, message: validation.error.errors[0].message };
+    }
+    const { userId, newPassword, adminUser } = validation.data;
+    
+    const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
+    
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        
+        const [rows] = await connection.query('SELECT username FROM users WHERE id = ?', [userId]);
+        if ((rows as any[]).length === 0) {
+            return { success: false, message: "User not found." };
+        }
+        const user = (rows as any)[0];
+
+        const salt = await bcrypt.genSalt(10);
+        const new_password_hash = await bcrypt.hash(newPassword, salt);
+
+        await connection.query('UPDATE users SET password_hash = ? WHERE id = ?', [new_password_hash, userId]);
+        await logUserAction(adminUser, 'Admin Password Reset', `Reset password for user '${user.username}'.`, connection);
+        
+        await connection.commit();
+        
+        return { success: true, message: `Password for ${user.username} has been reset.` };
+    } catch (error) {
+        await connection.rollback();
+        console.error("Failed to reset password:", error);
+        return { success: false, message: "Database operation failed." };
+    } finally {
+        connection.release();
+    }
+}

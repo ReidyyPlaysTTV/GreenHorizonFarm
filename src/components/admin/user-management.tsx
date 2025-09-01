@@ -8,13 +8,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { setUserStatus } from "@/lib/actions";
 import { useState, useEffect } from "react";
-import { Loader2, ShieldOff, ShieldCheck, MoreHorizontal } from "lucide-react";
+import { Loader2, ShieldOff, ShieldCheck, MoreHorizontal, KeySquare } from "lucide-react";
 import { AddUserForm } from "./add-user-form";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { EditUserDialog } from "./edit-user-dialog";
 import { Badge } from "../ui/badge";
+import { ResetPasswordDialog } from "./reset-password-dialog";
 
 interface UserManagementProps {
     users: AppUser[];
@@ -98,6 +99,7 @@ export function UserManagement({ users }: UserManagementProps) {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent>
                                                     <EditUserDialog user={user} />
+                                                    <ResetPasswordDialog user={user} />
                                                     <DropdownMenuItem onClick={() => handleSetStatus(user.id, 'Banned')} className="text-destructive focus:text-destructive">
                                                         <ShieldOff className="mr-2 h-4 w-4" />
                                                         Ban User
