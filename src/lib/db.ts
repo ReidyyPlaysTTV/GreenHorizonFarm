@@ -1,11 +1,10 @@
 
-
 import mysql from 'mysql2/promise';
 import { seedDatabase } from './db-seed';
 import { seedRolePermissions } from './actions/permission-actions';
 import type { Pool } from 'mysql2/promise';
 
-const DATABASE_URL = "mysql://zap1311701-4:YSurxxoqcMc22YnB@mysql-mariadb16-lon-101.zap-srv.com/zap1311701-4";
+const DATABASE_URL = "mysql://zap1311701-2:J2IAJKgRfnrCphFq@mysql-mariadb16-lon-101.zap-srv.com/zap1311701-2";
 
 if (!DATABASE_URL) {
   throw new Error('DATABASE_URL is not set.');
