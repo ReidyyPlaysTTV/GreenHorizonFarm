@@ -127,37 +127,39 @@ export default async function RosterPage() {
   const personnel = await getPersonnel();
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-            <h1 className="text-3xl font-bold tracking-tight">Personnel Roster</h1>
-            <p className="text-muted-foreground">
-            Browse active personnel across all departments.
-            </p>
+    <div className="flex flex-col h-full">
+        <div className="p-4 md:p-8">
+            <div className="flex items-center justify-between mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Personnel Roster</h1>
+                    <p className="text-muted-foreground">
+                    Browse active personnel across all departments.
+                    </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <AddPersonnelForm />
+                    <RefreshButton />
+                </div>
+            </div>
+            
+            <div className="space-y-8">
+                {departments.map(dep => {
+                const departmentPersonnel = personnel.filter(p => p.department === dep);
+                // Do not render department card if there are no personnel
+                if (departmentPersonnel.length === 0) return null;
+                return (
+                    <Card key={dep}>
+                    <CardHeader>
+                        <CardTitle>{dep}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <RosterTable personnel={departmentPersonnel} />
+                    </CardContent>
+                    </Card>
+                )
+                })}
+            </div>
         </div>
-        <div className="flex items-center gap-2">
-            <AddPersonnelForm />
-            <RefreshButton />
-        </div>
-      </div>
-      
-      <div className="space-y-8">
-        {departments.map(dep => {
-          const departmentPersonnel = personnel.filter(p => p.department === dep);
-          // Do not render department card if there are no personnel
-          if (departmentPersonnel.length === 0) return null;
-          return (
-            <Card key={dep}>
-              <CardHeader>
-                <CardTitle>{dep}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                  <RosterTable personnel={departmentPersonnel} />
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
     </div>
   );
 }
