@@ -9,10 +9,45 @@ import { RefreshButton } from "@/components/layout/refresh-button";
 import { AccessRequestManagement } from "@/components/admin/access-request-management";
 import { SettingsManagement } from "@/components/admin/settings-management";
 import { BannedUsersManagement } from "@/components/admin/banned-users-management";
+import { checkPermissions } from "@/lib/permissions";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ShieldAlert } from "lucide-react";
+import Link from "next/link";
 
 export default async function AdminPage() {
-  // Note: In a real application, you would protect this page to ensure
-  // only users with an 'Admin' or 'Developer' role can access it.
+  const headersList = headers();
+  const cookieHeader = headersList.get('cookie');
+  const loggedInUser = cookieHeader
+      ? decodeURIComponent(cookieHeader.split('; ').find(row => row.startsWith('loggedInUser='))?.split('=')[1] || '')
+      : undefined;
+
+  if (!loggedInUser) {
+    // Should be caught by the AuthProvider, but as a fallback
+    redirect('/');
+  }
+
+  const hasAccess = await checkPermissions(loggedInUser, 'ACCESS_ADMIN_PANEL');
+
+  if (!hasAccess) {
+    return (
+        <div className="container mx-auto p-4 md:p-8">
+            <Alert variant="destructive">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertTitle>Access Denied</AlertTitle>
+                <AlertDescription>
+                   You do not have the required permissions to view this page. Please contact an administrator if you believe this is an error.
+                   <br />
+                   <Link href="/dashboard" className="mt-2 inline-block font-bold underline">
+                        Return to Dashboard
+                   </Link>
+                </AlertDescription>
+            </Alert>
+        </div>
+    );
+  }
+
   const [users, bugReports, suggestions, accessRequests, sopLink, applicationsOpen, loginBgImage, isMaintenanceMode] = await Promise.all([
       getUsers(),
       getBugReports(),
