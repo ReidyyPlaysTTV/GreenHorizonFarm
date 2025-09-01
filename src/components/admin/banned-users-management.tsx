@@ -56,25 +56,25 @@ export function BannedUsersManagement({ users }: BannedUsersManagementProps) {
     const bannedUsers = users.filter(u => u.status === 'Banned');
 
     return (
-        <Card className="bg-destructive-foreground/5 border-destructive-foreground/20">
+        <Card className="bg-black text-white">
             <CardHeader>
                 <CardTitle>Banned Users</CardTitle>
-                <CardDescription className="text-destructive-foreground/60">Users who are currently banned from accessing the application.</CardDescription>
+                <CardDescription className="text-gray-400">Users who are currently banned from accessing the application.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
                     <TableHeader>
-                        <TableRow className="border-destructive-foreground/20">
+                        <TableRow className="border-gray-700">
                             <TableHead className="w-[50px]"></TableHead>
-                            <TableHead>Username</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead className="text-white">Username</TableHead>
+                            <TableHead className="text-white">Role</TableHead>
+                            <TableHead className="text-right text-white">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {bannedUsers.length > 0 ? (
                             bannedUsers.map(user => (
-                                <TableRow key={user.id} className="border-destructive-foreground/20">
+                                <TableRow key={user.id} className="border-gray-800">
                                      <TableCell>
                                         <Avatar className="h-8 w-8">
                                             <AvatarImage src={user.avatarUrl} alt={user.username} />
@@ -86,7 +86,7 @@ export function BannedUsersManagement({ users }: BannedUsersManagementProps) {
                                     <TableCell className="text-right">
                                         {isUpdating[user.id] ? <Loader2 className="h-4 w-4 animate-spin ml-auto" /> : (
                                             canManageUsers && (
-                                                <Button variant="outline" size="sm" onClick={() => handleUnban(user.id)} className="bg-destructive-foreground/10 hover:bg-destructive-foreground/20 text-destructive-foreground border-destructive-foreground/20">
+                                                <Button variant="outline" size="sm" onClick={() => handleUnban(user.id)} className="bg-gray-800 hover:bg-gray-700 text-white border-gray-600">
                                                     <ShieldCheck className="mr-2 h-4 w-4" />
                                                     Unban
                                                 </Button>
@@ -97,7 +97,7 @@ export function BannedUsersManagement({ users }: BannedUsersManagementProps) {
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">
+                                <TableCell colSpan={4} className="h-24 text-center text-gray-500">
                                     No users are currently banned.
                                 </TableCell>
                             </TableRow>

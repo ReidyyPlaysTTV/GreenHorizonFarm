@@ -159,7 +159,7 @@ export function SettingsManagement({ currentSopLink, applicationsOpen, currentLo
 
   if (!hasPermission('MANAGE_APP_SETTINGS')) {
     return (
-       <Card>
+       <Card className="bg-black text-white">
         <CardHeader>
             <CardTitle>Application Settings</CardTitle>
         </CardHeader>
@@ -177,10 +177,10 @@ export function SettingsManagement({ currentSopLink, applicationsOpen, currentLo
   }
 
   return (
-    <Card>
+    <Card className="bg-black text-white">
       <CardHeader>
         <CardTitle>Application Settings</CardTitle>
-        <CardDescription>
+        <CardDescription className="text-gray-400">
           Manage global settings for the application.
         </CardDescription>
       </CardHeader>
@@ -210,7 +210,7 @@ export function SettingsManagement({ currentSopLink, applicationsOpen, currentLo
             </form>
         </Form>
 
-        <Separator />
+        <Separator className="bg-gray-700"/>
 
         <Form {...bgImageForm}>
             <form onSubmit={bgImageForm.handleSubmit(onBgImageSubmit)} className="space-y-6 max-w-lg">
@@ -226,7 +226,7 @@ export function SettingsManagement({ currentSopLink, applicationsOpen, currentLo
                                     {...field}
                                 />
                             </FormControl>
-                            <FormDescription className="text-xs">
+                            <FormDescription className="text-xs text-gray-400">
                                 Must be a direct link from i.imgur.com or r2.fivemanage.com.
                             </FormDescription>
                             <FormMessage />
@@ -240,14 +240,14 @@ export function SettingsManagement({ currentSopLink, applicationsOpen, currentLo
             </form>
         </Form>
 
-        <Separator />
+        <Separator className="bg-gray-700"/>
 
         <div className="space-y-4 max-w-lg">
             <h3 className="text-lg font-medium">Application Controls</h3>
-            <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+            <div className="flex flex-row items-center justify-between rounded-lg border border-gray-700 p-4">
                 <div className="space-y-0.5">
                     <Label htmlFor="applications-open">Open Applications</Label>
-                     <p className="text-[0.8rem] text-muted-foreground">
+                     <p className="text-[0.8rem] text-gray-400">
                         Allow users to submit new applications.
                     </p>
                 </div>
@@ -258,10 +258,10 @@ export function SettingsManagement({ currentSopLink, applicationsOpen, currentLo
                     disabled={isSaving}
                 />
             </div>
-             <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+             <div className="flex flex-row items-center justify-between rounded-lg border border-gray-700 p-4">
                 <div className="space-y-0.5">
                     <Label htmlFor="maintenance-mode">Maintenance Mode</Label>
-                     <p className="text-[0.8rem] text-muted-foreground">
+                     <p className="text-[0.8rem] text-gray-400">
                         Redirect all non-developer users to a maintenance page.
                     </p>
                 </div>

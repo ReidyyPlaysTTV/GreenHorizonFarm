@@ -88,7 +88,7 @@ export function PermissionManagement() {
 
   if (!hasPermission('MANAGE_ROLES_PERMISSIONS')) {
     return (
-       <Card>
+       <Card className="bg-black text-white">
         <CardHeader>
             <CardTitle>Permission Groups</CardTitle>
         </CardHeader>
@@ -107,7 +107,7 @@ export function PermissionManagement() {
   
   if (isLoading) {
     return (
-       <Card>
+       <Card className="bg-black text-white">
         <CardHeader>
             <CardTitle>Permission Groups</CardTitle>
         </CardHeader>
@@ -119,12 +119,12 @@ export function PermissionManagement() {
   }
 
   return (
-    <Card>
+    <Card className="bg-black text-white">
       <CardHeader>
         <div className="flex justify-between items-start">
             <div>
                 <CardTitle>Permission Groups</CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-400">
                 Define what each role can see and do within the application.
                 </CardDescription>
             </div>
@@ -142,8 +142,8 @@ export function PermissionManagement() {
                 const areAllSelected = allPermissionIds.every(p => currentRolePermissions.includes(p));
 
                 return (
-                 <AccordionItem value={role} key={role}>
-                    <AccordionTrigger className="text-lg font-medium hover:no-underline">
+                 <AccordionItem value={role} key={role} className="border-gray-700">
+                    <AccordionTrigger className="text-lg font-medium hover:no-underline text-white">
                         <span className="flex-1 text-left">{role}</span>
                     </AccordionTrigger>
                     <AccordionContent>
@@ -167,7 +167,7 @@ export function PermissionManagement() {
                             </Button>
                           </div>
                         )}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-gray-900/50 rounded-lg">
                             {allPermissionIds.map((permissionId) => (
                                 <div key={permissionId} className="flex items-center space-x-2">
                                     <Checkbox 
@@ -176,7 +176,7 @@ export function PermissionManagement() {
                                         onCheckedChange={(checked) => handlePermissionChange(role as Role, permissionId as Permission, !!checked)}
                                         disabled={role === 'Developer' || role === 'Administrator'}
                                     />
-                                    <Label htmlFor={`${role}-${permissionId}`} className="font-normal text-sm">
+                                    <Label htmlFor={`${role}-${permissionId}`} className="font-normal text-sm text-gray-300">
                                         {permissionDescriptions[permissionId as Permission]}
                                     </Label>
                                 </div>

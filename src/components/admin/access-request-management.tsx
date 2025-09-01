@@ -49,29 +49,29 @@ export function AccessRequestManagement({ requests }: AccessRequestManagementPro
   }
   
   return (
-    <Card className="bg-destructive-foreground/5 border-destructive-foreground/20">
+    <Card className="bg-black text-white">
       <CardHeader>
         <CardTitle>Access Requests</CardTitle>
-        <CardDescription className="text-destructive-foreground/60">Review and approve or deny requests for application access.</CardDescription>
+        <CardDescription className="text-gray-400">Review and approve or deny requests for application access.</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
-            <TableRow className="border-destructive-foreground/20">
-              <TableHead>Username</TableHead>
-              <TableHead>Date Requested</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+            <TableRow className="border-gray-700">
+              <TableHead className="text-white">Username</TableHead>
+              <TableHead className="text-white">Date Requested</TableHead>
+              <TableHead className="text-white">Status</TableHead>
+              <TableHead className="text-right text-white">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {requests.length > 0 ? (
               requests.map((request) => (
-                <TableRow key={request.id} className="border-destructive-foreground/20">
+                <TableRow key={request.id} className="border-gray-800">
                   <TableCell className="font-medium">{request.requested_username}</TableCell>
                   <TableCell>{formatDistanceToNow(new Date(request.createdAt), { addSuffix: true })}</TableCell>
                   <TableCell>
-                    <Badge variant={request.status === 'Pending' ? 'secondary' : 'default'} className="bg-destructive-foreground/10 text-destructive-foreground">{request.status}</Badge>
+                    <Badge variant={request.status === 'Pending' ? 'secondary' : 'default'} className="bg-gray-700 text-white">{request.status}</Badge>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     {request.status === 'Pending' && canManageRequests && (
@@ -86,7 +86,7 @@ export function AccessRequestManagement({ requests }: AccessRequestManagementPro
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={4} className="h-24 text-center text-gray-500">
                   No pending access requests.
                 </TableCell>
               </TableRow>

@@ -63,11 +63,11 @@ export function UserManagement({ users }: UserManagementProps) {
     const activeUsers = users.filter(u => u.status === 'Active');
 
     return (
-        <Card className="bg-destructive-foreground/5 border-destructive-foreground/20">
+        <Card className="bg-black text-white">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>User Management</CardTitle>
-                <CardDescription className="text-destructive-foreground/60">Manage user accounts and their status.</CardDescription>
+                <CardDescription className="text-gray-400">Manage user accounts and their status.</CardDescription>
               </div>
               {canManageUsers && <AddUserForm />}
             </CardHeader>
@@ -78,23 +78,23 @@ export function UserManagement({ users }: UserManagementProps) {
                         if (usersInRole.length === 0) return null;
 
                         return (
-                            <AccordionItem value={role} key={role} className="border-destructive-foreground/20">
-                                <AccordionTrigger className="text-lg font-medium hover:no-underline">
+                            <AccordionItem value={role} key={role} className="border-gray-700">
+                                <AccordionTrigger className="text-lg font-medium hover:no-underline text-white">
                                     <span className="flex-1 text-left">{role} ({usersInRole.length})</span>
                                 </AccordionTrigger>
                                 <AccordionContent>
                                     <Table>
                                         <TableHeader>
-                                            <TableRow className="border-destructive-foreground/20">
+                                            <TableRow className="border-gray-700">
                                                 <TableHead className="w-[50px]"></TableHead>
-                                                <TableHead>Username</TableHead>
-                                                <TableHead>Status</TableHead>
-                                                <TableHead className="text-right">Actions</TableHead>
+                                                <TableHead className="text-white">Username</TableHead>
+                                                <TableHead className="text-white">Status</TableHead>
+                                                <TableHead className="text-right text-white">Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {usersInRole.map(user => (
-                                                <TableRow key={user.id} className="border-destructive-foreground/20">
+                                                <TableRow key={user.id} className="border-gray-800">
                                                     <TableCell>
                                                         <Avatar className="h-8 w-8">
                                                             <AvatarImage src={user.avatarUrl} alt={user.username} />
@@ -103,7 +103,7 @@ export function UserManagement({ users }: UserManagementProps) {
                                                     </TableCell>
                                                     <TableCell className="font-medium">{user.username}</TableCell>
                                                     <TableCell>
-                                                        <Badge variant={user.status === 'Active' ? 'secondary' : 'destructive'} className="bg-destructive-foreground/10 text-destructive-foreground">
+                                                        <Badge variant={user.status === 'Active' ? 'secondary' : 'destructive'} className="bg-gray-700 text-white">
                                                             {user.status}
                                                         </Badge>
                                                     </TableCell>
@@ -112,7 +112,7 @@ export function UserManagement({ users }: UserManagementProps) {
                                                             canManageUsers && user.username !== currentUser && (
                                                                 <DropdownMenu>
                                                                     <DropdownMenuTrigger asChild>
-                                                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive-foreground/10">
+                                                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-800">
                                                                             <MoreHorizontal className="h-4 w-4" />
                                                                         </Button>
                                                                     </DropdownMenuTrigger>

@@ -15,10 +15,10 @@ export function DeveloperPanel({ bugReports, suggestions }: DeveloperPanelProps)
 
   return (
     <div className="space-y-6">
-        <Card>
+        <Card className="bg-black text-white">
             <CardHeader>
                 <CardTitle>Bug Reports</CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-400">
                     Issues and bugs reported by users.
                 </CardDescription>
             </CardHeader>
@@ -26,10 +26,10 @@ export function DeveloperPanel({ bugReports, suggestions }: DeveloperPanelProps)
                 <ReportTable reports={bugReports} type="bug" />
             </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-black text-white">
             <CardHeader>
                 <CardTitle>Feature Suggestions</CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-400">
                     Ideas and suggestions submitted by users.
                 </CardDescription>
             </CardHeader>

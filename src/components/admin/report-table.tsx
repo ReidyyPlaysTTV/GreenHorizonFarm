@@ -81,29 +81,29 @@ export function ReportTable({ reports, type }: ReportTableProps) {
   return (
     <Table>
       <TableHeader>
-        <TableRow>
-          <TableHead>Title</TableHead>
-          <TableHead>Submitted</TableHead>
-          <TableHead className="w-[180px]">Status</TableHead>
-          <TableHead className="text-right w-[80px]">Actions</TableHead>
+        <TableRow className="border-gray-700">
+          <TableHead className="text-white">Title</TableHead>
+          <TableHead className="text-white">Submitted</TableHead>
+          <TableHead className="w-[180px] text-white">Status</TableHead>
+          <TableHead className="text-right w-[80px] text-white">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {reports.length > 0 ? (
           reports.map((report) => (
-            <TableRow key={report.id}>
+            <TableRow key={report.id} className="border-gray-800">
               <TableCell>
                 <div className="font-medium">{report.title}</div>
-                <p className="text-sm text-muted-foreground line-clamp-2">{report.description}</p>
+                <p className="text-sm text-gray-400 line-clamp-2">{report.description}</p>
               </TableCell>
-              <TableCell>{formatDistanceToNow(new Date(report.submittedAt), { addSuffix: true })}</TableCell>
+              <TableCell className="text-gray-400">{formatDistanceToNow(new Date(report.submittedAt), { addSuffix: true })}</TableCell>
               <TableCell>
                 <Select
                   defaultValue={report.status}
                   onValueChange={(value) => handleStatusChange(report.id, value as ReportStatus)}
                   disabled={isUpdating[report.id]}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full bg-gray-800 border-gray-600 text-white">
                     <SelectValue>
                          <Badge variant={statusColors[report.status]} className="mr-2">{report.status}</Badge>
                     </SelectValue>
@@ -145,7 +145,7 @@ export function ReportTable({ reports, type }: ReportTableProps) {
           ))
         ) : (
           <TableRow>
-            <TableCell colSpan={4} className="h-24 text-center">
+            <TableCell colSpan={4} className="h-24 text-center text-gray-500">
               No {type} reports found.
             </TableCell>
           </TableRow>
