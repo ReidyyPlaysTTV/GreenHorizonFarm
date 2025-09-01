@@ -101,7 +101,7 @@ export function UserManagement({ users }: UserManagementProps) {
             <CardContent>
                 <Accordion type="multiple" className="w-full" defaultValue={roles}>
                     {roles.map(role => {
-                        const usersInRole = activeUsers.filter(u => u.roles.includes(role));
+                        const usersInRole = activeUsers.filter(u => Array.isArray(u.roles) && u.roles.includes(role));
                         if (usersInRole.length === 0) return null;
 
                         return (
@@ -132,7 +132,7 @@ export function UserManagement({ users }: UserManagementProps) {
                                                     <TableCell className="font-medium">{user.username}</TableCell>
                                                     <TableCell>
                                                         <div className="flex flex-wrap gap-1">
-                                                            {user.roles.map(r => <Badge key={r} variant="secondary" className="bg-gray-700 text-white">{r}</Badge>)}
+                                                            {Array.isArray(user.roles) && user.roles.map(r => <Badge key={r} variant="secondary" className="bg-gray-700 text-white">{r}</Badge>)}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
