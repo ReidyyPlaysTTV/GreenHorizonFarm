@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { User, Shield, Briefcase, Star, Hash, Mail, Activity, KeySquare, Image as ImageIcon, FileCheck2 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { getAuditLogs, getUsers, getReviewedApplicationsCount } from "@/lib/actions";
+import { getAuditLogs, getUsers, getReviewedApplicationsCount, getPersonnel } from "@/lib/actions";
 import type { AppUser, Personnel, AuditLog } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ChangePasswordDialog } from "@/components/user/change-password-dialog";
@@ -79,13 +79,21 @@ export default function UserProfilePage() {
       try {
         const users = await getUsers();
         const foundUser = users.find(u => u.username === decodedUsername);
-
+        
         if (!foundUser) {
           notFound();
           return;
         }
+        
         setUser(foundUser);
-        setPersonnelRecord(foundUser.personnel || null);
+        
+        let pRecord = foundUser.personnel || null;
+        if (!pRecord) {
+            const allPersonnel = await getPersonnel();
+            pRecord = allPersonnel.find(p => p.name === foundUser.username) || null;
+        }
+        
+        setPersonnelRecord(pRecord);
 
         const [logs, reviewedCount] = await Promise.all([
             getAuditLogs({ username: decodedUsername }),

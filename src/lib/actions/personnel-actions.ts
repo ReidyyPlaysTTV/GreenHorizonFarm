@@ -243,10 +243,13 @@ export async function addPersonnel(data: unknown) {
     try {
         await connection.beginTransaction();
         
+        const [userRows] = await connection.query('SELECT id FROM users WHERE username = ?', [name]);
+        const userId = (userRows as any)[0]?.id || null;
+
         const personnelId = crypto.randomUUID();
         await connection.query(
-            'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, status, loa_until) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [personnelId, name, rank, callsign.toString(), discordUsername, 'Active', null]
+            'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, status, loa_until, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [personnelId, name, rank, callsign.toString(), discordUsername, 'Active', null, userId]
         );
         await logEvent(name, 'Hired', `Hired as ${rank}`, connection);
         await logCallsignChange(callsign.toString(), name, 'Assigned', connection);
@@ -311,10 +314,13 @@ export async function rehirePersonnel(data: unknown) {
   try {
     await connection.beginTransaction();
 
+    const [userRows] = await connection.query('SELECT id FROM users WHERE username = ?', [name]);
+    const userId = (userRows as any)[0]?.id || null;
+
     const newId = crypto.randomUUID();
     await connection.query(
-      'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, is_rehired) VALUES (?, ?, ?, ?, ?, ?)',
-      [newId, name, rank, callsign.toString(), discordUsername, true]
+      'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, is_rehired, userId) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [newId, name, rank, callsign.toString(), discordUsername, true, userId]
     );
 
     await connection.query('DELETE FROM archived_personnel WHERE id = ?', [archivedId]);
