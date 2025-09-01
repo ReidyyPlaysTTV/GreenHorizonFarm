@@ -3,49 +3,54 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import db from '../db';
+import db, { withRetry } from '../db';
 import { checkPermissions } from '../permissions';
 import { logUserAction } from './audit-log-actions';
 import type { Announcement } from '../types';
 
 export async function getAnnouncements(): Promise<Announcement[]> {
-    const connection = await db.getConnection();
-    try {
-        const [rows] = await connection.query(`
-            SELECT 
-                a.id, a.content, a.is_urgent, a.createdAt,
-                u.id as author_id, u.username as author_username, u.avatarUrl as author_avatarUrl
-            FROM announcements a
-            JOIN users u ON a.user_id = u.id
-            ORDER BY a.is_urgent DESC, a.createdAt DESC
-            LIMIT 10
-        `);
-        
-        if (!Array.isArray(rows)) {
-            return [];
-        }
-        
-        return (rows as any[]).map(row => ({
-            id: row.id,
-            content: row.content,
-            is_urgent: !!row.is_urgent,
-            createdAt: new Date(row.createdAt),
-            author: {
-                id: row.author_id,
-                username: row.author_username,
-                avatarUrl: row.author_avatarUrl,
+    return withRetry(async () => {
+        const connection = await db.getConnection();
+        try {
+            const [rows] = await connection.query(`
+                SELECT 
+                    a.id, a.content, a.is_urgent, a.createdAt,
+                    u.id as author_id, u.username as author_username, u.avatarUrl as author_avatarUrl
+                FROM announcements a
+                JOIN users u ON a.user_id = u.id
+                ORDER BY a.is_urgent DESC, a.createdAt DESC
+                LIMIT 10
+            `);
+            
+            if (!Array.isArray(rows)) {
+                return [];
             }
-        }));
-    } catch (error) {
-        console.error("Failed to fetch announcements:", error);
-         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
-            console.log("Announcements table does not exist yet. It will be created on app start.");
-            return [];
+            
+            return (rows as any[]).map(row => ({
+                id: row.id,
+                content: row.content,
+                is_urgent: !!row.is_urgent,
+                createdAt: new Date(row.createdAt),
+                author: {
+                    id: row.author_id,
+                    username: row.author_username,
+                    avatarUrl: row.author_avatarUrl,
+                }
+            }));
+        } catch (error) {
+            console.error("Failed to fetch announcements:", error);
+            if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
+                console.log("Announcements table does not exist yet. It will be created on app start.");
+                return [];
+            }
+            throw error; // Re-throw to be caught by withRetry
+        } finally {
+            connection.release();
         }
+    }).catch(error => {
+        console.error("getAnnouncements failed after multiple retries:", error);
         return [];
-    } finally {
-        connection.release();
-    }
+    });
 }
 
 const addAnnouncementSchema = z.object({

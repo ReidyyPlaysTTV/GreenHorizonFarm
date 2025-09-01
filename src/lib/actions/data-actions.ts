@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import type { Personnel, ArchivedPersonnel, BlacklistedPersonnel, Application, PersonnelEvent } from "../types";
@@ -30,41 +29,46 @@ async function createPersonnelTableIfNeeded(connection: any) {
 
 
 export async function getPersonnel(): Promise<Personnel[]> {
-    const connection = await db.getConnection();
-    try {
-        await createPersonnelTableIfNeeded(connection);
+    return withRetry(async () => {
+        const connection = await db.getConnection();
+        try {
+            await createPersonnelTableIfNeeded(connection);
 
-        const [rows] = await connection.query('SELECT * FROM personnel');
-        if (!Array.isArray(rows)) {
-            return [];
-        }
-
-        const personnel = (rows as any[]).map(p => ({
-            ...p,
-            discordUsername: p.discord_username,
-            department: rankToDepartmentMap[p.rank] || p.department,
-            status: p.status || 'Active',
-            loa_until: p.loa_until ? new Date(p.loa_until).toISOString() : null,
-            is_rehired: !!p.is_rehired,
-        }));
-        
-        personnel.sort((a, b) => {
-            const rankIndexA = rankOrder.indexOf(a.rank);
-            const rankIndexB = rankOrder.indexOf(b.rank);
-            if (rankIndexA !== rankIndexB) {
-                return rankIndexA - rankIndexB;
+            const [rows] = await connection.query('SELECT * FROM personnel');
+            if (!Array.isArray(rows)) {
+                return [];
             }
-            return parseInt(a.badgeNumber) - parseInt(b.badgeNumber);
-        });
 
-        return personnel;
+            const personnel = (rows as any[]).map(p => ({
+                ...p,
+                discordUsername: p.discord_username,
+                department: rankToDepartmentMap[p.rank] || p.department,
+                status: p.status || 'Active',
+                loa_until: p.loa_until ? new Date(p.loa_until).toISOString() : null,
+                is_rehired: !!p.is_rehired,
+            }));
+            
+            personnel.sort((a, b) => {
+                const rankIndexA = rankOrder.indexOf(a.rank);
+                const rankIndexB = rankOrder.indexOf(b.rank);
+                if (rankIndexA !== rankIndexB) {
+                    return rankIndexA - rankIndexB;
+                }
+                return parseInt(a.badgeNumber) - parseInt(b.badgeNumber);
+            });
 
-    } catch (error) {
-        console.error("Failed to fetch personnel:", error);
+            return personnel;
+
+        } catch (error) {
+            console.error("Failed to fetch personnel:", error);
+            throw error; // Re-throw to be caught by withRetry
+        } finally {
+            connection.release();
+        }
+    }).catch(error => {
+        console.error("getPersonnel failed after multiple retries:", error);
         return [];
-    } finally {
-        connection.release();
-    }
+    });
 }
 
 export async function getArchivedPersonnel(): Promise<ArchivedPersonnel[]> {
@@ -229,37 +233,39 @@ export async function getApplications(): Promise<Application[]> {
 }
 
 export async function getRecentActivity(): Promise<PersonnelEvent[]> {
-    const connection = await db.getConnection();
-    try {
-        const [rows] = await connection.query('SELECT * FROM personnel_events ORDER BY date DESC LIMIT 10');
-        if (!Array.isArray(rows)) {
-            return [];
+    return withRetry(async () => {
+        const connection = await db.getConnection();
+        try {
+            const [rows] = await connection.query('SELECT * FROM personnel_events ORDER BY date DESC LIMIT 10');
+            if (!Array.isArray(rows)) {
+                return [];
+            }
+            return (rows as any[]).map(e => ({...e, date: new Date(e.date)}));
+        } catch(error) {
+            console.error("Failed to fetch recent activity:", error);
+            if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
+                await connection.query(`
+                    CREATE TABLE IF NOT EXISTS personnel_events (
+                        id VARCHAR(36) NOT NULL PRIMARY KEY,
+                        personnel_name VARCHAR(255) NOT NULL,
+                        event_type ENUM('Hired', 'Fired', 'Promoted', 'Demoted', 'Rehired') NOT NULL,
+                        description VARCHAR(255) NOT NULL,
+                        date DATETIME NOT NULL
+                    )
+                `);
+                return [];
+            }
+            // Handle migration for new event_type
+            if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_TRUNCATED_WRONG_VALUE_FOR_FIELD')) {
+                await connection.query("ALTER TABLE personnel_events MODIFY COLUMN event_type ENUM('Hired', 'Fired', 'Promoted', 'Demoted', 'Rehired') NOT NULL");
+                return getRecentActivity(); // Retry
+            }
+            throw error; // Re-throw to be caught by withRetry
+        } finally {
+            connection.release();
         }
-        return (rows as any[]).map(e => ({...e, date: new Date(e.date)}));
-    } catch(error) {
-         console.error("Failed to fetch recent activity:", error);
-        if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
-            await connection.query(`
-                CREATE TABLE IF NOT EXISTS personnel_events (
-                    id VARCHAR(36) NOT NULL PRIMARY KEY,
-                    personnel_name VARCHAR(255) NOT NULL,
-                    event_type ENUM('Hired', 'Fired', 'Promoted', 'Demoted', 'Rehired') NOT NULL,
-                    description VARCHAR(255) NOT NULL,
-                    date DATETIME NOT NULL
-                )
-            `);
-            return [];
-        }
-        // Handle migration for new event_type
-        if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_TRUNCATED_WRONG_VALUE_FOR_FIELD')) {
-             await connection.query("ALTER TABLE personnel_events MODIFY COLUMN event_type ENUM('Hired', 'Fired', 'Promoted', 'Demoted', 'Rehired') NOT NULL");
-             return getRecentActivity(); // Retry
-        }
+    }).catch(error => {
+        console.error("getRecentActivity failed after multiple retries:", error);
         return [];
-    } finally {
-        connection.release();
-    }
+    });
 }
-
-
-
