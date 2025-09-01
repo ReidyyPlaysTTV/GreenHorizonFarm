@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Recycle } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
   
@@ -128,7 +129,7 @@ export default async function RosterPage() {
 
   return (
     <div className="flex flex-col h-full">
-        <div className="p-4 md:p-8">
+        <div className="flex-none p-4 md:p-8">
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Personnel Roster</h1>
@@ -141,7 +142,8 @@ export default async function RosterPage() {
                     <RefreshButton />
                 </div>
             </div>
-            
+        </div>
+        <div className="flex-1 overflow-auto px-4 md:px-8 pb-8">
             <div className="space-y-8">
                 {departments.map(dep => {
                 const departmentPersonnel = personnel.filter(p => p.department === dep);

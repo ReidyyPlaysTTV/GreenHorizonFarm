@@ -25,10 +25,8 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <PermissionsProvider>
-          {children}
-          <Toaster />
-        </PermissionsProvider>
+        {children}
+        <Toaster />
       </body>
     </html>
   );
