@@ -14,9 +14,10 @@ export async function seedDatabase(pool: Pool) {
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 username VARCHAR(255) NOT NULL UNIQUE,
                 password_hash VARCHAR(255) NOT NULL,
-                role VARCHAR(50) NOT NULL DEFAULT 'User',
+                roles JSON,
                 createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                avatarUrl VARCHAR(255)
+                avatarUrl VARCHAR(255),
+                status ENUM('Active', 'Banned') NOT NULL DEFAULT 'Active'
             );
         `);
         
@@ -28,15 +29,15 @@ export async function seedDatabase(pool: Pool) {
 
             const username = 'admin';
             const password = 'password'; // Use a simple, known password for the seed
-            const role = 'Administrator';
+            const roles = ['Administrator', 'Developer'];
             
             const salt = await bcrypt.genSalt(10);
             const password_hash = await bcrypt.hash(password, salt);
             const id = crypto.randomUUID();
 
             await connection.query(
-                'INSERT INTO users (id, username, password_hash, role, avatarUrl) VALUES (?, ?, ?, ?, ?)',
-                [id, username, password_hash, role, null]
+                'INSERT INTO users (id, username, password_hash, roles, avatarUrl) VALUES (?, ?, ?, ?, ?)',
+                [id, username, password_hash, JSON.stringify(roles), null]
             );
 
             console.log("Default admin user created successfully.");
