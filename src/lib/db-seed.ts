@@ -2,7 +2,6 @@
 'use server';
 
 import type { Pool } from 'mysql2/promise';
-import * as bcrypt from 'bcryptjs';
 
 // This function will only run if the users table is empty.
 export async function seedDatabase(pool: Pool) {
@@ -13,7 +12,7 @@ export async function seedDatabase(pool: Pool) {
             CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 username VARCHAR(255) NOT NULL UNIQUE,
-                password_hash VARCHAR(255) NOT NULL,
+                password VARCHAR(255) NOT NULL,
                 roles JSON,
                 createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 avatarUrl VARCHAR(255),
@@ -31,13 +30,11 @@ export async function seedDatabase(pool: Pool) {
             const password = 'password'; // Use a simple, known password for the seed
             const roles = ['Administrator', 'Developer'];
             
-            const salt = await bcrypt.genSalt(10);
-            const password_hash = await bcrypt.hash(password, salt);
             const id = crypto.randomUUID();
 
             await connection.query(
-                'INSERT INTO users (id, username, password_hash, roles, avatarUrl) VALUES (?, ?, ?, ?, ?)',
-                [id, username, password_hash, JSON.stringify(roles), null]
+                'INSERT INTO users (id, username, password, roles, avatarUrl) VALUES (?, ?, ?, ?, ?)',
+                [id, username, password, JSON.stringify(roles), null]
             );
 
             console.log("Default admin user created successfully.");

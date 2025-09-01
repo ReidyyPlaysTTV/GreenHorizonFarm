@@ -1,5 +1,6 @@
 
 
+
 'use server';
 
 import db from '../db';
@@ -7,7 +8,6 @@ import type { AppUser, AccessRequest, Personnel } from '../types';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { logUserAction } from './audit-log-actions';
-import * as bcrypt from 'bcryptjs';
 import { checkPermissions } from '../permissions';
 import { roles } from '../data';
 
@@ -19,7 +19,7 @@ async function createUsersTableIfNeeded() {
                 CREATE TABLE IF NOT EXISTS users (
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     username VARCHAR(255) NOT NULL UNIQUE,
-                    password_hash VARCHAR(255) NOT NULL,
+                    password VARCHAR(255) NOT NULL,
                     roles JSON NOT NULL,
                     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     avatarUrl VARCHAR(255),
@@ -62,7 +62,7 @@ async function createAccessRequestsTableIfNeeded(connection: any) {
         CREATE TABLE IF NOT EXISTS access_requests (
             id VARCHAR(36) NOT NULL PRIMARY KEY,
             requested_username VARCHAR(255) NOT NULL UNIQUE,
-            password_hash VARCHAR(255) NOT NULL,
+            password VARCHAR(255) NOT NULL,
             status ENUM('Pending', 'Approved', 'Denied') NOT NULL DEFAULT 'Pending',
             createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
@@ -80,16 +80,18 @@ export async function getUsers(): Promise<AppUser[]> {
                 return [];
             }
 
-            const [personnel] = await connection.query('SELECT name, rank, department FROM personnel');
+            const [personnel] = await connection.query('SELECT name, rank, department, userId FROM personnel');
             const personnelMap = new Map<string, Partial<Personnel>>();
             if (Array.isArray(personnel)) {
                 personnel.forEach((p: any) => {
-                    personnelMap.set(p.name, p);
+                    if (p.userId) {
+                        personnelMap.set(p.userId, p);
+                    }
                 });
             }
 
             return (users as any[]).map((u: any) => {
-                const pRecord = personnelMap.get(u.username);
+                const pRecord = personnelMap.get(u.id);
                 let userRoles = [];
                 if(typeof u.roles === 'string') {
                     try {
@@ -129,9 +131,8 @@ export async function loginUser(credentials: unknown) {
 
     const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-
         const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', [username]);
+        
         if (!Array.isArray(rows) || rows.length === 0) {
             return { success: false, message: 'Incorrect username or password. Please try again.' };
         }
@@ -141,15 +142,13 @@ export async function loginUser(credentials: unknown) {
             return { success: false, message: 'This account has been banned.' };
         }
 
-        const passwordMatch = await bcrypt.compare(password, user.password_hash);
+        const passwordMatch = user.password === password;
 
         if (!passwordMatch) {
             return { success: false, message: 'Incorrect username or password. Please try again.' };
         }
         
         await logUserAction(username, "Login", `User '${username}' signed in.`, connection);
-        
-        await connection.commit();
 
         let userRoles = [];
         if(typeof user.roles === 'string') {
@@ -163,7 +162,6 @@ export async function loginUser(credentials: unknown) {
         return { success: true, user: { id: user.id, username: user.username, roles: userRoles } };
 
     } catch (error) {
-        await connection.rollback();
         console.error("Login failed:", error);
         return { success: false, message: 'An internal server error occurred.' };
     } finally {
@@ -197,12 +195,9 @@ export async function submitAccessRequest(data: unknown) {
       return { success: false, message: "This username is already taken or requested." };
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const password_hash = await bcrypt.hash(password, salt);
-
     await connection.query(
-      'INSERT INTO access_requests (id, requested_username, password_hash) VALUES (?, ?, ?)',
-      [crypto.randomUUID(), username, password_hash]
+      'INSERT INTO access_requests (id, requested_username, password) VALUES (?, ?, ?)',
+      [crypto.randomUUID(), username, password]
     );
 
     revalidatePath('/admin');
@@ -260,12 +255,12 @@ export async function approveAccessRequest(data: unknown) {
             throw new Error("Access request not found.");
         }
         const request = (requestRows as any)[0];
-        const { password_hash, requested_username } = request;
+        const { password, requested_username } = request;
         const newUserId = crypto.randomUUID();
 
         await connection.query(
-            'INSERT INTO users (id, username, password_hash, roles) VALUES (?, ?, ?, ?)',
-            [newUserId, username, password_hash, JSON.stringify(roles)]
+            'INSERT INTO users (id, username, password, roles) VALUES (?, ?, ?, ?)',
+            [newUserId, username, password, JSON.stringify(roles)]
         );
 
         await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Approved', requestId]);
@@ -336,13 +331,11 @@ export async function createUser(data: unknown) {
   try {
     await connection.beginTransaction();
 
-    const salt = await bcrypt.genSalt(10);
-    const password_hash = await bcrypt.hash(password, salt);
     const newUserId = crypto.randomUUID();
     
     await connection.query(
-      'INSERT INTO users (id, username, password_hash, roles) VALUES (?, ?, ?, ?)',
-      [newUserId, username, password_hash, JSON.stringify(roles)]
+      'INSERT INTO users (id, username, password, roles) VALUES (?, ?, ?, ?)',
+      [newUserId, username, password, JSON.stringify(roles)]
     );
 
     await logUserAction(adminUser, 'Create User', `Created new user '${username}' with roles '${roles.join(', ')}'.`, connection);
@@ -381,21 +374,18 @@ export async function changeUserPassword(data: unknown) {
     try {
         await connection.beginTransaction();
         
-        const [rows] = await connection.query('SELECT username, password_hash FROM users WHERE id = ?', [userId]);
+        const [rows] = await connection.query('SELECT username, password FROM users WHERE id = ?', [userId]);
         if ((rows as any[]).length === 0) {
             return { success: false, message: "User not found." };
         }
         const user = (rows as any)[0];
 
-        const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+        const isMatch = user.password === currentPassword;
         if (!isMatch) {
             return { success: false, message: "Incorrect current password." };
         }
 
-        const salt = await bcrypt.genSalt(10);
-        const new_password_hash = await bcrypt.hash(newPassword, salt);
-
-        await connection.query('UPDATE users SET password_hash = ? WHERE id = ?', [new_password_hash, userId]);
+        await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
         await logUserAction(user.username, 'Change Password', `User '${user.username}' changed their password.`, connection);
         
         await connection.commit();
@@ -596,10 +586,7 @@ export async function resetUserPassword(data: unknown) {
         }
         const user = (rows as any)[0];
 
-        const salt = await bcrypt.genSalt(10);
-        const new_password_hash = await bcrypt.hash(newPassword, salt);
-
-        await connection.query('UPDATE users SET password_hash = ? WHERE id = ?', [new_password_hash, userId]);
+        await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
         await logUserAction(adminUser, 'Admin Password Reset', `Reset password for user '${user.username}'.`, connection);
         
         await connection.commit();

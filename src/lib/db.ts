@@ -1,5 +1,6 @@
 
 
+
 import mysql from 'mysql2/promise';
 import { seedDatabase } from './db-seed';
 import { seedRolePermissions } from './actions/permission-actions';
@@ -26,7 +27,7 @@ async function createCoreTables(pool: Pool) {
             CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 username VARCHAR(255) NOT NULL UNIQUE,
-                password_hash VARCHAR(255) NOT NULL,
+                password VARCHAR(255) NOT NULL,
                 roles JSON,
                 createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 avatarUrl VARCHAR(255),
