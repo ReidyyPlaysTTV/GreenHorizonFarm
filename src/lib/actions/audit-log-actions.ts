@@ -1,7 +1,6 @@
 
 'use server';
 
-import { randomUUID } from 'crypto';
 import db from '../db';
 import { revalidatePath } from 'next/cache';
 import type { AuditLog, BlacklistedPersonnel } from '../types';
@@ -37,7 +36,7 @@ export async function logUserAction(
         await createAuditLogTableIfNeeded(connection);
         await connection.query(
             'INSERT INTO audit_logs (id, user, actionType, description) VALUES (?, ?, ?, ?)',
-            [randomUUID(), user, actionType, description]
+            [crypto.randomUUID(), user, actionType, description]
         );
     } catch (error) {
         console.error("Failed to log user action:", error);
@@ -104,7 +103,7 @@ export async function addBlacklistedPersonnel(data: unknown) {
 
     await connection.query(
       'INSERT INTO blacklisted_personnel (id, name, discord_username, reason, dateAdded) VALUES (?, ?, ?, ?, ?)',
-      [randomUUID(), name, discordUsername, reason, new Date()]
+      [crypto.randomUUID(), name, discordUsername, reason, new Date()]
     );
 
     await logUserAction(

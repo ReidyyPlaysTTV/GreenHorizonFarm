@@ -2,7 +2,6 @@
 'use server';
 
 import { z } from 'zod';
-import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import db from '../db';
 import type { GalleryImage } from '../types';
@@ -61,7 +60,7 @@ export async function addGalleryImage(data: unknown) {
     try {
         await connection.query(
             'INSERT INTO gallery_images (id, src, alt, hint) VALUES (?, ?, ?, ?)',
-            [randomUUID(), src, alt, hint || null]
+            [crypto.randomUUID(), src, alt, hint || null]
         );
         
         revalidatePath('/dashboard');

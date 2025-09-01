@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import { z } from 'zod';
@@ -7,7 +6,6 @@ import { revalidatePath } from 'next/cache';
 import db from '../db';
 import { rankOrder } from '../data';
 import type { Personnel } from '../types';
-import { randomUUID } from 'crypto';
 import { logCallsignChange } from './callsign-log-actions';
 import { logUserAction } from './audit-log-actions';
 import { updateApplicationStatus } from './form-actions';
@@ -31,7 +29,7 @@ async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'P
     try {
         await connection.query(
             'INSERT INTO personnel_events (id, personnel_name, event_type, description, date) VALUES (?, ?, ?, ?, ?)',
-            [randomUUID(), personnelName, eventType, description, new Date()]
+            [crypto.randomUUID(), personnelName, eventType, description, new Date()]
         );
     } catch (error) {
         console.error(`Failed to log event: ${eventType} for ${personnelName}`, error);
@@ -245,7 +243,7 @@ export async function addPersonnel(data: unknown) {
     try {
         await connection.beginTransaction();
         
-        const personnelId = randomUUID();
+        const personnelId = crypto.randomUUID();
         await connection.query(
             'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, status, loa_until) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [personnelId, name, rank, callsign.toString(), discordUsername, 'Active', null]
@@ -313,7 +311,7 @@ export async function rehirePersonnel(data: unknown) {
   try {
     await connection.beginTransaction();
 
-    const newId = randomUUID();
+    const newId = crypto.randomUUID();
     await connection.query(
       'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, is_rehired) VALUES (?, ?, ?, ?, ?, ?)',
       [newId, name, rank, callsign.toString(), discordUsername, true]

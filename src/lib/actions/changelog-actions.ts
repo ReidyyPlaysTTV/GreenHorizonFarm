@@ -2,7 +2,6 @@
 'use server';
 
 import { z } from 'zod';
-import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import db from '../db';
 import { checkPermissions } from '../permissions';
@@ -89,7 +88,7 @@ export async function addChangelog(data: unknown) {
 
         await connection.query(
             'INSERT INTO changelogs (id, version, added_features, fixes, removed_features, other, author_id, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [randomUUID(), version, added_features, fixes, removed_features, other, authorId, new Date()]
+            [crypto.randomUUID(), version, added_features, fixes, removed_features, other, authorId, new Date()]
         );
         
         const logMessage = `Posted new changelog for version ${version}.`;

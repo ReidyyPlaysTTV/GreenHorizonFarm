@@ -1,7 +1,6 @@
 
 'use server';
 
-import { randomUUID } from 'crypto';
 import db from '../db';
 import { revalidatePath } from 'next/cache';
 import type { CallsignLog } from '../types';
@@ -29,7 +28,7 @@ export async function logCallsignChange(
         await createCallsignLogTableIfNeeded(connection);
         await connection.query(
             'INSERT INTO callsign_logs (id, callsign, personnel_name, action) VALUES (?, ?, ?, ?)',
-            [randomUUID(), callsign, personnelName, action]
+            [crypto.randomUUID(), callsign, personnelName, action]
         );
     } catch (error) {
         console.error("Failed to log callsign change:", error);

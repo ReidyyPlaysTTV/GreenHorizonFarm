@@ -1,10 +1,8 @@
 
-
 'use server';
 
 import { z } from 'zod';
 import db from '../db';
-import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import type { FormFieldData, BlacklistedPersonnel, Application } from '../types';
 import { logUserAction } from './audit-log-actions';
@@ -23,7 +21,7 @@ const formFieldsSchema = z.array(formFieldSchema);
 
 export async function getApplicationFormFields(): Promise<FormFieldData[]> {
     try {
-        const [fields] = await db.query('SELECT * FROM application_form_fields ORDER BY `order` ASC');
+        const [fields] = await db.query('SELECT * FROM application_form_fields ORDER BY `field_order` ASC');
 
         if (!Array.isArray(fields)) {
             return [];
@@ -67,17 +65,17 @@ export async function saveApplicationFormFields(fields: FormFieldData[], user: s
 
         for (const [index, field] of validatedFields.entries()) {
             // Use existing ID or generate a new one. `new-` prefix indicates a temp client-side ID.
-            const fieldId = field.id && !field.id.startsWith('new-') ? field.id : randomUUID();
+            const fieldId = field.id && !field.id.startsWith('new-') ? field.id : crypto.randomUUID();
             
             await connection.query(
-                'INSERT INTO application_form_fields (id, type, label, `order`, required) VALUES (?, ?, ?, ?, ?)',
+                'INSERT INTO application_form_fields (id, type, label, `field_order`, required) VALUES (?, ?, ?, ?, ?)',
                 [fieldId, field.type, field.label, index, field.required]
             );
 
             if (field.type === 'select' && field.options) {
                 for (const option of field.options) {
                     if (option.value) { // Don't save empty options
-                         const optionId = option.id && !option.id.startsWith('new-') ? option.id : randomUUID();
+                         const optionId = option.id && !option.id.startsWith('new-') ? option.id : crypto.randomUUID();
                         await connection.query(
                             'INSERT INTO application_field_options (id, field_id, value) VALUES (?, ?, ?)',
                             [optionId, fieldId, option.value]

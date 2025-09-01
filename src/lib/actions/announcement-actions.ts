@@ -2,7 +2,6 @@
 'use server';
 
 import { z } from 'zod';
-import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import db from '../db';
 import { checkPermissions } from '../permissions';
@@ -80,7 +79,7 @@ export async function addAnnouncement(data: unknown) {
 
         await connection.query(
             'INSERT INTO announcements (id, content, is_urgent, user_id) VALUES (?, ?, ?, ?)',
-            [randomUUID(), content, isUrgent, userId]
+            [crypto.randomUUID(), content, isUrgent, userId]
         );
         
         const logMessage = `Created a${isUrgent ? 'n URGENT' : ''} announcement: "${content.substring(0, 50)}..."`;

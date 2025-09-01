@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import db from '../db';
@@ -7,7 +6,6 @@ import type { AppUser, AccessRequest, Personnel } from '../types';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { logUserAction } from './audit-log-actions';
-import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { checkPermissions } from '../permissions';
 import { roles } from '../data';
@@ -218,7 +216,7 @@ export async function submitAccessRequest(data: unknown) {
 
     await connection.query(
       'INSERT INTO access_requests (id, requested_username, password_hash) VALUES (?, ?, ?)',
-      [randomUUID(), username, password_hash]
+      [crypto.randomUUID(), username, password_hash]
     );
 
     revalidatePath('/admin');
@@ -278,7 +276,7 @@ export async function approveAccessRequest(data: unknown) {
         }
         const request = (requestRows as any)[0];
         const { password_hash, requested_username } = request;
-        const newUserId = randomUUID();
+        const newUserId = crypto.randomUUID();
 
         // 2. Create the user
         await connection.query(
@@ -358,7 +356,7 @@ export async function createUser(data: unknown) {
 
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
-    const newUserId = randomUUID();
+    const newUserId = crypto.randomUUID();
     
     await connection.query(
       'INSERT INTO users (id, username, password_hash, role) VALUES (?, ?, ?, ?)',

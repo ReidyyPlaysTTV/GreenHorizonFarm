@@ -1,10 +1,8 @@
 
-
 'use server';
 
 import type { Pool } from 'mysql2/promise';
 import * as bcrypt from 'bcryptjs';
-import { randomUUID } from 'crypto';
 
 // This function will only run if the users table is empty.
 export async function seedDatabase(pool: Pool) {
@@ -34,7 +32,7 @@ export async function seedDatabase(pool: Pool) {
             
             const salt = await bcrypt.genSalt(10);
             const password_hash = await bcrypt.hash(password, salt);
-            const id = randomUUID();
+            const id = crypto.randomUUID();
 
             await connection.query(
                 'INSERT INTO users (id, username, password_hash, role, avatarUrl) VALUES (?, ?, ?, ?, ?)',
