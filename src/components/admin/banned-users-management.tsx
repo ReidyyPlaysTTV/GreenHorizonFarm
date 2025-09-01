@@ -7,10 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { setUserStatus } from "@/lib/actions";
 import { useState, useEffect } from "react";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck, User } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 interface BannedUsersManagementProps {
     users: AppUser[];
@@ -55,15 +56,16 @@ export function BannedUsersManagement({ users }: BannedUsersManagementProps) {
     const bannedUsers = users.filter(u => u.status === 'Banned');
 
     return (
-        <Card>
+        <Card className="bg-destructive-foreground/5 border-destructive-foreground/20">
             <CardHeader>
                 <CardTitle>Banned Users</CardTitle>
-                <CardDescription>Users who are currently banned from accessing the application.</CardDescription>
+                <CardDescription className="text-destructive-foreground/60">Users who are currently banned from accessing the application.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
                     <TableHeader>
-                        <TableRow>
+                        <TableRow className="border-destructive-foreground/20">
+                            <TableHead className="w-[50px]"></TableHead>
                             <TableHead>Username</TableHead>
                             <TableHead>Role</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
@@ -72,13 +74,19 @@ export function BannedUsersManagement({ users }: BannedUsersManagementProps) {
                     <TableBody>
                         {bannedUsers.length > 0 ? (
                             bannedUsers.map(user => (
-                                <TableRow key={user.id}>
+                                <TableRow key={user.id} className="border-destructive-foreground/20">
+                                     <TableCell>
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src={user.avatarUrl} alt={user.username} />
+                                            <AvatarFallback><User className="h-4 w-4"/></AvatarFallback>
+                                        </Avatar>
+                                    </TableCell>
                                     <TableCell className="font-medium">{user.username}</TableCell>
                                     <TableCell>{user.role}</TableCell>
                                     <TableCell className="text-right">
                                         {isUpdating[user.id] ? <Loader2 className="h-4 w-4 animate-spin ml-auto" /> : (
                                             canManageUsers && (
-                                                <Button variant="outline" size="sm" onClick={() => handleUnban(user.id)}>
+                                                <Button variant="outline" size="sm" onClick={() => handleUnban(user.id)} className="bg-destructive-foreground/10 hover:bg-destructive-foreground/20 text-destructive-foreground border-destructive-foreground/20">
                                                     <ShieldCheck className="mr-2 h-4 w-4" />
                                                     Unban
                                                 </Button>
@@ -89,7 +97,7 @@ export function BannedUsersManagement({ users }: BannedUsersManagementProps) {
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={3} className="h-24 text-center">
+                                <TableCell colSpan={4} className="h-24 text-center">
                                     No users are currently banned.
                                 </TableCell>
                             </TableRow>

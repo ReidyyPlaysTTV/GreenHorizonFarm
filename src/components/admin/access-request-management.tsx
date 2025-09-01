@@ -49,15 +49,15 @@ export function AccessRequestManagement({ requests }: AccessRequestManagementPro
   }
   
   return (
-    <Card>
+    <Card className="bg-destructive-foreground/5 border-destructive-foreground/20">
       <CardHeader>
         <CardTitle>Access Requests</CardTitle>
-        <CardDescription>Review and approve or deny requests for application access.</CardDescription>
+        <CardDescription className="text-destructive-foreground/60">Review and approve or deny requests for application access.</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="border-destructive-foreground/20">
               <TableHead>Username</TableHead>
               <TableHead>Date Requested</TableHead>
               <TableHead>Status</TableHead>
@@ -67,11 +67,11 @@ export function AccessRequestManagement({ requests }: AccessRequestManagementPro
           <TableBody>
             {requests.length > 0 ? (
               requests.map((request) => (
-                <TableRow key={request.id}>
+                <TableRow key={request.id} className="border-destructive-foreground/20">
                   <TableCell className="font-medium">{request.requested_username}</TableCell>
                   <TableCell>{formatDistanceToNow(new Date(request.createdAt), { addSuffix: true })}</TableCell>
                   <TableCell>
-                    <Badge variant={request.status === 'Pending' ? 'secondary' : 'default'}>{request.status}</Badge>
+                    <Badge variant={request.status === 'Pending' ? 'secondary' : 'default'} className="bg-destructive-foreground/10 text-destructive-foreground">{request.status}</Badge>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
                     {request.status === 'Pending' && canManageRequests && (
