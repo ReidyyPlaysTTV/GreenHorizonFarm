@@ -87,11 +87,12 @@ export async function saveApplicationFormFields(fields: FormFieldData[], user: s
             if (field.type === 'select' && field.options) {
                 // First, remove options that are no longer present for this field
                 const incomingOptionIds = field.options.map(o => o.id).filter(id => id && !id.startsWith('new-'));
+                
                 if (incomingOptionIds.length > 0) {
                     const deletePlaceholders = incomingOptionIds.map(() => '?').join(',');
                      await connection.query(`DELETE FROM application_field_options WHERE field_id = ? AND id NOT IN (${deletePlaceholders})`, [fieldId, ...incomingOptionIds]);
-                } else {
-                    // If there are no incoming options, delete all existing options for this field
+                } else if (!isNewField) {
+                    // If an existing field has all its options removed, delete all options for that field.
                     await connection.query('DELETE FROM application_field_options WHERE field_id = ?', [fieldId]);
                 }
 
