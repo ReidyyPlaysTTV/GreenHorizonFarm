@@ -1,6 +1,5 @@
 
 
-
 import mysql from 'mysql2/promise';
 import { seedDatabase } from './db-seed';
 import { seedRolePermissions } from './actions/permission-actions';
@@ -105,7 +104,7 @@ Promise.all([
 });
 
 // Helper function to retry database operations
-export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 100): Promise<T> {
+export async function withRetry<T>(fn: () => Promise<T>, retries = 5, delay = 100): Promise<T> {
   let lastError: Error | undefined;
   for (let i = 0; i < retries; i++) {
     try {
