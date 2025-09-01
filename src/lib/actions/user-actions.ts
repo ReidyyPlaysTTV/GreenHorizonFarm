@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import db from '../db';
@@ -19,7 +20,7 @@ async function createUsersTableIfNeeded() {
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     username VARCHAR(255) NOT NULL UNIQUE,
                     password_hash VARCHAR(255) NOT NULL,
-                    role VARCHAR(50) NOT NULL DEFAULT 'User',
+                    roles JSON NOT NULL,
                     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     avatarUrl VARCHAR(255),
                     status ENUM('Active', 'Banned') NOT NULL DEFAULT 'Active'
@@ -33,6 +34,19 @@ async function createUsersTableIfNeeded() {
             if (Array.isArray(statusColumns) && statusColumns.length === 0) {
                  await connection.query("ALTER TABLE users ADD COLUMN status ENUM('Active', 'Banned') NOT NULL DEFAULT 'Active'");
             }
+             const [roleColumns] = await connection.query("SHOW COLUMNS FROM users LIKE 'role'");
+             if (Array.isArray(roleColumns) && roleColumns.length > 0) {
+                // Check if old role column exists, if so migrate data and drop it
+                 const [oldRoleUsers] = await connection.query('SELECT id, role FROM users WHERE role IS NOT NULL');
+                 if(Array.isArray(oldRoleUsers) && oldRoleUsers.length > 0) {
+                     await connection.query("ALTER TABLE users ADD COLUMN roles JSON;");
+                     for (const user of (oldRoleUsers as any[])) {
+                        await connection.query('UPDATE users SET roles = ? WHERE id = ?', [JSON.stringify([user.role]), user.id]);
+                     }
+                     await connection.query("ALTER TABLE users DROP COLUMN role;");
+                 }
+             }
+
         } finally {
             connection.release();
         }
@@ -61,7 +75,7 @@ export async function getUsers(): Promise<AppUser[]> {
         await createUsersTableIfNeeded();
         const connection = await db.getConnection();
         try {
-            const [users] = await connection.query('SELECT id, username, role, createdAt, avatarUrl, status FROM users ORDER BY username ASC');
+            const [users] = await connection.query('SELECT id, username, roles, createdAt, avatarUrl, status FROM users ORDER BY username ASC');
             if (!Array.isArray(users)) {
                 return [];
             }
@@ -76,8 +90,18 @@ export async function getUsers(): Promise<AppUser[]> {
 
             return (users as any[]).map((u: any) => {
                 const pRecord = personnelMap.get(u.username);
+                let userRoles = [];
+                if(typeof u.roles === 'string') {
+                    try {
+                        userRoles = JSON.parse(u.roles);
+                    } catch(e) { console.error('Failed to parse roles for user', u.username)}
+                } else if (Array.isArray(u.roles)) {
+                    userRoles = u.roles;
+                }
+
                 return {
                     ...u,
+                    roles: userRoles,
                     createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined,
                     personnel: pRecord || null
                 };
@@ -127,59 +151,21 @@ export async function loginUser(credentials: unknown) {
         
         await connection.commit();
 
-        return { success: true, user: { id: user.id, username: user.username, role: user.role } };
+        let userRoles = [];
+        if(typeof user.roles === 'string') {
+            try {
+                userRoles = JSON.parse(user.roles);
+            } catch(e) { console.error('Failed to parse roles for user', user.username)}
+        } else if (Array.isArray(user.roles)) {
+            userRoles = user.roles;
+        }
+
+        return { success: true, user: { id: user.id, username: user.username, roles: userRoles } };
 
     } catch (error) {
         await connection.rollback();
         console.error("Login failed:", error);
         return { success: false, message: 'An internal server error occurred.' };
-    } finally {
-        connection.release();
-    }
-}
-
-
-const roleSchema = z.object({
-    role: z.string().min(1, "Role cannot be empty."),
-    user: z.string(),
-});
-
-export async function assignUserRole(userId: string, data: { role: string, user: string }) {
-    const validation = roleSchema.safeParse(data);
-
-    if (!validation.success) {
-        return { success: false, message: 'Invalid role specified.' };
-    }
-    const { role, user } = validation.data;
-    
-    const hasPermission = await checkPermissions(user, 'MANAGE_USERS');
-    if (!hasPermission) {
-        return { success: false, message: 'You do not have permission to perform this action.' };
-    }
-
-    const connection = await db.getConnection();
-
-    try {
-        await connection.beginTransaction();
-
-        const [userRows] = await connection.query('SELECT username FROM users WHERE id = ?', [userId]);
-        const targetUsername = (userRows as any)[0]?.username || 'Unknown User';
-
-        await connection.query(
-            'UPDATE users SET role = ? WHERE id = ?',
-            [role, userId]
-        );
-
-        await logUserAction(user, 'Assign Role', `Assigned role '${role}' to user '${targetUsername}'.`, connection);
-
-        await connection.commit();
-        revalidatePath('/admin');
-        revalidatePath('/logs');
-        return { success: true };
-    } catch (error) {
-        await connection.rollback();
-        console.error('Failed to assign user role:', error);
-        return { success: false, message: 'Database operation failed.' };
     } finally {
         connection.release();
     }
@@ -249,7 +235,7 @@ export async function getAccessRequests(): Promise<AccessRequest[]> {
 const approveRequestSchema = z.object({
     requestId: z.string(),
     username: z.string().min(3),
-    role: z.string(),
+    roles: z.array(z.string()).min(1, "At least one role must be selected."),
     adminUser: z.string(),
 });
 
@@ -258,7 +244,7 @@ export async function approveAccessRequest(data: unknown) {
     if (!validation.success) {
         return { success: false, message: "Invalid data provided." };
     }
-    const { requestId, username, role, adminUser } = validation.data;
+    const { requestId, username, roles, adminUser } = validation.data;
 
     const hasPermission = await checkPermissions(adminUser, 'MANAGE_ACCESS_REQUESTS');
     if (!hasPermission) {
@@ -269,7 +255,6 @@ export async function approveAccessRequest(data: unknown) {
     try {
         await connection.beginTransaction();
 
-        // 1. Get the request details (specifically the password hash)
         const [requestRows] = await connection.query('SELECT * FROM access_requests WHERE id = ?', [requestId]);
         if ((requestRows as any[]).length === 0) {
             throw new Error("Access request not found.");
@@ -278,17 +263,14 @@ export async function approveAccessRequest(data: unknown) {
         const { password_hash, requested_username } = request;
         const newUserId = crypto.randomUUID();
 
-        // 2. Create the user
         await connection.query(
-            'INSERT INTO users (id, username, password_hash, role) VALUES (?, ?, ?, ?)',
-            [newUserId, username, password_hash, role]
+            'INSERT INTO users (id, username, password_hash, roles) VALUES (?, ?, ?, ?)',
+            [newUserId, username, password_hash, JSON.stringify(roles)]
         );
 
-        // 3. Update the request status
         await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Approved', requestId]);
 
-        // 4. Log the action
-        await logUserAction(adminUser, 'Approve Access Request', `Approved request for '${requested_username}' as new user '${username}' with role '${role}'.`, connection);
+        await logUserAction(adminUser, 'Approve Access Request', `Approved request for '${requested_username}' as new user '${username}' with roles '${roles.join(', ')}'.`, connection);
 
         await connection.commit();
         revalidatePath('/admin');
@@ -334,16 +316,16 @@ export async function denyAccessRequest(requestId: string, username: string, adm
 const createUserSchema = z.object({
   username: z.string().min(3),
   password: z.string().min(8),
-  role: z.string(),
+  roles: z.array(z.string()).min(1, "At least one role must be selected."),
   adminUser: z.string(),
 });
 
 export async function createUser(data: unknown) {
   const validation = createUserSchema.safeParse(data);
   if (!validation.success) {
-    return { success: false, message: 'Invalid data provided.' };
+    return { success: false, message: validation.error.errors[0].message };
   }
-  const { username, password, role, adminUser } = validation.data;
+  const { username, password, roles, adminUser } = validation.data;
   
   const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
   if (!hasPermission) {
@@ -359,11 +341,11 @@ export async function createUser(data: unknown) {
     const newUserId = crypto.randomUUID();
     
     await connection.query(
-      'INSERT INTO users (id, username, password_hash, role) VALUES (?, ?, ?, ?)',
-      [newUserId, username, password_hash, role]
+      'INSERT INTO users (id, username, password_hash, roles) VALUES (?, ?, ?, ?)',
+      [newUserId, username, password_hash, JSON.stringify(roles)]
     );
 
-    await logUserAction(adminUser, 'Create User', `Created new user '${username}' with role '${role}'.`, connection);
+    await logUserAction(adminUser, 'Create User', `Created new user '${username}' with roles '${roles.join(', ')}'.`, connection);
     
     await connection.commit();
 
@@ -486,16 +468,16 @@ export async function getReviewedApplicationsCount(userId: string): Promise<numb
 const updateUserSchema = z.object({
     userId: z.string(),
     username: z.string().min(3),
-    role: z.string(),
+    roles: z.array(z.string()).min(1, "At least one role is required."),
     adminUser: z.string(),
 });
 
 export async function updateUser(data: unknown) {
     const validation = updateUserSchema.safeParse(data);
     if (!validation.success) {
-        return { success: false, message: 'Invalid data provided.' };
+        return { success: false, message: validation.error.errors[0].message };
     }
-    const { userId, username, role, adminUser } = validation.data;
+    const { userId, username, roles, adminUser } = validation.data;
     
     const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
     if (!hasPermission) {
@@ -513,11 +495,11 @@ export async function updateUser(data: unknown) {
         }
 
         await connection.query(
-            'UPDATE users SET username = ?, role = ? WHERE id = ?',
-            [username, role, userId]
+            'UPDATE users SET username = ?, roles = ? WHERE id = ?',
+            [username, JSON.stringify(roles), userId]
         );
 
-        await logUserAction(adminUser, 'Update User', `Updated user '${originalUsername}' to username '${username}' and role '${role}'.`, connection);
+        await logUserAction(adminUser, 'Update User', `Updated user '${originalUsername}' to username '${username}' and roles '${roles.join(', ')}'.`, connection);
         
         await connection.commit();
         revalidatePath('/admin');

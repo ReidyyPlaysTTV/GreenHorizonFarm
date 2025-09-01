@@ -29,19 +29,16 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Loader2, Edit } from "lucide-react";
+import { Loader2, Edit, Check } from "lucide-react";
 import { DropdownMenuItem } from "../ui/dropdown-menu";
+import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "../ui/command";
+import { Badge } from "../ui/badge";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters."),
-  role: z.string({ required_error: "Please select a role." }),
+  roles: z.array(z.string()).min(1, "At least one role must be selected."),
 });
 
 interface EditUserDialogProps {
@@ -64,16 +61,18 @@ export function EditUserDialog({ user }: EditUserDialogProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: user.username,
-      role: user.role,
+      roles: user.roles,
     },
   });
+  
+  const selectedRoles = form.watch('roles');
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     const result = await updateUser({
         userId: user.id,
         username: values.username,
-        role: values.role,
+        roles: values.roles,
         adminUser: currentUser,
     });
     
@@ -105,7 +104,7 @@ export function EditUserDialog({ user }: EditUserDialogProps) {
         <DialogHeader>
           <DialogTitle>Edit User: {user.username}</DialogTitle>
           <DialogDescription>
-            Change the user's username or role.
+            Change the user's username or assigned roles.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -125,24 +124,50 @@ export function EditUserDialog({ user }: EditUserDialogProps) {
             />
             <FormField
               control={form.control}
-              name="role"
+              name="roles"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {roles.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {role}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <FormItem className="flex flex-col">
+                  <FormLabel>Roles</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className={cn("w-full justify-between h-auto", !field.value && "text-muted-foreground")}
+                        >
+                          <div className="flex gap-1 flex-wrap">
+                            {selectedRoles.length > 0 ? selectedRoles.map(role => <Badge key={role}>{role}</Badge>) : "Select roles..."}
+                          </div>
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search roles..." className="h-9" />
+                        <CommandEmpty>No roles found.</CommandEmpty>
+                        <CommandGroup>
+                          {roles.map((role) => (
+                            <CommandItem
+                              value={role}
+                              key={role}
+                              onSelect={() => {
+                                const currentRoles = form.getValues("roles");
+                                if (currentRoles.includes(role)) {
+                                  form.setValue("roles", currentRoles.filter((r) => r !== role));
+                                } else {
+                                  form.setValue("roles", [...currentRoles, role]);
+                                }
+                              }}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", field.value.includes(role) ? "opacity-100" : "opacity-0")} />
+                              {role}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}

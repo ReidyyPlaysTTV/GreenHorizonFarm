@@ -1,4 +1,5 @@
 
+
 'use server';
 import type { AppUser, Role, Permission } from "./types";
 import db from "./db";
@@ -15,23 +16,36 @@ export async function checkPermissions(username: string, permission: Permission)
 
     const connection = await db.getConnection();
     try {
-        const [rows] = await connection.query('SELECT role FROM users WHERE username = ?', [username]);
+        const [rows] = await connection.query('SELECT roles FROM users WHERE username = ?', [username]);
         if (!Array.isArray(rows) || rows.length === 0) {
             return false;
         }
-        const user = (rows as AppUser[])[0];
-        const userRole = user.role as Role;
-
-        if (!userRole) return false;
+        
+        let userRoles: Role[] = [];
+        const user = (rows as any)[0];
+        if (typeof user.roles === 'string') {
+            userRoles = JSON.parse(user.roles);
+        } else if (Array.isArray(user.roles)) {
+            userRoles = user.roles;
+        }
+        
+        if (!userRoles || userRoles.length === 0) return false;
 
         // Admins and Developers have all permissions implicitly
-        if (userRole === 'Administrator' || userRole === 'Developer') {
+        if (userRoles.includes('Administrator') || userRoles.includes('Developer')) {
             return true;
         }
 
         const permissionsMap = await getPermissionsMap();
-        const userPermissions = permissionsMap[userRole];
-        return userPermissions?.includes(permission) ?? false;
+        
+        for (const role of userRoles) {
+            const rolePermissions = permissionsMap[role];
+            if (rolePermissions?.includes(permission)) {
+                return true;
+            }
+        }
+
+        return false;
 
     } catch (error) {
         console.error("Permission check failed:", error);

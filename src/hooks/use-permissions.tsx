@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
@@ -11,7 +12,7 @@ import { usePathname } from "next/navigation";
 type PermissionsMap = Record<Role, Permission[]>;
 
 type PermissionsContextType = {
-    userRole: Role | null;
+    userRoles: Role[] | null;
     hasPermission: (permission: Permission) => boolean;
     permissionsMap: PermissionsMap | null;
 };
@@ -19,7 +20,7 @@ type PermissionsContextType = {
 const PermissionsContext = createContext<PermissionsContextType | null>(null);
 
 export function PermissionsProvider({ children }: { children: React.ReactNode }) {
-    const [userRole, setUserRole] = useState<Role | null>(null);
+    const [userRoles, setUserRoles] = useState<Role[] | null>(null);
     const [permissionsMap, setPermissionsMap] = useState<PermissionsMap | null>(null);
     const pathname = usePathname();
 
@@ -37,19 +38,19 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
 
                 if (loggedInUser) {
                     if (loggedInUser.toLowerCase() === 'admin') {
-                        setUserRole("Administrator");
+                        setUserRoles(["Administrator"]);
                         return;
                     }
                     try {
                         const allUsers: AppUser[] = await getUsers();
                         const currentUser = allUsers.find((u: any) => u.username === loggedInUser);
-                        setUserRole(currentUser?.role || "User");
+                        setUserRoles(currentUser?.roles || ["User"]);
                     } catch (e) {
                         console.error("Failed to fetch user roles, defaulting to 'User'", e);
-                        setUserRole("User");
+                        setUserRoles(["User"]);
                     }
                 } else {
-                    setUserRole(null); // No user logged in
+                    setUserRoles(null); // No user logged in
                 }
             }
         };
@@ -57,20 +58,24 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
     }, [pathname]);
 
     const hasPermission = (permission: Permission) => {
-        if (!userRole || !permissionsMap) return false;
+        if (!userRoles || !permissionsMap) return false;
         
-        if (userRole === "Developer" || userRole === "Administrator") {
+        if (userRoles.includes("Developer") || userRoles.includes("Administrator")) {
             return true;
         }
+        
+        for (const role of userRoles) {
+            const userPermissions = permissionsMap[role];
+            if (userPermissions?.includes(permission)) {
+                return true;
+            }
+        }
 
-        const userPermissions = permissionsMap[userRole];
-        if (!userPermissions) return false;
-
-        return userPermissions.includes(permission);
+        return false;
     };
 
     return (
-        <PermissionsContext.Provider value={{ userRole, hasPermission, permissionsMap }}>
+        <PermissionsContext.Provider value={{ userRoles, hasPermission, permissionsMap }}>
             {children}
         </PermissionsContext.Provider>
     );

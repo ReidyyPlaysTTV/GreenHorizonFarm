@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { AppUser } from "@/lib/types";
@@ -74,7 +75,7 @@ export function UserManagement({ users }: UserManagementProps) {
             <CardContent>
                 <Accordion type="multiple" className="w-full" defaultValue={roles}>
                     {roles.map(role => {
-                        const usersInRole = activeUsers.filter(u => u.role === role);
+                        const usersInRole = activeUsers.filter(u => u.roles.includes(role));
                         if (usersInRole.length === 0) return null;
 
                         return (
@@ -88,6 +89,7 @@ export function UserManagement({ users }: UserManagementProps) {
                                             <TableRow className="border-gray-700">
                                                 <TableHead className="w-[50px]"></TableHead>
                                                 <TableHead className="text-white">Username</TableHead>
+                                                <TableHead className="text-white">Roles</TableHead>
                                                 <TableHead className="text-white">Status</TableHead>
                                                 <TableHead className="text-right text-white">Actions</TableHead>
                                             </TableRow>
@@ -102,6 +104,11 @@ export function UserManagement({ users }: UserManagementProps) {
                                                         </Avatar>
                                                     </TableCell>
                                                     <TableCell className="font-medium">{user.username}</TableCell>
+                                                    <TableCell>
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {user.roles.map(r => <Badge key={r} variant="secondary" className="bg-gray-700 text-white">{r}</Badge>)}
+                                                        </div>
+                                                    </TableCell>
                                                     <TableCell>
                                                         <Badge variant={user.status === 'Active' ? 'secondary' : 'destructive'} className="bg-gray-700 text-white">
                                                             {user.status}

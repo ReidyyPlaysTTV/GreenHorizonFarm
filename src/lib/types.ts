@@ -135,7 +135,7 @@ export interface Suggestion {
 export interface AppUser {
   id: string;
   username: string;
-  role: Role;
+  roles: Role[];
   status: UserStatus;
   createdAt?: string;
   avatarUrl?: string;

@@ -10,6 +10,7 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { roles } from "@/lib/data";
+import { Badge } from "@/components/ui/badge";
 
 const getRoleClass = (role: string) => {
     switch (role) {
@@ -57,14 +58,18 @@ const UserCard = ({ user }: { user: AppUser }) => (
                 <span className="text-muted-foreground">Department</span>
                 <span className="font-medium">{user.personnel?.department || "Department of Corrections"}</span>
             </div>
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex flex-col items-start text-sm gap-2">
                 <span className="text-muted-foreground flex items-center gap-1.5">
                     <Shield className="h-4 w-4" />
-                    Permission Group
+                    Permission Groups
                 </span>
-                <span className={cn("font-bold text-base", getRoleClass(user.role))}>
-                    {user.role}
-                </span>
+                <div className="flex flex-wrap gap-1">
+                    {user.roles.map(role => (
+                        <Badge key={role} className={cn("font-bold", getRoleClass(role))}>
+                            {role}
+                        </Badge>
+                    ))}
+                </div>
             </div>
         </CardContent>
     </Card>
@@ -88,7 +93,7 @@ export default async function UsersPage() {
 
       <div className="space-y-8">
         {roles.map((role) => {
-          const usersInRole = users.filter(user => user.role === role);
+          const usersInRole = users.filter(user => user.roles.includes(role));
           if (usersInRole.length === 0) return null;
 
           return (

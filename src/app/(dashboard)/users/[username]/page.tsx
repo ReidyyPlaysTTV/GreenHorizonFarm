@@ -168,9 +168,13 @@ export default function UserProfilePage() {
                             <span className="font-medium">{personnelRecord.discordUsername}</span>
                         </div>
                     )}
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Permission Group</span>
-                         <span className={cn("font-bold text-lg", getRoleClass(user.role))}>{user.role}</span>
+                    <div className="flex flex-col items-start gap-2">
+                        <span className="text-muted-foreground">Permission Groups</span>
+                         <div className="flex flex-wrap gap-2">
+                             {user.roles.map(role => (
+                                <Badge key={role} className={cn("font-bold text-base", getRoleClass(role))}>{role}</Badge>
+                             ))}
+                         </div>
                     </div>
                 </CardContent>
             </Card>

@@ -29,18 +29,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "../ui/command";
+import { cn } from "@/lib/utils";
+import { Badge } from "../ui/badge";
 
 const formSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters."),
-  role: z.string({ required_error: "Please select a role." }),
+  roles: z.array(z.string()).min(1, "At least one role must be selected."),
 });
 
 interface ApproveRequestDialogProps {
@@ -63,16 +60,18 @@ export function ApproveRequestDialog({ request }: ApproveRequestDialogProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: request.requested_username,
-      role: "User",
+      roles: ["User"],
     },
   });
+  
+  const selectedRoles = form.watch('roles');
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     const result = await approveAccessRequest({
         requestId: request.id,
         username: values.username,
-        role: values.role,
+        roles: values.roles,
         adminUser: currentUser,
     });
     
@@ -102,7 +101,7 @@ export function ApproveRequestDialog({ request }: ApproveRequestDialogProps) {
         <DialogHeader>
           <DialogTitle>Approve Access Request</DialogTitle>
           <DialogDescription>
-            Confirm username and assign a role to create the user account.
+            Confirm username and assign roles to create the user account.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -120,30 +119,56 @@ export function ApproveRequestDialog({ request }: ApproveRequestDialogProps) {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {roles.map((rank) => (
-                        <SelectItem key={rank} value={rank}>
-                          {rank}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+             <FormField
+                    control={form.control}
+                    name="roles"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Roles</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            className={cn("w-full justify-between h-auto", !field.value && "text-muted-foreground")}
+                                        >
+                                            <div className="flex gap-1 flex-wrap">
+                                                {selectedRoles.length > 0 ? selectedRoles.map(role => <Badge key={role}>{role}</Badge>) : "Select roles..."}
+                                            </div>
+                                        </Button>
+                                    </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-full p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search roles..." className="h-9" />
+                                        <CommandEmpty>No roles found.</CommandEmpty>
+                                        <CommandGroup>
+                                            {roles.map((role) => (
+                                                <CommandItem
+                                                    value={role}
+                                                    key={role}
+                                                    onSelect={() => {
+                                                        const currentRoles = form.getValues("roles");
+                                                        if (currentRoles.includes(role)) {
+                                                            form.setValue("roles", currentRoles.filter((r) => r !== role));
+                                                        } else {
+                                                            form.setValue("roles", [...currentRoles, role]);
+                                                        }
+                                                    }}
+                                                >
+                                                    <Check className={cn("mr-2 h-4 w-4", field.value.includes(role) ? "opacity-100" : "opacity-0")}/>
+                                                    {role}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isLoading} className="bg-green-600 hover:bg-green-700">
