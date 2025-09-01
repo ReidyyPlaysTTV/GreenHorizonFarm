@@ -613,3 +613,40 @@ export async function resetUserPassword(data: unknown) {
         connection.release();
     }
 }
+
+export async function deleteUser(userId: string, adminUser: string) {
+    const hasPermission = await checkPermissions(adminUser, 'DELETE_USERS');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
+    
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        const [userRows] = await connection.query('SELECT username FROM users WHERE id = ?', [userId]);
+        const username = (userRows as any)[0]?.username;
+        if (!username) {
+            throw new Error("User not found.");
+        }
+
+        if (username === adminUser) {
+            throw new Error("You cannot delete your own account.");
+        }
+
+        await connection.query('DELETE FROM users WHERE id = ?', [userId]);
+        await logUserAction(adminUser, 'Delete User', `Permanently deleted user '${username}' (ID: ${userId}).`, connection);
+        
+        await connection.commit();
+        revalidatePath('/admin');
+        revalidatePath('/logs');
+        return { success: true, message: `User '${username}' has been deleted.` };
+
+    } catch (error: any) {
+        await connection.rollback();
+        console.error("Failed to delete user:", error);
+        return { success: false, message: error.message || 'Database operation failed.' };
+    } finally {
+        connection.release();
+    }
+}

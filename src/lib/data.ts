@@ -77,6 +77,7 @@ export const permissions: Permission[] = [
     'EDIT_APPLICATION_FORM',
     'MANAGE_BLACKLIST',
     'MANAGE_USERS', // Create users, assign roles
+    'DELETE_USERS',
     'MANAGE_ROLES_PERMISSIONS',
     'MANAGE_ACCESS_REQUESTS',
     'MANAGE_APP_SETTINGS',
@@ -104,6 +105,7 @@ export const permissionDescriptions: Record<Permission, string> = {
     EDIT_APPLICATION_FORM: "Edit Application Form",
     MANAGE_BLACKLIST: "Manage DOC Blacklist",
     MANAGE_USERS: "Manage Users & Roles",
+    DELETE_USERS: "Permanently Delete Users",
     MANAGE_ROLES_PERMISSIONS: "Manage Permission Groups",
     MANAGE_ACCESS_REQUESTS: "Manage Access Requests",
     MANAGE_APP_SETTINGS: "Manage Application Settings (e.g. SOPs)",

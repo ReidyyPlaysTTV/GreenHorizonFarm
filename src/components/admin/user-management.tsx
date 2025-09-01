@@ -6,13 +6,13 @@ import type { AppUser } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { setUserStatus } from "@/lib/actions";
+import { setUserStatus, deleteUser } from "@/lib/actions";
 import { useState, useEffect } from "react";
-import { Loader2, ShieldOff, MoreHorizontal } from "lucide-react";
+import { Loader2, ShieldOff, MoreHorizontal, Trash2 } from "lucide-react";
 import { AddUserForm } from "./add-user-form";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "../ui/dropdown-menu";
 import { EditUserDialog } from "./edit-user-dialog";
 import { Badge } from "../ui/badge";
 import { ResetPasswordDialog } from "./reset-password-dialog";
@@ -20,6 +20,7 @@ import { roles } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { User } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
 
 interface UserManagementProps {
     users: AppUser[];
@@ -31,6 +32,7 @@ export function UserManagement({ users }: UserManagementProps) {
     const [currentUser, setCurrentUser] = useState("System");
     const { hasPermission } = usePermissions();
     const canManageUsers = hasPermission('MANAGE_USERS');
+    const canDeleteUsers = hasPermission('DELETE_USERS');
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -60,6 +62,30 @@ export function UserManagement({ users }: UserManagementProps) {
             setIsUpdating(prev => ({...prev, [userId]: false}));
         }
     }
+
+    const handleDelete = async (userId: string) => {
+        setIsUpdating(prev => ({...prev, [userId]: true}));
+         try {
+            const result = await deleteUser(userId, currentUser);
+            if (result.success) {
+                toast({
+                    title: "User Deleted",
+                    description: result.message,
+                });
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Delete Failed",
+                description: error.message || `Could not delete the user.`,
+            });
+        } finally {
+            setIsUpdating(prev => ({...prev, [userId]: false}));
+        }
+    }
+
 
     const activeUsers = users.filter(u => u.status === 'Active');
 
@@ -116,7 +142,7 @@ export function UserManagement({ users }: UserManagementProps) {
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         {isUpdating[user.id] ? <Loader2 className="h-4 w-4 animate-spin ml-auto" /> : (
-                                                            canManageUsers && user.username !== currentUser && (
+                                                             user.username !== currentUser && (
                                                                 <DropdownMenu>
                                                                     <DropdownMenuTrigger asChild>
                                                                         <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-800">
@@ -124,12 +150,37 @@ export function UserManagement({ users }: UserManagementProps) {
                                                                         </Button>
                                                                     </DropdownMenuTrigger>
                                                                     <DropdownMenuContent>
-                                                                        <EditUserDialog user={user} />
-                                                                        <ResetPasswordDialog user={user} />
-                                                                        <DropdownMenuItem onClick={() => handleSetStatus(user.id, 'Banned')} className="text-destructive focus:text-destructive">
-                                                                            <ShieldOff className="mr-2 h-4 w-4" />
-                                                                            Ban User
-                                                                        </DropdownMenuItem>
+                                                                        {canManageUsers && <>
+                                                                            <EditUserDialog user={user} />
+                                                                            <ResetPasswordDialog user={user} />
+                                                                            <DropdownMenuItem onClick={() => handleSetStatus(user.id, 'Banned')} className="text-destructive focus:text-destructive">
+                                                                                <ShieldOff className="mr-2 h-4 w-4" />
+                                                                                Ban User
+                                                                            </DropdownMenuItem>
+                                                                        </>}
+                                                                        {canDeleteUsers && <>
+                                                                            <DropdownMenuSeparator />
+                                                                            <AlertDialog>
+                                                                                <AlertDialogTrigger asChild>
+                                                                                     <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                                                                         <Trash2 className="mr-2 h-4 w-4" />
+                                                                                         Delete User
+                                                                                     </DropdownMenuItem>
+                                                                                </AlertDialogTrigger>
+                                                                                <AlertDialogContent>
+                                                                                    <AlertDialogHeader>
+                                                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                                                        <AlertDialogDescription>
+                                                                                            This action cannot be undone. This will permanently delete the user account for <span className="font-bold">{user.username}</span> and all of their associated data.
+                                                                                        </AlertDialogDescription>
+                                                                                    </AlertDialogHeader>
+                                                                                    <AlertDialogFooter>
+                                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                                        <AlertDialogAction onClick={() => handleDelete(user.id)} className="bg-destructive hover:bg-destructive/80">Delete User</AlertDialogAction>
+                                                                                    </AlertDialogFooter>
+                                                                                </AlertDialogContent>
+                                                                            </AlertDialog>
+                                                                        </>}
                                                                     </DropdownMenuContent>
                                                                 </DropdownMenu>
                                                             )

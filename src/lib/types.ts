@@ -26,6 +26,7 @@ export const permissions = [
     'EDIT_APPLICATION_FORM',
     'MANAGE_BLACKLIST',
     'MANAGE_USERS', // Create users, assign roles
+    'DELETE_USERS',
     'MANAGE_ROLES_PERMISSIONS',
     'MANAGE_ACCESS_REQUESTS',
     'MANAGE_APP_SETTINGS',
