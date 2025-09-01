@@ -5,7 +5,7 @@ import { seedDatabase } from './db-seed';
 import { seedRolePermissions } from './actions/permission-actions';
 import type { Pool } from 'mysql2/promise';
 
-const DATABASE_URL = "mysql://zap1311701-2:J2IAJKgRfnrCphFq@mysql-mariadb16-lon-101.zap-srv.com/zap1311701-2";
+const DATABASE_URL = "mysql://zap1311701-4:YSurxxoqcMc22YnB@mysql-mariadb16-lon-101.zap-srv.com/zap1311701-4";
 
 if (!DATABASE_URL) {
   throw new Error('DATABASE_URL is not set.');
@@ -103,26 +103,5 @@ Promise.all([
 ]).catch(err => {
     console.error("Failed to setup and seed database:", err);
 });
-
-// Helper function to retry database operations
-export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 50): Promise<T> {
-  let lastError: Error | undefined;
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn();
-    } catch (error: any) {
-      lastError = error;
-      if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'PROTOCOL_CONNECTION_LOST') {
-        console.warn(`Database connection issue (${error.code}). Retry attempt ${i + 1}/${retries}...`);
-        await new Promise(res => setTimeout(res, delay * (i + 1))); // Incremental backoff
-      } else {
-        // Don't retry on other errors
-        throw error;
-      }
-    }
-  }
-  console.error("Database operation failed after all retries.", lastError);
-  throw lastError;
-}
 
 export default pool;
