@@ -82,6 +82,7 @@ export const permissions: Permission[] = [
     'MANAGE_ANNOUNCEMENTS',
     'MANAGE_GALLERY',
     'MANAGE_CHANGELOGS',
+    'BYPASS_MAINTENANCE_MODE',
 ];
 
 export const permissionDescriptions: Record<Permission, string> = {
@@ -109,6 +110,7 @@ export const permissionDescriptions: Record<Permission, string> = {
     MANAGE_GALLERY: "Manage Dashboard Photo Gallery",
     VIEW_CHANGELOGS: "View Changelogs Page",
     MANAGE_CHANGELOGS: "Create and Delete Changelogs",
+    BYPASS_MAINTENANCE_MODE: "Bypass Maintenance Mode",
 };
 
 

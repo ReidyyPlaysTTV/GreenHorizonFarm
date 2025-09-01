@@ -31,6 +31,7 @@ export const permissions = [
     'MANAGE_ANNOUNCEMENTS',
     'MANAGE_GALLERY',
     'MANAGE_CHANGELOGS',
+    'BYPASS_MAINTENANCE_MODE',
 ] as const;
 export type Permission = typeof permissions[number];
 

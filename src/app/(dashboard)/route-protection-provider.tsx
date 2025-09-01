@@ -2,31 +2,24 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getMaintenanceMode } from "@/lib/actions/settings-actions";
-import { getUsers } from "@/lib/actions";
+import { checkPermissions } from "@/lib/permissions";
 
 export async function RouteProtectionProvider({ children }: { children: React.ReactNode }) {
     const headersList = headers();
     const loggedInUserCookie = headersList.get('cookie')?.split('; ').find(row => row.startsWith('loggedInUser='))?.split('=')[1];
     
-    // Maintenance mode is effectively disabled by not checking for it.
-    // const isMaintenanceMode = await getMaintenanceMode();
-    const users = await getUsers();
-    const currentUser = loggedInUserCookie ? users.find(u => u.username === loggedInUserCookie) : null;
+    const isMaintenanceMode = await getMaintenanceMode();
 
-    // if (isMaintenanceMode) {
-    //     let canBypass = false;
-    //     if (currentUser && (currentUser.role === 'Developer' || currentUser.role === 'Administrator')) {
-    //         canBypass = true;
-    //     }
-        
-    //     if (!canBypass) {
-    //         redirect('/maintenance');
-    //     }
-    // }
-
-    if (currentUser?.status === 'Banned') {
-        redirect('/banned');
+    if (isMaintenanceMode && loggedInUserCookie) {
+        const canBypass = await checkPermissions(loggedInUserCookie, 'BYPASS_MAINTENANCE_MODE');
+        if (!canBypass) {
+            redirect('/maintenance');
+        }
     }
+    
+    // This part is handled by the AuthProvider on the client side now
+    // to avoid issues with headers and server components.
+    // We still need the cookie for the maintenance check above.
 
     return <>{children}</>;
 }
