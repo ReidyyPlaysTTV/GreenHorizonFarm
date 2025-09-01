@@ -73,9 +73,9 @@ export default function UserProfilePage() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-       if (typeof window !== 'undefined') {
-        setLoggedInUser(localStorage.getItem('loggedInUser'));
-      }
+      const loggedInUserFromStorage = localStorage.getItem('loggedInUser');
+      setLoggedInUser(loggedInUserFromStorage);
+
       try {
         const users = await getUsers();
         const foundUser = users.find(u => u.username === decodedUsername);

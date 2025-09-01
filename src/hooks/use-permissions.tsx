@@ -26,32 +26,30 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
 
     useEffect(() => {
         const fetchUserAndPermissions = async () => {
-             if (typeof window !== 'undefined') {
-                const loggedInUser = localStorage.getItem("loggedInUser");
-                
-                try {
-                    const fetchedMap = await getPermissionsMap();
-                    setPermissionsMap(fetchedMap);
-                } catch(e) {
-                     console.error("Failed to fetch permissions map", e);
-                }
+             const loggedInUser = localStorage.getItem("loggedInUser");
+            
+            try {
+                const fetchedMap = await getPermissionsMap();
+                setPermissionsMap(fetchedMap);
+            } catch(e) {
+                 console.error("Failed to fetch permissions map", e);
+            }
 
-                if (loggedInUser) {
-                    if (loggedInUser.toLowerCase() === 'admin') {
-                        setUserRoles(["Administrator"]);
-                        return;
-                    }
-                    try {
-                        const allUsers: AppUser[] = await getUsers();
-                        const currentUser = allUsers.find((u: any) => u.username === loggedInUser);
-                        setUserRoles(currentUser?.roles || ["User"]);
-                    } catch (e) {
-                        console.error("Failed to fetch user roles, defaulting to 'User'", e);
-                        setUserRoles(["User"]);
-                    }
-                } else {
-                    setUserRoles(null); // No user logged in
+            if (loggedInUser) {
+                if (loggedInUser.toLowerCase() === 'admin') {
+                    setUserRoles(["Administrator"]);
+                    return;
                 }
+                try {
+                    const allUsers: AppUser[] = await getUsers();
+                    const currentUser = allUsers.find((u: any) => u.username === loggedInUser);
+                    setUserRoles(currentUser?.roles || ["User"]);
+                } catch (e) {
+                    console.error("Failed to fetch user roles, defaulting to 'User'", e);
+                    setUserRoles(["User"]);
+                }
+            } else {
+                setUserRoles(null); // No user logged in
             }
         };
         fetchUserAndPermissions();
