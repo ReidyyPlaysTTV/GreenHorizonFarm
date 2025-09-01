@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useIdleTimeout } from "@/hooks/use-idle-timeout";
@@ -18,7 +19,7 @@ export function TimedOutProvider({ children }: { children: React.ReactNode }) {
         router.push('/');
     };
 
-    useIdleTimeout({ onIdle: handleIdle, idleTime: 15 }); // 15 minutes
+    // useIdleTimeout({ onIdle: handleIdle, idleTime: 15 }); // 15 minutes
 
     return <>{children}</>;
 }
