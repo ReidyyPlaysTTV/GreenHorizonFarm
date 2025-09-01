@@ -2,6 +2,7 @@
 
 
 
+
 'use server';
 
 import db, { withRetry } from '../db';
@@ -644,4 +645,3 @@ export async function deleteUser(userId: string, adminUser: string) {
         connection.release();
     }
 }
-

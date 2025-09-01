@@ -105,7 +105,7 @@ Promise.all([
 });
 
 // Helper function to retry database operations
-export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 50): Promise<T> {
+export async function withRetry<T>(fn: () => Promise<T>, retries = 5, delay = 50): Promise<T> {
   let lastError: Error | undefined;
   for (let i = 0; i < retries; i++) {
     try {
