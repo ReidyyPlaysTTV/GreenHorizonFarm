@@ -8,20 +8,21 @@ export async function RouteProtectionProvider({ children }: { children: React.Re
     const headersList = headers();
     const loggedInUserCookie = headersList.get('cookie')?.split('; ').find(row => row.startsWith('loggedInUser='))?.split('=')[1];
     
-    const isMaintenanceMode = await getMaintenanceMode();
+    // Maintenance mode is effectively disabled by not checking for it.
+    // const isMaintenanceMode = await getMaintenanceMode();
     const users = await getUsers();
     const currentUser = loggedInUserCookie ? users.find(u => u.username === loggedInUserCookie) : null;
 
-    if (isMaintenanceMode) {
-        let canBypass = false;
-        if (currentUser && (currentUser.role === 'Developer' || currentUser.role === 'Administrator')) {
-            canBypass = true;
-        }
+    // if (isMaintenanceMode) {
+    //     let canBypass = false;
+    //     if (currentUser && (currentUser.role === 'Developer' || currentUser.role === 'Administrator')) {
+    //         canBypass = true;
+    //     }
         
-        if (!canBypass) {
-            redirect('/maintenance');
-        }
-    }
+    //     if (!canBypass) {
+    //         redirect('/maintenance');
+    //     }
+    // }
 
     if (currentUser?.status === 'Banned') {
         redirect('/banned');
