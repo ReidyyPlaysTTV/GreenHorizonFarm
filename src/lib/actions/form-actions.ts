@@ -59,25 +59,51 @@ export async function saveApplicationFormFields(fields: FormFieldData[], user: s
     await connection.beginTransaction();
 
     try {
-        // Clear existing fields and options
-        await connection.query('DELETE FROM application_field_options');
-        await connection.query('DELETE FROM application_form_fields');
+        // Get existing field and option IDs to determine which ones to delete
+        const [existingFieldRows] = await connection.query('SELECT id FROM application_form_fields');
+        const existingFieldIds = Array.isArray(existingFieldRows) ? (existingFieldRows as any[]).map(r => r.id) : [];
+        const incomingFieldIds = validatedFields.map(f => f.id).filter(id => id && !id.startsWith('new-'));
+        const fieldsToDelete = existingFieldIds.filter(id => !incomingFieldIds.includes(id));
+        
+        if (fieldsToDelete.length > 0) {
+            const placeholders = fieldsToDelete.map(() => '?').join(',');
+            // Must delete from options first due to foreign key constraints
+            await connection.query(`DELETE FROM application_field_options WHERE field_id IN (${placeholders})`, fieldsToDelete);
+            await connection.query(`DELETE FROM application_form_fields WHERE id IN (${placeholders})`, fieldsToDelete);
+        }
 
         for (const [index, field] of validatedFields.entries()) {
-            // Use existing ID or generate a new one. `new-` prefix indicates a temp client-side ID.
-            const fieldId = field.id && !field.id.startsWith('new-') ? field.id : crypto.randomUUID();
-            
+            const isNewField = !field.id || field.id.startsWith('new-');
+            const fieldId = isNewField ? crypto.randomUUID() : field.id;
+
             await connection.query(
-                'INSERT INTO application_form_fields (id, type, label, `field_order`, required) VALUES (?, ?, ?, ?, ?)',
+                `INSERT INTO application_form_fields (id, type, label, \`field_order\`, required) 
+                 VALUES (?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE 
+                 type = VALUES(type), label = VALUES(label), \`field_order\` = VALUES(\`field_order\`), required = VALUES(required)`,
                 [fieldId, field.type, field.label, index, field.required]
             );
 
             if (field.type === 'select' && field.options) {
+                // First, remove options that are no longer present for this field
+                const incomingOptionIds = field.options.map(o => o.id).filter(id => id && !id.startsWith('new-'));
+                if (incomingOptionIds.length > 0) {
+                    const deletePlaceholders = incomingOptionIds.map(() => '?').join(',');
+                     await connection.query(`DELETE FROM application_field_options WHERE field_id = ? AND id NOT IN (${deletePlaceholders})`, [fieldId, ...incomingOptionIds]);
+                } else {
+                    // If there are no incoming options, delete all existing options for this field
+                    await connection.query('DELETE FROM application_field_options WHERE field_id = ?', [fieldId]);
+                }
+
+
                 for (const option of field.options) {
                     if (option.value) { // Don't save empty options
-                         const optionId = option.id && !option.id.startsWith('new-') ? option.id : crypto.randomUUID();
+                         const isNewOption = !option.id || option.id.startsWith('new-');
+                         const optionId = isNewOption ? crypto.randomUUID() : option.id;
                         await connection.query(
-                            'INSERT INTO application_field_options (id, field_id, value) VALUES (?, ?, ?)',
+                            `INSERT INTO application_field_options (id, field_id, value) 
+                             VALUES (?, ?, ?)
+                             ON DUPLICATE KEY UPDATE value = VALUES(value)`,
                             [optionId, fieldId, option.value]
                         );
                     }
