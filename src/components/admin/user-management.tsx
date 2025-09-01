@@ -24,21 +24,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 interface UserManagementProps {
     users: AppUser[];
+    currentUser: string;
 }
 
-export function UserManagement({ users }: UserManagementProps) {
+export function UserManagement({ users, currentUser }: UserManagementProps) {
     const { toast } = useToast();
     const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
-    const [currentUser, setCurrentUser] = useState("System");
     const { hasPermission } = usePermissions();
     const canManageUsers = hasPermission('MANAGE_USERS');
     const canDeleteUsers = hasPermission('DELETE_USERS');
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-        setCurrentUser(localStorage.getItem('loggedInUser') || "System");
-        }
-    }, []);
 
     const handleSetStatus = async (userId: string, status: 'Active' | 'Banned') => {
         setIsUpdating(prev => ({...prev, [userId]: true}));

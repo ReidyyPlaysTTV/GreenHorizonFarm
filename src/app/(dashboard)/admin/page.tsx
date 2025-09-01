@@ -1,5 +1,7 @@
 
+"use client";
 
+import { useState, useEffect } from 'react';
 import { UserManagement } from "@/components/admin/user-management";
 import { PermissionManagement } from "@/components/admin/permission-management";
 import { DeveloperPanel } from "@/components/admin/developer-panel";
@@ -9,28 +11,77 @@ import { RefreshButton } from "@/components/layout/refresh-button";
 import { AccessRequestManagement } from "@/components/admin/access-request-management";
 import { SettingsManagement } from "@/components/admin/settings-management";
 import { BannedUsersManagement } from "@/components/admin/banned-users-management";
-import { checkPermissions } from "@/lib/permissions";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { usePermissions } from "@/hooks/use-permissions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, Loader2 } from "lucide-react";
 import Link from "next/link";
+import type { AppUser, BugReport, Suggestion, AccessRequest } from '@/lib/types';
 
-export default async function AdminPage() {
-  const headersList = headers();
-  const cookieHeader = headersList.get('cookie');
-  const loggedInUser = cookieHeader
-      ? decodeURIComponent(cookieHeader.split('; ').find(row => row.startsWith('loggedInUser='))?.split('=')[1] || '')
-      : undefined;
+export default function AdminPage() {
+  const { hasPermission, userRoles } = usePermissions();
+  const [isLoading, setIsLoading] = useState(true);
+  const [data, setData] = useState<{
+    users: AppUser[];
+    bugReports: BugReport[];
+    suggestions: Suggestion[];
+    accessRequests: AccessRequest[];
+    sopLink: string | null;
+    applicationsOpen: boolean;
+    loginBgImage: string;
+    isMaintenanceMode: boolean;
+  } | null>(null);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
 
-  if (!loggedInUser) {
-    // Should be caught by the AuthProvider, but as a fallback
-    redirect('/');
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        setCurrentUser(localStorage.getItem('loggedInUser'));
+    }
+  }, []);
+
+  useEffect(() => {
+    // Wait until the user's roles have been determined.
+    if (userRoles === null) {
+      return;
+    }
+
+    const canAccess = hasPermission('ACCESS_ADMIN_PANEL');
+    if (!canAccess) {
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        const [users, bugReports, suggestions, accessRequests, sopLink, applicationsOpen, loginBgImage, isMaintenanceMode] = await Promise.all([
+          getUsers(),
+          getBugReports(),
+          getSuggestions(),
+          getAccessRequests(),
+          getSopLink(),
+          getApplicationStatus(),
+          getLoginBackgroundImage(),
+          getMaintenanceMode(),
+        ]);
+        setData({ users, bugReports, suggestions, accessRequests, sopLink, applicationsOpen, loginBgImage, isMaintenanceMode });
+      } catch (error) {
+        console.error("Failed to load admin data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [userRoles, hasPermission]);
+  
+  if (isLoading) {
+    return (
+        <div className="flex h-full w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+    );
   }
 
-  const hasAccess = await checkPermissions(loggedInUser, 'ACCESS_ADMIN_PANEL');
-
-  if (!hasAccess) {
+  if (!hasPermission('ACCESS_ADMIN_PANEL')) {
     return (
         <div className="container mx-auto p-4 md:p-8">
             <Alert variant="destructive">
@@ -47,17 +98,22 @@ export default async function AdminPage() {
         </div>
     );
   }
+  
+  if (!data) {
+    return (
+       <div className="container mx-auto p-4 md:p-8">
+         <Alert variant="destructive">
+            <ShieldAlert className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+                Failed to load administrative data. Please try refreshing the page.
+            </AlertDescription>
+        </Alert>
+       </div>
+    );
+  }
 
-  const [users, bugReports, suggestions, accessRequests, sopLink, applicationsOpen, loginBgImage, isMaintenanceMode] = await Promise.all([
-      getUsers(),
-      getBugReports(),
-      getSuggestions(),
-      getAccessRequests(),
-      getSopLink(),
-      getApplicationStatus(),
-      getLoginBackgroundImage(),
-      getMaintenanceMode(),
-  ]);
+  const { users, bugReports, suggestions, accessRequests, sopLink, applicationsOpen, loginBgImage, isMaintenanceMode } = data;
 
   return (
     <div className="container mx-auto p-4 md:p-8 bg-destructive text-destructive-foreground rounded-lg my-8">
@@ -81,7 +137,7 @@ export default async function AdminPage() {
           <TabsTrigger value="developer" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">Developer</TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="mt-6">
-           <UserManagement users={users} />
+           <UserManagement users={users} currentUser={currentUser || ''} />
         </TabsContent>
         <TabsContent value="banned" className="mt-6">
             <BannedUsersManagement users={users} />
