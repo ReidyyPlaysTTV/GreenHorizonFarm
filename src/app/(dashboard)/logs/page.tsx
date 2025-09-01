@@ -7,13 +7,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
-import { Shield, User, FileText, UserPlus, UserMinus, ArrowUp, ArrowDown, UserX } from "lucide-react";
+import { Shield, User, FileText, UserPlus, UserMinus, ArrowUp, ArrowDown, UserX, Check, ChevronsUpDown } from "lucide-react";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { AuditLog, AppUser } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 const actionTypeIcons: Record<string, React.ReactNode> = {
     "Login": <User className="h-4 w-4" />,
@@ -30,14 +33,21 @@ const actionTypeIcons: Record<string, React.ReactNode> = {
 
 export default function AuditLogPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [users, setUsers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [userFilter, setUserFilter] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   const fetchLogs = async () => {
     setLoading(true);
-    const fetchedLogs = await getAuditLogs();
+    const [fetchedLogs, fetchedUsers] = await Promise.all([
+        getAuditLogs(),
+        getUsers()
+    ]);
     setLogs(fetchedLogs);
+    const allUsernames = fetchedUsers.map(u => u.username);
+    setUsers(['All Users', ...Array.from(new Set(allUsernames))]);
     setLoading(false);
   };
 
@@ -52,7 +62,7 @@ export default function AuditLogPage() {
 
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
-      const userMatch = log.user.toLowerCase().includes(userFilter.toLowerCase());
+      const userMatch = userFilter === '' || userFilter === 'All Users' || log.user === userFilter;
       const actionMatch = actionFilter === 'all' || log.actionType === actionFilter;
       return userMatch && actionMatch;
     });
@@ -80,12 +90,47 @@ export default function AuditLogPage() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Input 
-                placeholder="Filter by user..."
-                value={userFilter}
-                onChange={(e) => setUserFilter(e.target.value)}
-                className="max-w-xs"
-              />
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={popoverOpen}
+                    className="w-[200px] justify-between"
+                  >
+                    {userFilter ? users.find((u) => u === userFilter) : "Filter by user..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search user..." />
+                    <CommandEmpty>No user found.</CommandEmpty>
+                    <CommandGroup>
+                      {users.map((user) => (
+                        <CommandItem
+                          key={user}
+                          value={user}
+                          onSelect={(currentValue) => {
+                            const filterValue = currentValue === userFilter.toLowerCase() ? '' : user;
+                            setUserFilter(filterValue === 'all users' ? '' : filterValue);
+                            setPopoverOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              userFilter === user ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {user}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
               <Select value={actionFilter} onValueChange={setActionFilter}>
                 <SelectTrigger className="w-[220px]">
                   <SelectValue placeholder="Filter by action..." />
