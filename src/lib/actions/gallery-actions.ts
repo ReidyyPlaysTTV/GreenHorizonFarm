@@ -3,39 +3,34 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import db, { withRetry } from '../db';
+import db from '../db';
 import type { GalleryImage } from '../types';
 
 export async function getGalleryImages(): Promise<GalleryImage[]> {
-    return withRetry(async () => {
-        const connection = await db.getConnection();
-        try {
-            const [rows] = await connection.query(`SELECT * FROM gallery_images ORDER BY createdAt DESC`);
-            
-            if (!Array.isArray(rows)) {
-                return [];
-            }
-            return (rows as any[]).map(row => ({
-                id: row.id,
-                src: row.src,
-                alt: row.alt,
-                hint: row.hint,
-                createdAt: new Date(row.createdAt),
-            }));
-
-        } catch (error) {
-            console.error("Failed to fetch gallery images:", error);
-            if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
-                return [];
-            }
-            throw error; // Re-throw to be caught by withRetry
-        } finally {
-            connection.release();
+    const connection = await db.getConnection();
+    try {
+        const [rows] = await connection.query(`SELECT * FROM gallery_images ORDER BY createdAt DESC`);
+        
+        if (!Array.isArray(rows)) {
+            return [];
         }
-    }).catch(error => {
-        console.error("getGalleryImages failed after multiple retries:", error);
+        return (rows as any[]).map(row => ({
+            id: row.id,
+            src: row.src,
+            alt: row.alt,
+            hint: row.hint,
+            createdAt: new Date(row.createdAt),
+        }));
+
+    } catch (error) {
+        console.error("Failed to fetch gallery images:", error);
+        if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
+            return [];
+        }
         return [];
-    });
+    } finally {
+        connection.release();
+    }
 }
 
 const addImageSchema = z.object({

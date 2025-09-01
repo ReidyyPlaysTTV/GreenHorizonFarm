@@ -3,9 +3,10 @@
 
 
 
+
 'use server';
 
-import db, { withRetry } from '../db';
+import db from '../db';
 import type { AppUser, AccessRequest, Personnel } from '../types';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
@@ -125,56 +126,50 @@ const loginSchema = z.object({
 });
 
 export async function loginUser(credentials: unknown) {
-    return withRetry(async () => {
-        const validation = loginSchema.safeParse(credentials);
-        if (!validation.success) {
-            return { success: false, message: 'Invalid credentials format.' };
+    const validation = loginSchema.safeParse(credentials);
+    if (!validation.success) {
+        return { success: false, message: 'Invalid credentials format.' };
+    }
+    const { username, password } = validation.data;
+
+    const connection = await db.getConnection();
+    try {
+        const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', [username]);
+        
+        if (!Array.isArray(rows) || rows.length === 0) {
+            return { success: false, message: 'Incorrect username or password. Please try again.' };
         }
-        const { username, password } = validation.data;
-
-        const connection = await db.getConnection();
-        try {
-            const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', [username]);
-            
-            if (!Array.isArray(rows) || rows.length === 0) {
-                return { success: false, message: 'Incorrect username or password. Please try again.' };
-            }
-            
-            const user = (rows as any[])[0];
-            if (user.status === 'Banned') {
-                return { success: false, message: 'This account has been banned.' };
-            }
-
-            const passwordMatch = user.password === password;
-
-            if (!passwordMatch) {
-                return { success: false, message: 'Incorrect username or password. Please try again.' };
-            }
-            
-            await logUserAction(username, "Login", `User '${username}' signed in.`, connection);
-
-            let userRoles = [];
-            if(typeof user.roles === 'string') {
-                try {
-                    userRoles = JSON.parse(user.roles);
-                } catch(e) { console.error('Failed to parse roles for user', user.username)}
-            } else if (Array.isArray(user.roles)) {
-                userRoles = user.roles;
-            }
-
-            return { success: true, user: { id: user.id, username: user.username, roles: userRoles } };
-
-        } catch (error) {
-            console.error("Login failed:", error);
-            // Re-throw specific errors to be handled by withRetry
-            if (error instanceof Error && 'code' in error && (error as any).code === 'ECONNRESET') {
-                throw error;
-            }
-            return { success: false, message: 'An internal server error occurred.' };
-        } finally {
-            connection.release();
+        
+        const user = (rows as any[])[0];
+        if (user.status === 'Banned') {
+            return { success: false, message: 'This account has been banned.' };
         }
-    });
+
+        const passwordMatch = user.password === password;
+
+        if (!passwordMatch) {
+            return { success: false, message: 'Incorrect username or password. Please try again.' };
+        }
+        
+        await logUserAction(username, "Login", `User '${username}' signed in.`, connection);
+
+        let userRoles = [];
+        if(typeof user.roles === 'string') {
+            try {
+                userRoles = JSON.parse(user.roles);
+            } catch(e) { console.error('Failed to parse roles for user', user.username)}
+        } else if (Array.isArray(user.roles)) {
+            userRoles = user.roles;
+        }
+
+        return { success: true, user: { id: user.id, username: user.username, roles: userRoles } };
+
+    } catch (error) {
+        console.error("Login failed:", error);
+        return { success: false, message: 'An internal server error occurred.' };
+    } finally {
+        connection.release();
+    }
 }
 
 const accessRequestSchema = z.object({
