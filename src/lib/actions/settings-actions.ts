@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import db from '../db';
@@ -9,6 +10,7 @@ import { logUserAction } from './audit-log-actions';
 const SOP_LINK_KEY = 'sop_link';
 const APPLICATIONS_OPEN_KEY = 'applications_open';
 const LOGIN_BACKGROUND_IMAGE_KEY = 'login_background_image';
+const MAINTENANCE_MODE_KEY = 'maintenance_mode';
 
 
 async function createSettingsTableIfNeeded(connection: any) {
@@ -201,6 +203,55 @@ export async function updateLoginBackgroundImage(newUrl: string, user: string) {
     } catch (error) {
         await connection.rollback();
         console.error("Failed to update login background image:", error);
+        return { success: false, message: 'Database operation failed.' };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function getMaintenanceMode(): Promise<boolean> {
+    const connection = await db.getConnection();
+    try {
+        await createSettingsTableIfNeeded(connection);
+        const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [MAINTENANCE_MODE_KEY]);
+        if (Array.isArray(rows) && rows.length > 0) {
+            return (rows[0] as any).setting_value === 'true';
+        }
+        return false;
+    } catch (error) {
+        console.error("Failed to get maintenance mode status:", error);
+        return false;
+    } finally {
+        connection.release();
+    }
+}
+
+export async function updateMaintenanceMode(isMaintenance: boolean, user: string) {
+    const hasPermission = await checkPermissions(user, 'MANAGE_APP_SETTINGS');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        await createSettingsTableIfNeeded(connection);
+        await connection.query(
+            `INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE setting_value = ?`,
+            [MAINTENANCE_MODE_KEY, isMaintenance.toString(), isMaintenance.toString()]
+        );
+        
+        const logMessage = `Set maintenance mode to ${isMaintenance ? 'ON' : 'OFF'}.`;
+        await logUserAction(user, 'Update Settings', logMessage, connection);
+
+        await connection.commit();
+        
+        revalidatePath('/admin');
+        return { success: true };
+    } catch (error) {
+        await connection.rollback();
+        console.error("Failed to update maintenance mode:", error);
         return { success: false, message: 'Database operation failed.' };
     } finally {
         connection.release();

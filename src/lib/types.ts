@@ -36,6 +36,7 @@ export type Permission = typeof permissions[number];
 
 export type Department = "Commissioners Office" | "High Command" | "Command" | "NCOS" | "Corrections" | "Training" | "BCSO";
 export type PersonnelStatus = 'Active' | 'LOA' | 'Inactive' | 'Low Activity' | 'Medical Leave' | 'Suspended';
+export type UserStatus = 'Active' | 'Banned';
 
 
 export interface Personnel {
@@ -100,6 +101,7 @@ export interface FormFieldData {
     type: 'text' | 'textarea' | 'select';
     label: string;
     required: boolean;
+    order: number;
     options?: FormFieldOption[];
 }
 
@@ -133,6 +135,7 @@ export interface AppUser {
   id: string;
   username: string;
   role: Role;
+  status: UserStatus;
   createdAt?: string;
   avatarUrl?: string;
   personnel?: Personnel | null;

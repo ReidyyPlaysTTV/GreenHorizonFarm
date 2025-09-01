@@ -1,17 +1,19 @@
 
+
 import { UserManagement } from "@/components/admin/user-management";
 import { PermissionManagement } from "@/components/admin/permission-management";
 import { DeveloperPanel } from "@/components/admin/developer-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getUsers, getBugReports, getSuggestions, getAccessRequests, getSopLink, getApplicationStatus, getLoginBackgroundImage } from "@/lib/actions";
+import { getUsers, getBugReports, getSuggestions, getAccessRequests, getSopLink, getApplicationStatus, getLoginBackgroundImage, getMaintenanceMode } from "@/lib/actions";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { AccessRequestManagement } from "@/components/admin/access-request-management";
 import { SettingsManagement } from "@/components/admin/settings-management";
+import { BannedUsersManagement } from "@/components/admin/banned-users-management";
 
 export default async function AdminPage() {
   // Note: In a real application, you would protect this page to ensure
   // only users with an 'Admin' or 'Developer' role can access it.
-  const [users, bugReports, suggestions, accessRequests, sopLink, applicationsOpen, loginBgImage] = await Promise.all([
+  const [users, bugReports, suggestions, accessRequests, sopLink, applicationsOpen, loginBgImage, isMaintenanceMode] = await Promise.all([
       getUsers(),
       getBugReports(),
       getSuggestions(),
@@ -19,6 +21,7 @@ export default async function AdminPage() {
       getSopLink(),
       getApplicationStatus(),
       getLoginBackgroundImage(),
+      getMaintenanceMode(),
   ]);
 
   return (
@@ -34,8 +37,9 @@ export default async function AdminPage() {
       </div>
 
        <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="users">Users & Roles</TabsTrigger>
+          <TabsTrigger value="banned">Banned Users</TabsTrigger>
           <TabsTrigger value="access_requests">Access Requests</TabsTrigger>
           <TabsTrigger value="permissions">Permission Groups</TabsTrigger>
           <TabsTrigger value="settings">App Settings</TabsTrigger>
@@ -43,6 +47,9 @@ export default async function AdminPage() {
         </TabsList>
         <TabsContent value="users" className="mt-6">
            <UserManagement users={users} />
+        </TabsContent>
+        <TabsContent value="banned" className="mt-6">
+            <BannedUsersManagement users={users} />
         </TabsContent>
          <TabsContent value="access_requests" className="mt-6">
             <AccessRequestManagement requests={accessRequests} />
@@ -55,6 +62,7 @@ export default async function AdminPage() {
                 currentSopLink={sopLink} 
                 applicationsOpen={applicationsOpen}
                 currentLoginBgImage={loginBgImage}
+                isMaintenanceMode={isMaintenanceMode}
             />
         </TabsContent>
         <TabsContent value="developer" className="mt-6">

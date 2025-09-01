@@ -23,12 +23,17 @@ async function createUsersTableIfNeeded() {
                     password_hash VARCHAR(255) NOT NULL,
                     role VARCHAR(50) NOT NULL DEFAULT 'User',
                     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    avatarUrl VARCHAR(255)
+                    avatarUrl VARCHAR(255),
+                    status ENUM('Active', 'Banned') NOT NULL DEFAULT 'Active'
                 );
             `);
              const [columns] = await connection.query("SHOW COLUMNS FROM users LIKE 'avatarUrl'");
             if (Array.isArray(columns) && columns.length === 0) {
                 await connection.query("ALTER TABLE users ADD COLUMN avatarUrl VARCHAR(255) NULL");
+            }
+             const [statusColumns] = await connection.query("SHOW COLUMNS FROM users LIKE 'status'");
+            if (Array.isArray(statusColumns) && statusColumns.length === 0) {
+                 await connection.query("ALTER TABLE users ADD COLUMN status ENUM('Active', 'Banned') NOT NULL DEFAULT 'Active'");
             }
         } finally {
             connection.release();
@@ -58,7 +63,7 @@ export async function getUsers(): Promise<AppUser[]> {
         await createUsersTableIfNeeded();
         const connection = await db.getConnection();
         try {
-            const [users] = await connection.query('SELECT id, username, role, createdAt, avatarUrl FROM users ORDER BY username ASC');
+            const [users] = await connection.query('SELECT id, username, role, createdAt, avatarUrl, status FROM users ORDER BY username ASC');
             if (!Array.isArray(users)) {
                 return [];
             }
@@ -110,6 +115,10 @@ export async function loginUser(credentials: unknown) {
         }
         
         const user = (rows as any[])[0];
+        if (user.status === 'Banned') {
+            return { success: false, message: 'This account has been banned.' };
+        }
+
         const passwordMatch = await bcrypt.compare(password, user.password_hash);
 
         if (!passwordMatch) {
@@ -471,6 +480,108 @@ export async function getReviewedApplicationsCount(userId: string): Promise<numb
     } catch (error) {
         console.error("Failed to fetch reviewed applications count:", error);
         return 0;
+    } finally {
+        connection.release();
+    }
+}
+
+const updateUserSchema = z.object({
+    userId: z.string(),
+    username: z.string().min(3),
+    role: z.string(),
+    adminUser: z.string(),
+});
+
+export async function updateUser(data: unknown) {
+    const validation = updateUserSchema.safeParse(data);
+    if (!validation.success) {
+        return { success: false, message: 'Invalid data provided.' };
+    }
+    const { userId, username, role, adminUser } = validation.data;
+    
+    const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
+    
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        const [userRows] = await connection.query('SELECT username FROM users WHERE id = ?', [userId]);
+        const originalUsername = (userRows as any)[0]?.username;
+        if (!originalUsername) {
+            throw new Error("User not found.");
+        }
+
+        await connection.query(
+            'UPDATE users SET username = ?, role = ? WHERE id = ?',
+            [username, role, userId]
+        );
+
+        await logUserAction(adminUser, 'Update User', `Updated user '${originalUsername}' to username '${username}' and role '${role}'.`, connection);
+        
+        await connection.commit();
+        revalidatePath('/admin');
+        revalidatePath(`/users/${encodeURIComponent(username)}`);
+        revalidatePath(`/users/${encodeURIComponent(originalUsername)}`);
+        return { success: true, message: "User updated successfully." };
+
+    } catch (error) {
+        await connection.rollback();
+        console.error("Failed to update user:", error);
+        if (error instanceof Error && 'code' in error && (error as any).code === 'ER_DUP_ENTRY') {
+            return { success: false, message: 'This username is already taken.' };
+        }
+        return { success: false, message: 'Database operation failed.' };
+    } finally {
+        connection.release();
+    }
+}
+
+const setUserStatusSchema = z.object({
+    userId: z.string(),
+    status: z.enum(['Active', 'Banned']),
+    adminUser: z.string(),
+});
+
+export async function setUserStatus(data: unknown) {
+    const validation = setUserStatusSchema.safeParse(data);
+    if (!validation.success) {
+        return { success: false, message: 'Invalid data provided.' };
+    }
+    const { userId, status, adminUser } = validation.data;
+
+    const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
+    
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        const [userRows] = await connection.query('SELECT username FROM users WHERE id = ?', [userId]);
+        const username = (userRows as any)[0]?.username;
+        if (!username) {
+            throw new Error("User not found.");
+        }
+        
+        if (username === adminUser) {
+             throw new Error("You cannot change your own status.");
+        }
+
+        await connection.query('UPDATE users SET status = ? WHERE id = ?', [status, userId]);
+        await logUserAction(adminUser, 'Update User Status', `Set status of user '${username}' to '${status}'.`, connection);
+
+        await connection.commit();
+        revalidatePath('/admin');
+        return { success: true, message: `User status set to ${status}.` };
+
+    } catch (error: any) {
+        await connection.rollback();
+        console.error("Failed to set user status:", error);
+        return { success: false, message: error.message || 'Database operation failed.' };
     } finally {
         connection.release();
     }

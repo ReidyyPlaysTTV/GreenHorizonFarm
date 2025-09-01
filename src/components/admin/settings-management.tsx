@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/use-permissions";
-import { updateSopLink, updateApplicationStatusSetting, updateLoginBackgroundImage } from "@/lib/actions";
+import { updateSopLink, updateApplicationStatusSetting, updateLoginBackgroundImage, updateMaintenanceMode } from "@/lib/actions";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -34,9 +35,10 @@ interface SettingsManagementProps {
     currentSopLink: string | null;
     applicationsOpen: boolean;
     currentLoginBgImage: string;
+    isMaintenanceMode: boolean;
 }
 
-export function SettingsManagement({ currentSopLink, applicationsOpen, currentLoginBgImage }: SettingsManagementProps) {
+export function SettingsManagement({ currentSopLink, applicationsOpen, currentLoginBgImage, isMaintenanceMode }: SettingsManagementProps) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [currentUser, setCurrentUser] = useState("System");
@@ -125,6 +127,29 @@ export function SettingsManagement({ currentSopLink, applicationsOpen, currentLo
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to update application status.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleMaintenanceModeChange = async (checked: boolean) => {
+    setIsSaving(true);
+    try {
+        const result = await updateMaintenanceMode(checked, currentUser);
+        if (result.success) {
+            toast({
+                title: "Success",
+                description: `Maintenance mode is now ${checked ? 'ON' : 'OFF'}.`,
+            });
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to update maintenance mode.",
       });
     } finally {
       setIsSaving(false);
@@ -230,6 +255,20 @@ export function SettingsManagement({ currentSopLink, applicationsOpen, currentLo
                     id="applications-open"
                     checked={applicationsOpen}
                     onCheckedChange={handleApplicationStatusChange}
+                    disabled={isSaving}
+                />
+            </div>
+             <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                    <Label htmlFor="maintenance-mode">Maintenance Mode</Label>
+                     <p className="text-[0.8rem] text-muted-foreground">
+                        Redirect all non-developer users to a maintenance page.
+                    </p>
+                </div>
+                <Switch
+                    id="maintenance-mode"
+                    defaultChecked={isMaintenanceMode}
+                    onCheckedChange={handleMaintenanceModeChange}
                     disabled={isSaving}
                 />
             </div>
