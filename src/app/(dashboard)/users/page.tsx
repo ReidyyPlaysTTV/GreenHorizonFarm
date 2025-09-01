@@ -42,7 +42,8 @@ const getRoleClass = (role: string) => {
 }
 
 const UserCard = ({ user, primaryRole }: { user: AppUser, primaryRole: string }) => {
-    const otherRoles = user.roles.filter(r => r !== primaryRole);
+    const userRoles = Array.isArray(user.roles) ? user.roles : [];
+    const otherRoles = userRoles.filter(r => r !== primaryRole);
 
     return (
         <Card className="flex flex-col">
@@ -102,9 +103,10 @@ export default function UsersPage() {
         fetchUsers();
     }, []);
 
-    const getPrimaryRole = (userRoles: string[]) => {
+    const getPrimaryRole = (userRoles: any) => {
+        const rolesToCheck = Array.isArray(userRoles) ? userRoles : [];
         for (const role of roles) { // Iterate in order of role importance
-            if (userRoles.includes(role)) {
+            if (rolesToCheck.includes(role)) {
                 return role;
             }
         }

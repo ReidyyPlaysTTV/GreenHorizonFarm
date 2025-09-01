@@ -134,6 +134,7 @@ export default function UserProfilePage() {
   
   const isOwnProfile = loggedInUser === user.username;
   const lastLogin = activityLogs.find(log => log.actionType === 'Login');
+  const userRoles = Array.isArray(user.roles) ? user.roles : [];
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -171,7 +172,7 @@ export default function UserProfilePage() {
                     <div className="flex flex-col items-start gap-2">
                         <span className="text-muted-foreground">Permission Groups</span>
                          <div className="flex flex-wrap gap-2">
-                             {user.roles.map(role => (
+                             {userRoles.map(role => (
                                 <Badge key={role} className={cn("font-bold text-base", getRoleClass(role))}>{role}</Badge>
                              ))}
                          </div>
