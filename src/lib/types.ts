@@ -1,5 +1,4 @@
 
-
 export const roles = ["Developer", "Administrator", "Commissioners Office", "High Command", "Command", "NCOs", "User"] as const;
 export type Role = typeof roles[number];
 
@@ -28,6 +27,7 @@ export const permissions = [
     'MANAGE_USERS', // Create users, assign roles
     'DELETE_USERS',
     'MANAGE_ROLES_PERMISSIONS',
+    'MANAGE_RANKS',
     'MANAGE_ACCESS_REQUESTS',
     'MANAGE_APP_SETTINGS',
     'MANAGE_ANNOUNCEMENTS',
@@ -52,6 +52,14 @@ export interface Personnel {
   status: PersonnelStatus;
   loa_until?: string | null;
   is_rehired?: boolean;
+}
+
+export interface Rank {
+    id: string;
+    name: string;
+    department: Department;
+    sort_order: number;
+    insignia_url?: string | null;
 }
 
 export interface ArchivedPersonnel {

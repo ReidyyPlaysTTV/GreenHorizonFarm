@@ -1,7 +1,7 @@
 
-import { getPersonnel } from "@/lib/actions";
-import { departments, rankInsignias } from "@/lib/data";
-import type { Personnel, PersonnelStatus } from "@/lib/types";
+import { getPersonnel, getRanks } from "@/lib/actions";
+import { departments } from "@/lib/data";
+import type { Personnel, PersonnelStatus, Rank } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -15,7 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Recycle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
+const RosterTable = ({ personnel, ranks }: { personnel: Personnel[], ranks: Rank[] }) => {
   
   const getStatusRowClass = (p: Personnel) => {
     const isLoaExpired = p.status === 'LOA' && p.loa_until && new Date(p.loa_until) < new Date();
@@ -50,6 +50,12 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
     }
   }
 
+  const rankInsignias = ranks.reduce((acc, rank) => {
+    if (rank.insignia_url) {
+      acc[rank.name] = rank.insignia_url;
+    }
+    return acc;
+  }, {} as Record<string, string>);
 
   return (
     <TooltipProvider>
@@ -71,7 +77,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
               <TableRow key={p.id} className={cn(getStatusRowClass(p))}>
                 <TableCell>
                   <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted p-1">
-                    <Image src={rankInsignias[p.rank] || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"} alt={`${p.rank} insignia`} width={p.rank === "Lieutenant" ? 10 : 25} height={p.rank === "Lieutenant" ? 10 : 25} className="rounded-md object-contain" />
+                    <Image src={rankInsignias[p.rank] || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"} alt={`${p.rank} insignia`} width={25} height={25} className="rounded-md object-contain" />
                   </div>
                 </TableCell>
                 <TableCell className="font-medium">
@@ -107,7 +113,7 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
                     )}
                 </TableCell>
                 <TableCell className="text-right">
-                  <PersonnelActions personnel={p} />
+                  <PersonnelActions personnel={p} ranks={ranks} />
                 </TableCell>
               </TableRow>
             ))
@@ -125,7 +131,22 @@ const RosterTable = ({ personnel }: { personnel: Personnel[] }) => {
 };
 
 export default async function RosterPage() {
-  const personnel = await getPersonnel();
+  const [personnel, ranks] = await Promise.all([
+    getPersonnel(),
+    getRanks()
+  ]);
+
+  const sortedPersonnel = [...personnel].sort((a, b) => {
+    const rankA = ranks.find(r => r.name === a.rank);
+    const rankB = ranks.find(r => r.name === b.rank);
+    const rankAOrder = rankA ? rankA.sort_order : Infinity;
+    const rankBOrder = rankB ? rankB.sort_order : Infinity;
+    
+    if (rankAOrder !== rankBOrder) {
+        return rankAOrder - rankBOrder;
+    }
+    return parseInt(a.badgeNumber) - parseInt(b.badgeNumber);
+  });
 
   return (
     <div className="flex flex-col h-full">
@@ -138,7 +159,7 @@ export default async function RosterPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <AddPersonnelForm />
+                    <AddPersonnelForm ranks={ranks} />
                     <RefreshButton />
                 </div>
             </div>
@@ -146,7 +167,7 @@ export default async function RosterPage() {
         <div className="flex-1 overflow-auto px-4 md:px-8 pb-8">
             <div className="space-y-8">
                 {departments.map(dep => {
-                const departmentPersonnel = personnel.filter(p => p.department === dep);
+                const departmentPersonnel = sortedPersonnel.filter(p => p.department === dep);
                 // Do not render department card if there are no personnel
                 if (departmentPersonnel.length === 0) return null;
                 return (
@@ -155,7 +176,7 @@ export default async function RosterPage() {
                         <CardTitle>{dep}</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <RosterTable personnel={departmentPersonnel} />
+                        <RosterTable personnel={departmentPersonnel} ranks={ranks} />
                     </CardContent>
                     </Card>
                 )

@@ -6,9 +6,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { addPersonnel } from "@/lib/actions";
-import { rankOrder } from "@/lib/data";
-import type { Application } from "@/lib/types";
+import { addPersonnel, getRanks } from "@/lib/actions";
+import type { Application, Rank } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +56,7 @@ interface ApproveApplicationDialogProps {
 export function ApproveApplicationDialog({ application, currentUser, children }: ApproveApplicationDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [ranks, setRanks] = useState<Rank[]>([]);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -67,6 +67,16 @@ export function ApproveApplicationDialog({ application, currentUser, children }:
       rank: "",
       callsign: "" as any,
     },
+  });
+
+  useState(() => {
+    async function fetchRanks() {
+        const fetchedRanks = await getRanks();
+        setRanks(fetchedRanks);
+    }
+    if(isOpen) {
+        fetchRanks();
+    }
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -147,9 +157,9 @@ export function ApproveApplicationDialog({ application, currentUser, children }:
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {rankOrder.map((rank) => (
-                        <SelectItem key={rank} value={rank}>
-                          {rank}
+                      {ranks.map((rank) => (
+                        <SelectItem key={rank.id} value={rank.name}>
+                          {rank.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

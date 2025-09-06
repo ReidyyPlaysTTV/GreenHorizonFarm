@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -36,8 +35,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { addPersonnel } from "@/lib/actions";
-import { rankOrder } from "@/lib/data";
 import { usePermissions } from "@/hooks/use-permissions";
+import type { Rank } from "@/lib/types";
 
 const formSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters."),
@@ -49,7 +48,11 @@ const formSchema = z.object({
   discordUsername: z.string().optional(),
 });
 
-export function AddPersonnelForm() {
+interface AddPersonnelFormProps {
+    ranks: Rank[];
+}
+
+export function AddPersonnelForm({ ranks }: AddPersonnelFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState("System");
@@ -152,9 +155,9 @@ export function AddPersonnelForm() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {rankOrder.map((rank) => (
-                        <SelectItem key={rank} value={rank}>
-                          {rank}
+                      {ranks.map((rank) => (
+                        <SelectItem key={rank.id} value={rank.name}>
+                          {rank.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

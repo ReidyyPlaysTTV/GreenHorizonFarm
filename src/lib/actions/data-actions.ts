@@ -1,9 +1,8 @@
 
 'use server';
 
-import type { Personnel, ArchivedPersonnel, BlacklistedPersonnel, Application, PersonnelEvent } from "../types";
+import type { Personnel, ArchivedPersonnel, BlacklistedPersonnel, Application, PersonnelEvent, Rank } from "../types";
 import db from '../db';
-import { rankToDepartmentMap, rankOrder } from "../data";
 import { addPersonnel } from "./personnel-actions";
 
 async function createPersonnelTableIfNeeded(connection: any) {
@@ -25,6 +24,10 @@ async function createPersonnelTableIfNeeded(connection: any) {
     if (Array.isArray(columns) && columns.length === 0) {
         await connection.query("ALTER TABLE personnel ADD COLUMN userId VARCHAR(36) NULL, ADD INDEX (userId)");
     }
+    const [departmentColumns] = await connection.query("SHOW COLUMNS FROM personnel LIKE 'department'");
+    if (Array.isArray(departmentColumns) && departmentColumns.length === 0) {
+        await connection.query("ALTER TABLE personnel ADD COLUMN department VARCHAR(255)");
+    }
 }
 
 
@@ -41,21 +44,11 @@ export async function getPersonnel(): Promise<Personnel[]> {
         const personnel = (rows as any[]).map(p => ({
             ...p,
             discordUsername: p.discord_username,
-            department: rankToDepartmentMap[p.rank] || p.department,
             status: p.status || 'Active',
             loa_until: p.loa_until ? new Date(p.loa_until).toISOString() : null,
             is_rehired: !!p.is_rehired,
         }));
         
-        personnel.sort((a, b) => {
-            const rankIndexA = rankOrder.indexOf(a.rank);
-            const rankIndexB = rankOrder.indexOf(b.rank);
-            if (rankIndexA !== rankIndexB) {
-                return rankIndexA - rankIndexB;
-            }
-            return parseInt(a.badgeNumber) - parseInt(b.badgeNumber);
-        });
-
         return personnel;
 
     } catch (error) {

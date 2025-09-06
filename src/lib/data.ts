@@ -1,56 +1,7 @@
 
-
 import type { Department, Permission, Role } from "./types";
 
 export const departments: Department[] = ["Commissioners Office", "High Command", "Command", "NCOS", "Corrections", "Training", "BCSO"];
-
-export const rankInsignias: Record<string, string> = {
-    "Sheriff": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/gota.png",
-    "Commissioner": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/gota.png",
-    "Deputy Comissioner": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/gota.png",
-    "Warden": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/general.png",
-    "Deputy Warden": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/lt-general.png",
-    "Major": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/major.png",
-    "Captain": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/captain.png",
-    "Lieutenant": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/first-lieutenant.png",
-    "Corrections Sergeant": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/staff-sergeant.png",
-    "Senior Corrections Officer": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/corporal.png",
-    "Correctional Officer": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
-    "Probationary Correctional Officer": "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png",
-    "Developer": "https://i.imgur.com/FxJ5c2v.png",
-};
-
-export const rankToDepartmentMap: Record<string, Department> = {
-    "Sheriff": "BCSO",
-    "Commissioner": "Commissioners Office",
-    "Deputy Comissioner": "Commissioners Office",
-    "Warden": "High Command",
-    "Deputy Warden": "High Command",
-    "Major": "High Command",
-    "Captain": "Command",
-    "Lieutenant": "Command",
-    "Corrections Sergeant": "NCOS",
-    "Senior Corrections Officer": "Corrections",
-    "Correctional Officer": "Corrections",
-    "Probationary Correctional Officer": "Training",
-    "Developer": "BCSO",
-};
-
-export const rankOrder = [
-    "Developer",
-    "Sheriff",
-    "Commissioner",
-    "Deputy Comissioner",
-    "Warden",
-    "Deputy Warden",
-    "Major",
-    "Captain",
-    "Lieutenant",
-    "Corrections Sergeant",
-    "Senior Corrections Officer",
-    "Correctional Officer",
-    "Probationary Correctional Officer",
-];
 
 export const roles: Role[] = ["Developer", "Administrator", "Commissioners Office", "High Command", "Command", "NCOs", "User"];
 
@@ -79,6 +30,7 @@ export const permissions: Permission[] = [
     'MANAGE_USERS', // Create users, assign roles
     'DELETE_USERS',
     'MANAGE_ROLES_PERMISSIONS',
+    'MANAGE_RANKS',
     'MANAGE_ACCESS_REQUESTS',
     'MANAGE_APP_SETTINGS',
     'MANAGE_ANNOUNCEMENTS',
@@ -107,6 +59,7 @@ export const permissionDescriptions: Record<Permission, string> = {
     MANAGE_USERS: "Manage Users & Roles",
     DELETE_USERS: "Permanently Delete Users",
     MANAGE_ROLES_PERMISSIONS: "Manage Permission Groups",
+    MANAGE_RANKS: "Manage Ranks",
     MANAGE_ACCESS_REQUESTS: "Manage Access Requests",
     MANAGE_APP_SETTINGS: "Manage Application Settings (e.g. SOPs)",
     VIEW_ANNOUNCEMENTS: "View Dashboard Announcements",

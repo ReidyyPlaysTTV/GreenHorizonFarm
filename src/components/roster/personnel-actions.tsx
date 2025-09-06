@@ -10,7 +10,7 @@ import {
   updatePersonnel,
   updatePersonnelStatus,
 } from "@/lib/actions";
-import type { Personnel, PersonnelStatus } from "@/lib/types";
+import type { Personnel, PersonnelStatus, Rank } from "@/lib/types";
 import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { rankOrder } from "@/lib/data";
 import { ArrowUp, ArrowDown, UserX, Edit, Loader2, ShieldHalf, CalendarIcon, MoreHorizontal } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -55,6 +54,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 interface PersonnelActionsProps {
   personnel: Personnel;
+  ranks: Rank[];
 }
 
 const fireFormSchema = z.object({
@@ -79,7 +79,7 @@ const statusFormSchema = z.object({
 
 const statusOptions: PersonnelStatus[] = ['Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended'];
 
-export function PersonnelActions({ personnel }: PersonnelActionsProps) {
+export function PersonnelActions({ personnel, ranks }: PersonnelActionsProps) {
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const [isPromoting, setIsPromoting] = useState(false);
@@ -187,9 +187,9 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
   }
 
 
-  const currentRankIndex = rankOrder.indexOf(personnel.rank);
-  const canPromote = currentRankIndex > 0;
-  const canDemote = currentRankIndex < rankOrder.length - 1;
+  const currentRank = ranks.find(r => r.name === personnel.rank);
+  const canPromote = currentRank && currentRank.sort_order > 1;
+  const canDemote = currentRank && currentRank.sort_order < ranks.length;
 
   const canManagePersonnel = hasPermission('MANAGE_PERSONNEL');
 
@@ -308,7 +308,7 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
                                 <SelectContent>
-                                    {rankOrder.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                    {ranks.map(r => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                             <FormMessage/>

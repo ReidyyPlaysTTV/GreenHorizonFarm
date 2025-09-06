@@ -4,8 +4,7 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import db from '../db';
-import { rankOrder } from '../data';
-import type { Personnel } from '../types';
+import type { Personnel, Rank } from '../types';
 import { logCallsignChange } from './callsign-log-actions';
 import { logUserAction } from './audit-log-actions';
 import { updateApplicationStatus } from './form-actions';
@@ -53,6 +52,9 @@ export async function promotePersonnel(personnelId: string, user: string) {
     if (!personnel) {
       throw new Error('Personnel not found.');
     }
+    
+    const [ranks] = await connection.query('SELECT * FROM ranks ORDER BY sort_order ASC');
+    const rankOrder = (ranks as Rank[]).map(r => r.name);
 
     const currentRankIndex = rankOrder.indexOf(personnel.rank);
     if (currentRankIndex === -1) {
@@ -94,6 +96,9 @@ export async function demotePersonnel(personnelId: string, user: string) {
     if (!personnel) {
       throw new Error('Personnel not found.');
     }
+    
+    const [ranks] = await connection.query('SELECT * FROM ranks ORDER BY sort_order ASC');
+    const rankOrder = (ranks as Rank[]).map(r => r.name);
 
     const currentRankIndex = rankOrder.indexOf(personnel.rank);
     if (currentRankIndex === -1) {

@@ -1,6 +1,7 @@
 
 import mysql from 'mysql2/promise';
 import { seedDatabase } from './db-seed';
+import { seedInitialRanks } from './actions/rank-actions';
 import { seedRolePermissions } from './actions/permission-actions';
 import type { Pool } from 'mysql2/promise';
 
@@ -98,7 +99,8 @@ async function createCoreTables(pool: Pool) {
 Promise.all([
     createCoreTables(pool),
     seedDatabase(pool),
-    seedRolePermissions(pool)
+    seedRolePermissions(pool),
+    seedInitialRanks(pool),
 ]).catch(err => {
     console.error("Failed to setup and seed database:", err);
 });

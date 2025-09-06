@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ShieldAlert, Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { AppUser, BugReport, Suggestion, AccessRequest } from '@/lib/types';
+import { RankManagement } from '@/components/admin/rank-management';
 
 export default function AdminPage() {
   const { hasPermission, userRoles } = usePermissions();
@@ -128,11 +129,12 @@ export default function AdminPage() {
       </div>
 
        <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 bg-destructive-foreground/20 text-destructive-foreground">
+        <TabsList className="grid w-full grid-cols-7 bg-destructive-foreground/20 text-destructive-foreground">
           <TabsTrigger value="users" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">Users & Roles</TabsTrigger>
           <TabsTrigger value="banned" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">Banned Users</TabsTrigger>
           <TabsTrigger value="access_requests" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">Access Requests</TabsTrigger>
           <TabsTrigger value="permissions" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">Permission Groups</TabsTrigger>
+          <TabsTrigger value="ranks" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">Ranks</TabsTrigger>
           <TabsTrigger value="settings" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">App Settings</TabsTrigger>
           <TabsTrigger value="developer" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">Developer</TabsTrigger>
         </TabsList>
@@ -147,6 +149,9 @@ export default function AdminPage() {
         </TabsContent>
         <TabsContent value="permissions" className="mt-6">
             <PermissionManagement />
+        </TabsContent>
+        <TabsContent value="ranks" className="mt-6">
+            <RankManagement />
         </TabsContent>
         <TabsContent value="settings" className="mt-6">
             <SettingsManagement 
