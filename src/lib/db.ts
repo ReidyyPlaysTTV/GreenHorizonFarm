@@ -1,6 +1,8 @@
-
 import mysql from 'mysql2/promise';
 import type { Pool } from 'mysql2/promise';
+import { seedDatabase } from './db-seed';
+import { seedRolePermissions } from './actions/permission-actions';
+import { seedInitialRanks } from './actions/rank-actions';
 
 const dbConfig = {
     host: 'mysql-mariadb-20-104.zap-srv.com',
@@ -24,7 +26,7 @@ try {
 
 async function createFarmTables(connection: any) {
     try {
-        // Users
+        // Users Table
         await connection.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -32,11 +34,12 @@ async function createFarmTables(connection: any) {
                 password VARCHAR(255) NOT NULL,
                 roles JSON,
                 status ENUM('Active', 'Banned') NOT NULL DEFAULT 'Active',
+                avatarUrl VARCHAR(255),
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
 
-        // Personnel (Extended Roster)
+        // Personnel Table
         await connection.query(`
             CREATE TABLE IF NOT EXISTS personnel (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -55,7 +58,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Detailed Farm Orders (Migrated for Dynamic Products)
+        // Orders Table
         await connection.query(`
             CREATE TABLE IF NOT EXISTS detailed_farm_orders (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -71,14 +74,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Check if legacy columns exist and migrate or drop them if needed. 
-        // For MVP, we ensure the JSON columns exist.
-        const [cols] = await connection.query("SHOW COLUMNS FROM detailed_farm_orders LIKE 'items_sold'");
-        if (Array.isArray(cols) && cols.length === 0) {
-            await connection.query("ALTER TABLE detailed_farm_orders ADD COLUMN items_sold JSON NOT NULL, ADD COLUMN discount_amount DECIMAL(10, 2) DEFAULT 0");
-        }
-
-        // Security Time Logs
+        // Security Logs
         await connection.query(`
             CREATE TABLE IF NOT EXISTS security_time_logs (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -104,7 +100,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Events
+        // Events Table
         await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_events (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -117,7 +113,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Financial Transactions
+        // Financial Ledger
         await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_transactions (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -137,7 +133,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Farm Procedures (Guidelines)
+        // Procedures / SOPs
         await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_procedures (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -150,7 +146,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Staff Incidents (Disciplinaries)
+        // Staff Incidents
         await connection.query(`
             CREATE TABLE IF NOT EXISTS staff_incidents (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -161,7 +157,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Farm Products
+        // Farm Products Catalog
         await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_products (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -171,7 +167,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Manager Plans
+        // Management Strategies
         await connection.query(`
             CREATE TABLE IF NOT EXISTS manager_plans (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -184,7 +180,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Promotion Suggestions
+        // Promotion Recommendations
         await connection.query(`
             CREATE TABLE IF NOT EXISTS promotion_suggestions (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -198,7 +194,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // CEO Chat
+        // Executive Chat
         await connection.query(`
             CREATE TABLE IF NOT EXISTS ceo_chat (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -215,12 +211,22 @@ async function createFarmTables(connection: any) {
 
 let isInitialized = false;
 
+/**
+ * Ensures the database schema is up to date and base data is seeded.
+ */
 export async function ensureDbInitialized() {
     if (isInitialized) return pool;
     try {
         const connection = await pool.getConnection();
         try {
+            // 1. Ensure all tables exist
             await createFarmTables(connection);
+            
+            // 2. Run Seeders
+            await seedDatabase(pool);         // Leon Green & admin
+            await seedRolePermissions(pool);  // Rank permissions
+            await seedInitialRanks(pool);     // Roster positions
+            
             isInitialized = true;
             return pool;
         } finally {
@@ -232,5 +238,7 @@ export async function ensureDbInitialized() {
     }
 }
 
+// Fire off initialization immediately
 ensureDbInitialized().catch(console.error);
+
 export default pool;
