@@ -50,16 +50,23 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Orders
+        // Detailed Farm Orders
         await connection.query(`
-            CREATE TABLE IF NOT EXISTS farm_orders (
+            CREATE TABLE IF NOT EXISTS detailed_farm_orders (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
-                item_name VARCHAR(255) NOT NULL,
-                quantity INT NOT NULL,
-                status ENUM('Pending', 'Completed', 'Cancelled') DEFAULT 'Pending',
-                completed_by VARCHAR(255),
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                completed_at DATETIME
+                business_name VARCHAR(255) NOT NULL,
+                sugarcane INT DEFAULT 0,
+                wheat INT DEFAULT 0,
+                fruits INT DEFAULT 0,
+                vegs INT DEFAULT 0,
+                normal_meat INT DEFAULT 0,
+                premium_meat INT DEFAULT 0,
+                total_price DECIMAL(10, 2) DEFAULT 0,
+                logistics_used BOOLEAN DEFAULT FALSE,
+                employee_cut_value DECIMAL(10, 2) DEFAULT 0,
+                employee_cut_percentage INT DEFAULT 0,
+                completed_by VARCHAR(255) NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
 

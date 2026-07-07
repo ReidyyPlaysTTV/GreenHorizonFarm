@@ -17,3 +17,4 @@ export * from './actions/announcement-actions';
 export * from './actions/gallery-actions';
 export * from './actions/changelog-actions';
 export * from './actions/rank-actions';
+export * from './actions/order-actions';

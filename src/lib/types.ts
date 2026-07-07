@@ -75,6 +75,23 @@ export interface FarmOrder {
     created_at: Date;
 }
 
+export interface DetailedFarmOrder {
+    id: string;
+    business_name: string;
+    sugarcane: number;
+    wheat: number;
+    fruits: number;
+    vegs: number;
+    normal_meat: number;
+    premium_meat: number;
+    total_price: number;
+    logistics_used: boolean;
+    employee_cut_value: number;
+    employee_cut_percentage: number;
+    completed_by: string;
+    created_at: Date;
+}
+
 export interface Application {
   id: string;
   name: string;
