@@ -156,5 +156,7 @@ export interface SecurityIncident {
   description: string;
   location: string;
   reported_by: string;
+  pd_called: boolean;
+  injured_details?: string;
   created_at: Date;
 }

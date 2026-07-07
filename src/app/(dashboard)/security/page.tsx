@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Clock, ShieldAlert, History, MapPin, User, FileText } from "lucide-react";
+import { Shield, Clock, ShieldAlert, History, MapPin, User, Siren, Activity } from "lucide-react";
 import { ClockHoursForm } from "@/components/security/clock-hours-form";
 import { ReportIncidentForm } from "@/components/security/report-incident-form";
 import { getSecurityIncidents, getSecurityTimeLogs } from "@/lib/actions";
@@ -14,6 +14,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 export default function SecurityPortal() {
   const [incidents, setIncidents] = useState<SecurityIncident[]>([]);
@@ -97,7 +98,7 @@ export default function SecurityPortal() {
                 <CardDescription>Recent perimeter events and property damage reports.</CardDescription>
             </CardHeader>
             <CardContent>
-                <ScrollArea className="h-[450px] pr-4">
+                <ScrollArea className="h-[550px] pr-4">
                     {loading ? (
                          <div className="space-y-4">
                             {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
@@ -105,10 +106,17 @@ export default function SecurityPortal() {
                     ) : incidents.length > 0 ? (
                         <div className="space-y-4">
                             {incidents.map((incident) => (
-                                <div key={incident.id} className="p-4 rounded-xl border border-destructive/10 bg-destructive/5 space-y-3">
+                                <div key={incident.id} className="p-5 rounded-2xl border border-destructive/10 bg-destructive/5 space-y-4 relative overflow-hidden group">
+                                    {incident.pd_called && (
+                                        <div className="absolute top-0 right-0 p-2">
+                                            <Badge className="bg-red-600 animate-pulse gap-1">
+                                                <Siren className="h-3 w-3" /> PD CALLED
+                                            </Badge>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <h3 className="font-bold text-lg leading-tight">{incident.title}</h3>
+                                            <h3 className="font-bold text-xl leading-tight">{incident.title}</h3>
                                             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                                                 <MapPin className="h-3 w-3" />
                                                 {incident.location}
@@ -118,12 +126,21 @@ export default function SecurityPortal() {
                                             {formatDistanceToNow(new Date(incident.created_at), { addSuffix: true })}
                                         </Badge>
                                     </div>
-                                    <p className="text-sm text-muted-foreground leading-relaxed italic">
+                                    <p className="text-sm text-muted-foreground leading-relaxed italic border-l-2 border-destructive/20 pl-3">
                                         "{incident.description}"
                                     </p>
-                                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-muted-foreground pt-2 border-t border-destructive/10">
-                                        <User className="h-3 w-3" />
-                                        Reported by {incident.reported_by}
+                                    
+                                    <div className="grid gap-3 md:grid-cols-2">
+                                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-muted-foreground">
+                                            <User className="h-3 w-3" />
+                                            Reported by {incident.reported_by}
+                                        </div>
+                                        {incident.injured_details && (
+                                            <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-red-400">
+                                                <Activity className="h-3 w-3" />
+                                                Injuries: {incident.injured_details}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -146,7 +163,7 @@ export default function SecurityPortal() {
                 </div>
             </CardHeader>
             <CardContent>
-                <ScrollArea className="h-[450px]">
+                <ScrollArea className="h-[550px]">
                     {loading ? (
                          <div className="space-y-3">
                             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}

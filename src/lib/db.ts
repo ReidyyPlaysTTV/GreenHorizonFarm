@@ -90,6 +90,8 @@ async function createFarmTables(connection: any) {
                 description TEXT NOT NULL,
                 location VARCHAR(255) NOT NULL,
                 reported_by VARCHAR(255) NOT NULL,
+                pd_called BOOLEAN DEFAULT FALSE,
+                injured_details TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);

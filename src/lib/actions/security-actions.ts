@@ -48,6 +48,8 @@ const incidentSchema = z.object({
   title: z.string().min(5, "Title must be descriptive."),
   description: z.string().min(10, "Provide detailed description."),
   location: z.string().min(3, "Specify a location."),
+  pd_called: z.boolean().default(false),
+  injured_details: z.string().optional(),
   user: z.string(),
 });
 
@@ -56,15 +58,15 @@ export async function submitSecurityIncident(data: unknown) {
     if (!validation.success) {
         return { success: false, message: validation.error.errors[0].message };
     }
-    const { title, description, location, user } = validation.data;
+    const { title, description, location, pd_called, injured_details, user } = validation.data;
 
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
         await connection.query(
-            'INSERT INTO security_incidents (id, title, description, location, reported_by) VALUES (?, ?, ?, ?, ?)',
-            [crypto.randomUUID(), title, description, location, user]
+            'INSERT INTO security_incidents (id, title, description, location, pd_called, injured_details, reported_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [crypto.randomUUID(), title, description, location, pd_called, injured_details || null, user]
         );
 
         await logUserAction(user, "Report Security Incident", `Reported incident: ${title} at ${location}`, connection);
@@ -106,6 +108,7 @@ export async function getSecurityIncidents(): Promise<SecurityIncident[]> {
         if (!Array.isArray(rows)) return [];
         return (rows as any[]).map(row => ({
             ...row,
+            pd_called: !!row.pd_called,
             created_at: new Date(row.created_at)
         }));
     } catch (error) {

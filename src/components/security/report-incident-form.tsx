@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, ShieldAlert, MapPin } from "lucide-react";
+import { Loader2, ShieldAlert, MapPin, User, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -28,12 +29,15 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { submitSecurityIncident } from "@/lib/actions";
 
 const formSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters."),
   location: z.string().min(3, "Location is required."),
   description: z.string().min(10, "Please provide detailed incident notes."),
+  pd_called: z.boolean().default(false),
+  injured_details: z.string().optional(),
 });
 
 export function ReportIncidentForm() {
@@ -54,6 +58,8 @@ export function ReportIncidentForm() {
       title: "",
       location: "",
       description: "",
+      pd_called: false,
+      injured_details: "",
     },
   });
 
@@ -85,14 +91,14 @@ export function ReportIncidentForm() {
           Report Incident
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldAlert className="h-5 w-5 text-destructive" />
             File Incident Report
           </DialogTitle>
           <DialogDescription>
-            Document any security breaches, suspicious activity, or farm property damage.
+            Document security breaches, suspicious activity, or injuries.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -133,12 +139,53 @@ export function ReportIncidentForm() {
                 <FormItem>
                   <FormLabel>Incident Details</FormLabel>
                   <FormControl>
-                    <Textarea className="min-h-[150px]" placeholder="Provide a thorough account of what happened..." {...field} />
+                    <Textarea className="min-h-[120px]" placeholder="Provide a thorough account of what happened..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            <div className="bg-muted/30 p-4 rounded-xl space-y-4 border border-white/5">
+                <FormField
+                    control={form.control}
+                    name="pd_called"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                            <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                            <FormLabel className="text-destructive font-bold uppercase tracking-tight text-xs">Law Enforcement Involved?</FormLabel>
+                            <FormDescription className="text-[10px]">
+                                Check this if PD/Police were called to the scene.
+                            </FormDescription>
+                        </div>
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="injured_details"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-xs font-bold uppercase">Injuries / Casualties</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g., 2 employees with minor cuts" {...field} />
+                            </FormControl>
+                            <FormDescription className="text-[10px]">
+                                List anyone injured or enter "None" if clear.
+                            </FormDescription>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
               <Button type="submit" variant="destructive" disabled={isLoading}>
