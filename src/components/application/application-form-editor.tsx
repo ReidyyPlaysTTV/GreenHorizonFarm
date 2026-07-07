@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -41,8 +40,8 @@ const formSchema = z.object({
 type FormSchema = z.infer<typeof formSchema>;
 type FormFieldSchema = z.infer<typeof formFieldSchema>;
 
-const SortableField = ({ field, index, onEdit, onRemove }: { field: FormFieldSchema, index: number, onEdit: (index: number) => void, onRemove: (index: number) => void }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: field.id! });
+const SortableField = ({ field, index, onEdit, onRemove }: { field: any, index: number, onEdit: (index: number) => void, onRemove: (index: number) => void }) => {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: field.id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -61,7 +60,7 @@ const SortableField = ({ field, index, onEdit, onRemove }: { field: FormFieldSch
                     <SelectValue placeholder={field.label} />
                 </SelectTrigger>
                 <SelectContent>
-                    {field.options?.map((opt, i) => <SelectItem key={i} value={opt.value}>{opt.value}</SelectItem>)}
+                    {field.options?.map((opt: any, i: number) => <SelectItem key={i} value={opt.value}>{opt.value}</SelectItem>)}
                 </SelectContent>
             </Select>
         )
@@ -115,8 +114,8 @@ export function ApplicationFormEditor() {
     },
   });
 
-  const { fields, control, reset } = form;
-  const { append, remove, move, update } = useFieldArray({
+  const { control, reset } = form;
+  const { fields, append, remove, move, update } = useFieldArray({
     control,
     name: "fields",
   });
@@ -164,8 +163,8 @@ export function ApplicationFormEditor() {
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
     if (active.id !== over.id) {
-      const oldIndex = fields.value.findIndex((f) => f.id === active.id);
-      const newIndex = fields.value.findIndex((f) => f.id === over.id);
+      const oldIndex = fields.findIndex((f) => f.id === active.id);
+      const newIndex = fields.findIndex((f) => f.id === over.id);
       move(oldIndex, newIndex);
     }
   };
@@ -175,9 +174,8 @@ export function ApplicationFormEditor() {
   );
 
   const handleAddNewField = () => {
-     // Use a temporary client-side ID for the key, the server will assign a permanent one.
-     append({ id: `new-${Date.now()}`, label: "New Question", type: 'text', required: true, options: [] }, { shouldFocus: false });
-     setEditDialogIndex(form.getValues('fields').length);
+     append({ label: "New Question", type: 'text', required: true, options: [] }, { shouldFocus: false });
+     setEditDialogIndex(fields.length);
   };
 
   const handleSaveField = (index: number, data: FormFieldSchema) => {
@@ -192,8 +190,6 @@ export function ApplicationFormEditor() {
        </div>
     );
   }
-  
-  const currentFields = form.getValues('fields');
 
   return (
     <Card>
@@ -213,13 +209,13 @@ export function ApplicationFormEditor() {
             ) : (
               <div className="space-y-4">
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={currentFields.map(f => f.id!)} strategy={verticalListSortingStrategy}>
-                    {currentFields.map((field, index) => (
+                  <SortableContext items={fields.map(f => f.id)} strategy={verticalListSortingStrategy}>
+                    {fields.map((field, index) => (
                       <SortableField key={field.id} field={field} index={index} onEdit={setEditDialogIndex} onRemove={remove} />
                     ))}
                   </SortableContext>
                 </DndContext>
-                {currentFields.length === 0 && (
+                {fields.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-40 rounded-lg border border-dashed text-center p-4">
                         <p className="text-muted-foreground">Your application form is empty.</p>
                         <p className="text-sm text-muted-foreground">Click "Add New Field" to get started.</p>
@@ -248,7 +244,7 @@ export function ApplicationFormEditor() {
         </Form>
       </CardContent>
 
-      {editDialogIndex !== null && currentFields[editDialogIndex] && (
+      {editDialogIndex !== null && fields[editDialogIndex] && (
         <EditFieldDialog
             isOpen={editDialogIndex !== null}
             onClose={() => setEditDialogIndex(null)}
@@ -257,7 +253,7 @@ export function ApplicationFormEditor() {
                 remove(editDialogIndex);
                 setEditDialogIndex(null);
             }}
-            fieldData={currentFields[editDialogIndex]}
+            fieldData={fields[editDialogIndex] as unknown as FormFieldData}
         />
        )}
     </Card>
