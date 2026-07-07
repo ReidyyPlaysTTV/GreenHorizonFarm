@@ -14,7 +14,7 @@ const dbConfig = {
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    connectTimeout: 30000,
+    connectTimeout: 30000, // 30 seconds
     charset: 'utf8mb4',
     ssl: {
         rejectUnauthorized: false

@@ -14,7 +14,7 @@ export async function seedDatabase(pool: Pool) {
         const [leonRows] = await connection.query('SELECT id FROM users WHERE username = ?', ['Leon Green']);
         if (Array.isArray(leonRows) && leonRows.length === 0) {
             console.log("Seeding Developer: Leon Green");
-            // Important: Roles must be stringified JSON array to pass DB constraint
+            // Important: Roles must be stringified JSON array to satisfy constraints
             const devRoles = JSON.stringify(['Developer']);
             await connection.query(
                 'INSERT INTO users (id, username, password, roles, avatarUrl, status) VALUES (?, ?, ?, ?, ?, ?)',
