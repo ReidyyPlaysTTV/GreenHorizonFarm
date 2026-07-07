@@ -1,37 +1,12 @@
+
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldCheck, LogIn, Loader2 } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { LoginForm } from "@/components/auth/login-form";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSimulatedLogin = async () => {
-    setIsLoading(true);
-    
-    // Simulate a brief network delay
-    setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('loggedInUser', 'CEO_User');
-      }
-
-      toast({
-        title: "Access Granted",
-        description: "Welcome to Green Horizon Management.",
-      });
-
-      router.push('/dashboard');
-      setIsLoading(false);
-    }, 800);
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
       <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]" />
@@ -56,14 +31,8 @@ export default function LoginPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Button 
-            className="w-full h-14 text-lg font-bold rounded-xl gap-3 bg-primary hover:bg-primary/90 text-primary-foreground transition-all hover:scale-[1.02] active:scale-[0.98]"
-            onClick={handleSimulatedLogin}
-            disabled={isLoading}
-          >
-            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
-            Enter Management System
-          </Button>
+          
+          <LoginForm />
           
           <div className="flex items-center gap-4 py-2">
             <div className="h-px flex-1 bg-border" />

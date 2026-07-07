@@ -24,22 +24,25 @@ export async function seedDatabase(pool: Pool) {
         const [users] = await connection.query('SELECT COUNT(*) as count FROM users');
         
         if (Array.isArray(users) && (users[0] as any).count === 0) {
-            console.log("No users found. Seeding default admin user...");
+            console.log("No users found. Seeding default base users...");
 
-            const username = 'admin';
-            const password = 'password'; // Use a simple, known password for the seed
-            const roles = ['Administrator', 'Developer'];
-            
-            const id = crypto.randomUUID();
-
+            // Developer User: Leon Green
+            const leonId = crypto.randomUUID();
             await connection.query(
                 'INSERT INTO users (id, username, password, roles, avatarUrl) VALUES (?, ?, ?, ?, ?)',
-                [id, username, password, JSON.stringify(roles), null]
+                [leonId, 'Leon Green', 'password123', JSON.stringify(['Developer']), 'https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png']
             );
 
-            console.log("Default admin user created successfully.");
-            console.log("Username: admin");
-            console.log("Password: password");
+            // Technical Admin
+            const adminId = crypto.randomUUID();
+            await connection.query(
+                'INSERT INTO users (id, username, password, roles, avatarUrl) VALUES (?, ?, ?, ?, ?)',
+                [adminId, 'admin', 'password', JSON.stringify(['Administrator']), null]
+            );
+
+            console.log("Base users created successfully.");
+            console.log("Developer: Leon Green / password123");
+            console.log("Admin: admin / password");
         }
     } catch (error) {
         console.error("Error during database seeding:", error);
