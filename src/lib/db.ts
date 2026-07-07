@@ -55,17 +55,13 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Detailed Farm Orders
+        // Detailed Farm Orders (Migrated for Dynamic Products)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS detailed_farm_orders (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 business_name VARCHAR(255) NOT NULL,
-                sugarcane INT DEFAULT 0,
-                wheat INT DEFAULT 0,
-                fruits INT DEFAULT 0,
-                vegs INT DEFAULT 0,
-                normal_meat INT DEFAULT 0,
-                premium_meat INT DEFAULT 0,
+                items_sold JSON NOT NULL,
+                discount_amount DECIMAL(10, 2) DEFAULT 0,
                 total_price DECIMAL(10, 2) DEFAULT 0,
                 logistics_used BOOLEAN DEFAULT FALSE,
                 employee_cut_value DECIMAL(10, 2) DEFAULT 0,
@@ -74,6 +70,13 @@ async function createFarmTables(connection: any) {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
+
+        // Check if legacy columns exist and migrate or drop them if needed. 
+        // For MVP, we ensure the JSON columns exist.
+        const [cols] = await connection.query("SHOW COLUMNS FROM detailed_farm_orders LIKE 'items_sold'");
+        if (Array.isArray(cols) && cols.length === 0) {
+            await connection.query("ALTER TABLE detailed_farm_orders ADD COLUMN items_sold JSON NOT NULL, ADD COLUMN discount_amount DECIMAL(10, 2) DEFAULT 0");
+        }
 
         // Security Time Logs
         await connection.query(`

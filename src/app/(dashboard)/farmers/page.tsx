@@ -5,13 +5,14 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Sprout, Wheat, Beef, Truck, DollarSign, Clock, TrendingUp } from "lucide-react";
+import { Sprout, Wheat, Beef, Truck, DollarSign, Clock, Tag } from "lucide-react";
 import { AddOrderForm } from "@/components/farmers/add-order-form";
 import { getDetailedOrders } from "@/lib/actions";
 import type { DetailedFarmOrder } from "@/lib/types";
 import { formatDistanceToNow, subDays, isAfter } from "date-fns";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function FarmersPortal() {
   const [orders, setOrders] = useState<DetailedFarmOrder[]>([]);
@@ -33,8 +34,7 @@ export default function FarmersPortal() {
     
     const recentOrders = orders.filter(o => isAfter(new Date(o.created_at), sevenDaysAgo));
     
-    const totalHarvested = orders.reduce((acc, o) => acc + o.sugarcane + o.wheat + o.fruits + o.vegs, 0);
-    const totalMeat = orders.reduce((acc, o) => acc + o.normal_meat + o.premium_meat, 0);
+    const totalItems = orders.reduce((acc, o) => acc + (o.items_sold || []).reduce((sum, item) => sum + item.quantity, 0), 0);
     
     const farmProfit7d = recentOrders.reduce((acc, o) => {
         const total = Number(o.total_price);
@@ -47,8 +47,7 @@ export default function FarmersPortal() {
         : 0;
 
     return {
-        totalHarvested,
-        totalMeat,
+        totalItems,
         farmProfit7d,
         logisticsRate,
         submissionCount: orders.length
@@ -68,7 +67,7 @@ export default function FarmersPortal() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-primary/10 shadow-lg bg-card/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Total Orders</CardTitle>
@@ -93,23 +92,12 @@ export default function FarmersPortal() {
         
         <Card className="border-primary/10 shadow-lg bg-card/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Produce</CardTitle>
-            <Wheat className="h-5 w-5 text-emerald-500" />
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Units Yielded</CardTitle>
+            <Sprout className="h-5 w-5 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">{stats.totalHarvested}</div>
-            <p className="text-xs text-muted-foreground mt-1">Items harvested</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-primary/10 shadow-lg bg-card/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Meat</CardTitle>
-            <Beef className="h-5 w-5 text-red-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black">{stats.totalMeat}</div>
-            <p className="text-xs text-muted-foreground mt-1">Units processed</p>
+            <div className="text-3xl font-black">{stats.totalItems}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total products harvested</p>
           </CardContent>
         </Card>
 
@@ -138,56 +126,68 @@ export default function FarmersPortal() {
                 ))}
             </div>
           ) : orders.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Business</TableHead>
-                    <TableHead>Details</TableHead>
-                    <TableHead>Total Paid</TableHead>
-                    <TableHead>Cut (%)</TableHead>
-                    <TableHead>Logistics</TableHead>
-                    <TableHead>Employee</TableHead>
-                    <TableHead className="text-right">Date Completed</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orders.map((o) => (
-                    <TableRow key={o.id}>
-                      <TableCell className="font-bold">{o.business_name}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-[200px]">
-                        {[
-                          o.sugarcane > 0 && `${o.sugarcane}x Sugar`,
-                          o.wheat > 0 && `${o.wheat}x Wheat`,
-                          o.fruits > 0 && `${o.fruits}x Fruits`,
-                          o.vegs > 0 && `${o.vegs}x Vegs`,
-                          o.normal_meat > 0 && `${o.normal_meat}x N-Meat`,
-                          o.premium_meat > 0 && `${o.premium_meat}x P-Meat`,
-                        ].filter(Boolean).join(", ")}
-                      </TableCell>
-                      <TableCell className="font-medium text-emerald-500">${Number(o.total_price).toLocaleString()}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                            <span className="font-bold">${Number(o.employee_cut_value).toLocaleString()}</span>
-                            <span className="text-[10px] text-muted-foreground">{o.employee_cut_percentage}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {o.logistics_used ? (
-                          <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-blue-500/20">Yes</Badge>
-                        ) : (
-                          <Badge variant="outline" className="opacity-50">No</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>{o.completed_by}</TableCell>
-                      <TableCell className="text-right text-xs text-muted-foreground font-medium">
-                        {formatDistanceToNow(new Date(o.created_at), { addSuffix: true })}
-                      </TableCell>
+            <TooltipProvider>
+                <div className="overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead>Business</TableHead>
+                        <TableHead>Yield Details</TableHead>
+                        <TableHead>Total Paid</TableHead>
+                        <TableHead>Discount</TableHead>
+                        <TableHead>Cut (%)</TableHead>
+                        <TableHead>Logistics</TableHead>
+                        <TableHead>Employee</TableHead>
+                        <TableHead className="text-right">Date Completed</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                    </TableHeader>
+                    <TableBody>
+                    {orders.map((o) => (
+                        <TableRow key={o.id}>
+                        <TableCell className="font-bold">{o.business_name}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[250px]">
+                            <div className="flex flex-wrap gap-1">
+                                {(o.items_sold || []).map((item, idx) => (
+                                    <Badge key={idx} variant="outline" className="text-[9px] bg-muted/20">
+                                        {item.quantity}x {item.product_name}
+                                    </Badge>
+                                ))}
+                            </div>
+                        </TableCell>
+                        <TableCell className="font-medium text-emerald-500">${Number(o.total_price).toLocaleString()}</TableCell>
+                        <TableCell>
+                            {o.discount_amount > 0 ? (
+                                <div className="flex items-center gap-1 text-orange-400 text-xs font-bold">
+                                    <Tag className="h-3 w-3" />
+                                    ${Number(o.discount_amount).toLocaleString()}
+                                </div>
+                            ) : (
+                                <span className="opacity-20 text-xs">-</span>
+                            )}
+                        </TableCell>
+                        <TableCell>
+                            <div className="flex flex-col">
+                                <span className="font-bold">${Number(o.employee_cut_value).toLocaleString()}</span>
+                                <span className="text-[10px] text-muted-foreground">{o.employee_cut_percentage}%</span>
+                            </div>
+                        </TableCell>
+                        <TableCell>
+                            {o.logistics_used ? (
+                            <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-blue-500/20">Yes</Badge>
+                            ) : (
+                            <Badge variant="outline" className="opacity-50">No</Badge>
+                            )}
+                        </TableCell>
+                        <TableCell>{o.completed_by}</TableCell>
+                        <TableCell className="text-right text-xs text-muted-foreground font-medium">
+                            {formatDistanceToNow(new Date(o.created_at), { addSuffix: true })}
+                        </TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+                </div>
+            </TooltipProvider>
           ) : (
             <div className="flex flex-col items-center justify-center h-40 border border-dashed rounded-lg text-center p-8">
               <p className="text-muted-foreground font-medium">No orders recorded in the current ledger.</p>

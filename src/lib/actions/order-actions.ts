@@ -9,12 +9,13 @@ import { logUserAction } from './audit-log-actions';
 
 const orderSchema = z.object({
   business_name: z.string().min(1, "Business name is required."),
-  sugarcane: z.coerce.number().min(0),
-  wheat: z.coerce.number().min(0),
-  fruits: z.coerce.number().min(0),
-  vegs: z.coerce.number().min(0),
-  normal_meat: z.coerce.number().min(0),
-  premium_meat: z.coerce.number().min(0),
+  items_sold: z.array(z.object({
+    product_id: z.string(),
+    product_name: z.string(),
+    quantity: z.number().min(1),
+    price_at_sale: z.number().min(0),
+  })),
+  discount_amount: z.coerce.number().min(0),
   total_price: z.coerce.number().min(0),
   logistics_used: z.boolean(),
   employee_cut_value: z.coerce.number().min(0),
@@ -28,8 +29,7 @@ export async function submitDetailedOrder(data: unknown) {
         return { success: false, message: validation.error.errors[0].message };
     }
     const { 
-        business_name, sugarcane, wheat, fruits, vegs, 
-        normal_meat, premium_meat, total_price, 
+        business_name, items_sold, discount_amount, total_price, 
         logistics_used, employee_cut_value, employee_cut_percentage, user 
     } = validation.data;
 
@@ -40,13 +40,11 @@ export async function submitDetailedOrder(data: unknown) {
         const id = crypto.randomUUID();
         await connection.query(
             `INSERT INTO detailed_farm_orders (
-                id, business_name, sugarcane, wheat, fruits, vegs, 
-                normal_meat, premium_meat, total_price, logistics_used, 
+                id, business_name, items_sold, discount_amount, total_price, logistics_used, 
                 employee_cut_value, employee_cut_percentage, completed_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                id, business_name, sugarcane, wheat, fruits, vegs, 
-                normal_meat, premium_meat, total_price, logistics_used, 
+                id, business_name, JSON.stringify(items_sold), discount_amount, total_price, logistics_used, 
                 employee_cut_value, employee_cut_percentage, user
             ]
         );
@@ -55,6 +53,9 @@ export async function submitDetailedOrder(data: unknown) {
 
         await connection.commit();
         revalidatePath('/farmers');
+        revalidatePath('/manager');
+        revalidatePath('/ceo');
+        revalidatePath('/finances');
         return { success: true, message: 'Order submitted successfully.' };
     } catch (error) {
         await connection.rollback();
@@ -72,6 +73,7 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
         if (!Array.isArray(rows)) return [];
         return (rows as any[]).map(row => ({
             ...row,
+            items_sold: typeof row.items_sold === 'string' ? JSON.parse(row.items_sold) : (row.items_sold || []),
             logistics_used: !!row.logistics_used,
             created_at: new Date(row.created_at)
         }));

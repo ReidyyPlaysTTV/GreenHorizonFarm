@@ -59,15 +59,18 @@ export type Division = "Harvesting" | "Processing" | "Logistics" | "Sales" | "Ma
 export type EmployeeStatus = 'Active' | 'On Leave' | 'Inactive' | 'Probation';
 export type UserStatus = 'Active' | 'Banned';
 
+export interface OrderItem {
+    product_id: string;
+    product_name: string;
+    quantity: number;
+    price_at_sale: number;
+}
+
 export interface DetailedFarmOrder {
     id: string;
     business_name: string;
-    sugarcane: number;
-    wheat: number;
-    fruits: number;
-    vegs: number;
-    normal_meat: number;
-    premium_meat: number;
+    items_sold: OrderItem[];
+    discount_amount: number;
     total_price: number;
     logistics_used: boolean;
     employee_cut_value: number;
