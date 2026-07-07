@@ -31,7 +31,7 @@ export async function testDatabaseConnection() {
         console.error("Test Connection Error:", error);
         return { 
             success: false, 
-            message: `Connection Error: ${error.message || 'Unknown issue'}. Check ZAP firewall. Code: ${error.code || 'N/A'}` 
+            message: `Connection Error: ${error.message || 'Unknown issue'}. ZAP-Hosting may be blocking the connection. Code: ${error.code || 'N/A'}` 
         };
     }
 }
@@ -137,70 +137,50 @@ export async function loginUser(credentials: unknown) {
     } catch (error: any) {
         console.error("Login server error:", error);
         if (error.code === 'ETIMEDOUT') {
-            return { success: false, message: 'Database Connection Timeout. Please check Zap-Hosting external access settings.' };
+            return { success: false, message: 'Database Connection Timeout. Please check ZAP-Hosting public accessibility.' };
         }
         return { success: false, message: `System Error: ${error.message || 'Unknown error'}` };
     }
 }
 
-const createUserSchema = z.object({
-  username: z.string().min(3),
-  password: z.string().min(8),
-  roles: z.array(z.string()),
-  adminUser: z.string(),
-});
+export async function createUser(data: any) {
+    const { username, password, roles, adminUser } = data;
 
-export async function createUser(data: unknown) {
-  const validation = createUserSchema.safeParse(data);
-  if (!validation.success) {
-    return { success: false, message: 'Invalid data.' };
-  }
-  const { username, password, roles, adminUser } = validation.data;
-
-  const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
-  if (!hasPermission) {
-    return { success: false, message: 'You do not have permission to perform this action.' };
-  }
-
-  const connection = await db.getConnection();
-  try {
-    await connection.beginTransaction();
-
-    // Check if user already exists
-    const [existing] = await connection.query('SELECT id FROM users WHERE username = ?', [username]);
-    if (Array.isArray(existing) && existing.length > 0) {
-       return { success: false, message: 'A user with that username already exists.' };
+    const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
     }
 
-    const userId = crypto.randomUUID();
-    await connection.query(
-      'INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)',
-      [userId, username, password, JSON.stringify(roles), 'Active']
-    );
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
 
-    await logUserAction(adminUser, 'Create User', `Manually created new user account: ${username}`, connection);
+        const [existing] = await connection.query('SELECT id FROM users WHERE username = ?', [username]);
+        if (Array.isArray(existing) && existing.length > 0) {
+            return { success: false, message: 'A user with that username already exists.' };
+        }
 
-    await connection.commit();
-    revalidatePath('/admin');
-    return { success: true, message: `User '${username}' created successfully.` };
-  } catch (error: any) {
-    await connection.rollback();
-    console.error('Failed to create user:', error);
-    return { success: false, message: 'Database operation failed.' };
-  } finally {
-    connection.release();
-  }
+        const userId = crypto.randomUUID();
+        await connection.query(
+            'INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)',
+            [userId, username, password, JSON.stringify(roles), 'Active']
+        );
+
+        await logUserAction(adminUser, 'Create User', `Manually created user account: ${username}`, connection);
+        await connection.commit();
+        revalidatePath('/admin');
+        return { success: true, message: `User '${username}' created.` };
+    } catch (error: any) {
+        await connection.rollback();
+        console.error('Failed to create user:', error);
+        return { success: false, message: 'Database operation failed.' };
+    } finally {
+        connection.release();
+    }
 }
 
-export async function submitAccessRequest(data: unknown) {
-  const validation = z.object({
-    username: z.string().min(3),
-    password: z.string().min(8),
-  }).safeParse(data);
-  
-  if (!validation.success) return { success: false, message: 'Invalid data.' };
-  
-  const { username, password } = validation.data;
+export async function submitAccessRequest(data: any) {
+  const { username, password } = data;
   await ensureDbInitialized();
   const connection = await db.getConnection();
   try {
@@ -252,20 +232,19 @@ export async function approveAccessRequest(data: any) {
 export async function denyAccessRequest(requestId: string, requestedUsername: string, adminUser: string) {
     const hasPermission = await checkPermissions(adminUser, 'MANAGE_ACCESS_REQUESTS');
     if (!hasPermission) {
-        return { success: false, message: 'You do not have permission to perform this action.' };
+        return { success: false, message: 'You do not have permission.' };
     }
 
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
         await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Denied', requestId]);
-        await logUserAction(adminUser, 'Deny Access Request', `Denied access request for user: ${requestedUsername}`, connection);
+        await logUserAction(adminUser, 'Deny Access Request', `Denied access for user: ${requestedUsername}`, connection);
         await connection.commit();
         revalidatePath('/admin');
         return { success: true, message: 'Access request denied.' };
     } catch (error) {
         await connection.rollback();
-        console.error("Failed to deny access request:", error);
         return { success: false, message: 'Database operation failed.' };
     } finally {
         connection.release();

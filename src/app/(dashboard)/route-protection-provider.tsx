@@ -11,7 +11,13 @@ export async function RouteProtectionProvider({ children }: { children: React.Re
         ? cookieHeader.split('; ').find(row => row.startsWith('loggedInUser='))?.split('=')[1]
         : undefined;
     
-    const isMaintenanceMode = await getMaintenanceMode();
+    let isMaintenanceMode = false;
+    try {
+        isMaintenanceMode = await getMaintenanceMode();
+    } catch (error) {
+        console.error("Maintenance mode check failed:", error);
+        // If DB is unreachable, we allow the request to proceed so diagnostic tools can be used.
+    }
 
     if (isMaintenanceMode && loggedInUserCookie) {
         const canBypass = await checkPermissions(loggedInUserCookie, 'BYPASS_MAINTENANCE_MODE');
@@ -20,9 +26,5 @@ export async function RouteProtectionProvider({ children }: { children: React.Re
         }
     }
     
-    // This part is handled by the AuthProvider on the client side now
-    // to avoid issues with headers and server components.
-    // We still need the cookie for the maintenance check above.
-
     return <>{children}</>;
 }

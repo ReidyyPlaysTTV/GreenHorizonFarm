@@ -11,7 +11,13 @@ const connectionString = "mysql://zap1311701-1:gFtXgwwIs09GtYtx@mysql-mariadb-20
 let pool: Pool;
 
 try {
-    pool = mysql.createPool(connectionString);
+    pool = mysql.createPool({
+        uri: connectionString,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+        connectTimeout: 30000, // 30 seconds
+    });
 } catch (err) {
     console.error("Failed to create MySQL pool:", err);
     throw err;
@@ -307,7 +313,8 @@ export async function ensureDbInitialized() {
         }
     } catch (err: any) {
         console.error("DB Initialization Error:", err.message);
-        throw err;
+        // Don't throw here to prevent the entire app layout from crashing on DB failure
+        return pool;
     }
 }
 
