@@ -9,21 +9,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
     const [isLoading, setIsLoading] = useState(true);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
         const checkAuth = () => {
-            const user = typeof window !== 'undefined' ? localStorage.getItem('loggedInUser') : null;
-            
-            const isPublicRoute = ['/login', '/', '/apply', '/check-status'].includes(pathname);
-            
-            if (!user && !isPublicRoute) {
-                router.replace('/login');
-            } else if (user && pathname === '/login') {
-                router.replace('/dashboard');
+            if (typeof window !== 'undefined') {
+                // TEMPORARY DEBUG BYPASS: 
+                // Automatically set the session to Leon Green to allow database testing.
+                if (!localStorage.getItem('loggedInUser')) {
+                    localStorage.setItem('loggedInUser', 'Leon Green');
+                }
             }
-            
-            setIsAuthenticated(!!user);
             setIsLoading(false);
         };
 

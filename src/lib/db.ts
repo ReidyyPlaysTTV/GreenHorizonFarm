@@ -12,9 +12,10 @@ const dbConfig = {
     database: 'zap1311701-1',
     port: 3306,
     waitForConnections: true,
-    connectionLimit: 10,
+    connectionLimit: 5,
     queueLimit: 0,
-    connectTimeout: 30000, // 30 seconds for remote handshake
+    connectTimeout: 20000, // 20 seconds
+    acquireTimeout: 20000,
     charset: 'utf8mb4',
     ssl: {
         rejectUnauthorized: false

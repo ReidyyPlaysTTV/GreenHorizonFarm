@@ -2,6 +2,7 @@
 'use server';
 
 import db, { ensureDbInitialized } from '../db';
+import pool from '../db';
 import type { AppUser, AccessRequest, Personnel } from '../types';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
@@ -14,7 +15,7 @@ import { checkPermissions } from '../permissions';
 export async function testDatabaseConnection() {
     const startTime = Date.now();
     try {
-        const pool = await ensureDbInitialized();
+        await ensureDbInitialized();
         const connection = await pool.getConnection();
         try {
             const [rows] = await connection.query('SELECT 1 as ping');
@@ -30,7 +31,7 @@ export async function testDatabaseConnection() {
         console.error("Test Connection Error:", error);
         return { 
             success: false, 
-            message: `Connection Error: ${error.message || 'Unknown issue'}. Check ZAP firewall.` 
+            message: `Connection Error: ${error.message || 'Unknown issue'}. Check ZAP firewall. Code: ${error.code || 'N/A'}` 
         };
     }
 }
