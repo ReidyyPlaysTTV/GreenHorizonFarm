@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -12,11 +13,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const loggedInUser = localStorage.getItem('loggedInUser');
-            if (!loggedInUser && pathname !== '/') {
-                router.replace('/'); 
-            } else {
-                setIsChecking(false);
+            
+            // Temporary Bypass: Auto-login as CEO if no one is logged in
+            if (!loggedInUser) {
+                console.log("Auth Bypassed: Auto-logging in as CEO for development.");
+                localStorage.setItem('loggedInUser', 'CEO_Guest');
+                // Optional: You could also mock a session in a real auth system here
             }
+            
+            setIsChecking(false);
         }
     }, [pathname, router]);
 

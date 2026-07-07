@@ -1,75 +1,51 @@
 
-
-import { LoginForm } from "@/components/auth/login-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getLoginBackgroundImage } from "@/lib/actions";
-import Image from "next/image";
+import { Sprout, ArrowRight, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
-export default async function LoginPage() {
-  const bgImageUrl = await getLoginBackgroundImage();
-
+export default function FarmLandingPage() {
   return (
-    <div 
-      className="relative flex min-h-screen items-center justify-center bg-background p-4 bg-cover bg-center"
-      style={{
-        backgroundImage: `url('${bgImageUrl}')`
-      }}
-    >
-        <div className="absolute inset-0 bg-black/60 z-0" />
-        
-        <div className="relative z-10 w-full max-w-md space-y-6">
-            <div className="text-center text-foreground">
-            <Image src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png" alt="DOC Logo" width={96} height={96} className="mx-auto h-24 w-24 object-contain" />
-            <h1 className="mt-4 text-3xl font-bold tracking-tight">
-                Department of Corrections
+    <div className="relative min-h-screen flex items-center justify-center bg-background overflow-hidden">
+        {/* Decorative Background Elements */}
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px]" />
+
+        <div className="relative z-10 w-full max-w-2xl px-6 text-center">
+            <div className="mb-10 inline-flex p-4 rounded-3xl bg-primary/10 border border-primary/20">
+                <Sprout className="h-16 w-16 text-primary animate-pulse" />
+            </div>
+            
+            <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-4 bg-gradient-to-br from-white to-white/40 bg-clip-text text-transparent">
+                GREEN HORIZON
             </h1>
-            <p className="mt-2 text-muted-foreground">
-                Personnel Portal
+            <p className="text-xl md:text-2xl text-muted-foreground mb-12 font-medium">
+                The future of sustainable agriculture and roleplay farm management.
             </p>
-            </div>
-            <Card className="bg-card/80 backdrop-blur-sm">
-            <CardHeader>
-                <CardTitle>Personnel Login</CardTitle>
-                <CardDescription>Enter your credentials to access the roster.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <LoginForm />
-            </CardContent>
-            </Card>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="bg-card/80 backdrop-blur-sm text-center">
-                    <CardHeader>
-                        <CardTitle className="text-base">Check Application Status</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                         <Button variant="link" asChild className="text-primary">
-                            <Link href="/check-status">
-                                Check Status
-                            </Link>
-                        </Button>
-                    </CardContent>
-                </Card>
-                 <Card className="bg-card/80 backdrop-blur-sm text-center">
-                    <CardHeader>
-                        <CardTitle className="text-base">Want to join?</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Button variant="link" asChild className="text-primary">
-                            <Link href="/apply">
-                                Submit Application
-                            </Link>
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
-             <div className="text-center">
-                 <Button variant="link" asChild className="text-sm text-muted-foreground">
-                    <Link href="/request-access">
-                        Need an account? Request Access
+
+            <div className="grid gap-4 sm:grid-cols-2">
+                <Button size="lg" className="h-16 text-lg font-bold rounded-2xl group" asChild>
+                    <Link href="/dashboard">
+                        Enter Operations Room
+                        <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                     </Link>
                 </Button>
+                <Button size="lg" variant="outline" className="h-16 text-lg font-bold rounded-2xl border-primary/20 hover:bg-primary/10" asChild>
+                    <Link href="/apply">
+                        Join Our Team
+                    </Link>
+                </Button>
+            </div>
+
+            <div className="mt-16 flex items-center justify-center gap-8 text-muted-foreground/60 font-bold uppercase tracking-widest text-xs">
+                <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4" />
+                    Secure Access
+                </div>
+                <span>•</span>
+                <div>Manager Verified</div>
+                <span>•</span>
+                <div>v2.0 Farm Edition</div>
             </div>
         </div>
     </div>

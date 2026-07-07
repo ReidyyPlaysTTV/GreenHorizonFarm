@@ -1,16 +1,17 @@
 
-export const roles = ["Developer", "Administrator", "Commissioners Office", "High Command", "Command", "NCOs", "User"] as const;
+export const roles = ["CEO", "Manager", "Division Lead", "Employee", "User"] as const;
 export type Role = typeof roles[number];
 
 export const permissions = [
     // Page Access
     'ACCESS_DASHBOARD',
-    'VIEW_ROSTER',
+    'VIEW_EMPLOYEES',
     'VIEW_USERS',
-    'VIEW_CALLSIGNS',
+    'VIEW_ORDERS',
     'VIEW_SOPS',
     'VIEW_ARCHIVE',
-    'ACCESS_COMMAND_CENTER',
+    'ACCESS_MANAGER_PORTAL',
+    'ACCESS_CEO_PORTAL',
     'VIEW_APPLICATIONS',
     'VIEW_LOGS',
     'ACCESS_ADMIN_PANEL',
@@ -18,66 +19,55 @@ export const permissions = [
     'VIEW_CHANGELOGS',
     
     // Actions
-    'MANAGE_PERSONNEL', // Promote, Demote, Fire, Edit Status
-    'HIRE_PERSONNEL', // Add new personnel from roster or rehire
-    'MANAGE_APPLICATIONS', // Approve, Deny
+    'MANAGE_EMPLOYEES', 
+    'HIRE_EMPLOYEES', 
+    'MANAGE_APPLICATIONS',
     'DELETE_APPLICATIONS',
     'EDIT_APPLICATION_FORM',
-    'MANAGE_BLACKLIST',
-    'MANAGE_USERS', // Create users, assign roles
+    'MANAGE_ORDERS',
+    'MANAGE_USERS',
     'DELETE_USERS',
     'MANAGE_ROLES_PERMISSIONS',
-    'MANAGE_RANKS',
-    'MANAGE_ACCESS_REQUESTS',
+    'MANAGE_POSITIONS',
     'MANAGE_APP_SETTINGS',
     'MANAGE_ANNOUNCEMENTS',
     'MANAGE_GALLERY',
-    'MANAGE_CHANGELOGS',
     'BYPASS_MAINTENANCE_MODE',
 ] as const;
 export type Permission = typeof permissions[number];
 
-export type Department = "Commissioners Office" | "High Command" | "Command" | "NCOS" | "Corrections" | "Training" | "BCSO";
-export type PersonnelStatus = 'Active' | 'LOA' | 'Inactive' | 'Low Activity' | 'Medical Leave' | 'Suspended';
+export type Division = "Harvesting" | "Processing" | "Logistics" | "Sales" | "Management" | "Maintenance";
+export type EmployeeStatus = 'Active' | 'On Leave' | 'Inactive' | 'Probation';
 export type UserStatus = 'Active' | 'Banned';
 
-
-export interface Personnel {
+export interface Employee {
   id: string;
   name: string;
-  rank: string;
-  badgeNumber: string;
-  department: Department;
+  position: string;
+  employeeId: string;
+  division: Division;
   discordUsername?: string;
-  status: PersonnelStatus;
-  loa_until?: string | null;
-  is_rehired?: boolean;
+  status: EmployeeStatus;
+  joinedAt: Date;
+  userId?: string | null;
 }
 
-export interface Rank {
+export interface Position {
     id: string;
     name: string;
-    department: Department;
+    division: Division;
     sort_order: number;
-    insignia_url?: string | null;
+    icon_url?: string | null;
 }
 
-export interface ArchivedPersonnel {
-  id: string;
-  name: string;
-  rank: string;
-  discordUsername?: string;
-  status: "Fired" | "Resigned";
-  date: string;
-  reason: string;
-}
-
-export interface BlacklistedPersonnel {
-  id: string;
-  name: string;
-  discordUsername?: string;
-  reason: string;
-  dateAdded: string;
+export interface FarmOrder {
+    id: string;
+    item_name: string;
+    quantity: number;
+    status: 'Pending' | 'Completed' | 'Cancelled';
+    completed_by?: string;
+    completed_at?: Date;
+    created_at: Date;
 }
 
 export interface Application {
@@ -88,58 +78,7 @@ export interface Application {
   status: "Pending" | "Under Review" | "Approved" | "Rejected";
   submittedAt: Date;
   reviewer_comment?: string;
-  reviewedAt?: Date | null;
-  reviewer?: {
-    id: string;
-    username: string;
-    avatarUrl?: string;
-  } | null;
-  responses: {
-    fieldId: string;
-    label: string;
-    type: string;
-    answer: string;
-  }[];
-}
-
-export interface FormFieldOption {
-    id?: string;
-    value: string;
-}
-
-export interface FormFieldData {
-    id?: string;
-    type: 'text' | 'textarea' | 'select';
-    label: string;
-    required: boolean;
-    order: number;
-    options?: FormFieldOption[];
-}
-
-export interface PersonnelEvent {
-    id: string;
-    personnel_name: string;
-    event_type: 'Hired' | 'Fired' | 'Promoted' | 'Demoted' | 'Rehired';
-    description: string;
-    date: Date;
-}
-
-export type ReportStatus = "Pending" | "In Progress" | "Completed" | "Rejected";
-
-export interface BugReport {
-    id: string;
-    title: string;
-    description: string;
-    status: ReportStatus;
-    submittedAt: Date;
-}
-
-export interface Suggestion {
-    id:string;
-    title: string;
-    description: string;
-    status: ReportStatus;
-    submittedAt: Date;
+  responses: any[];
 }
 
 export interface AppUser {
@@ -149,22 +88,7 @@ export interface AppUser {
   status: UserStatus;
   createdAt?: string;
   avatarUrl?: string;
-  personnel?: Personnel | null;
-}
-
-export interface AccessRequest {
-  id: string;
-  requested_username: string;
-  status: 'Pending' | 'Approved' | 'Denied';
-  createdAt: Date;
-}
-
-export interface CallsignLog {
-    id: string;
-    callsign: string;
-    personnel_name: string;
-    action: 'Assigned' | 'Unassigned';
-    timestamp: Date;
+  employee?: Partial<Employee> | null;
 }
 
 export interface AuditLog {
@@ -193,19 +117,4 @@ export interface GalleryImage {
     alt: string;
     hint?: string;
     createdAt: Date;
-}
-
-export interface Changelog {
-    id: string;
-    version: string;
-    added_features: string | null;
-    fixes: string | null;
-    removed_features: string | null;
-    other: string | null;
-    createdAt: Date;
-    author: {
-        id: string;
-        username: string;
-        avatarUrl?: string;
-    }
 }
