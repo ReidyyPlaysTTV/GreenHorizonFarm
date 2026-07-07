@@ -5,7 +5,7 @@ import { seedDatabase } from './db-seed';
 import { seedRolePermissions } from './actions/permission-actions';
 import { seedInitialRanks } from './actions/rank-actions';
 
-// Use the exact URI provided by the user
+// Connection URI for ZAP-Hosting MariaDB
 const dbUri = 'mysql://zap1311701-1:gFtXgwwIs09GtYtx@mysql-mariadb-20-104.zap-srv.com:3306/zap1311701-1';
 
 let pool: Pool;
@@ -14,10 +14,11 @@ try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 5,
+        connectionLimit: 10,
         queueLimit: 0,
-        // Short timeout (5s) to fail fast and prevent app hanging
+        // Strict 5s timeout to prevent app hanging during render
         connectTimeout: 5000,
+        acquireTimeout: 5000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });
@@ -74,54 +75,7 @@ async function createFarmTables(connection: any) {
         `);
 
         await connection.query(`
-            CREATE TABLE IF NOT EXISTS security_time_logs (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                user VARCHAR(255) NOT NULL,
-                hours DECIMAL(5, 2) NOT NULL,
-                description TEXT,
-                date DATE NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS security_incidents (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                title VARCHAR(255) NOT NULL,
-                description TEXT NOT NULL,
-                location VARCHAR(255) NOT NULL,
-                reported_by VARCHAR(255) NOT NULL,
-                pd_called BOOLEAN DEFAULT FALSE,
-                injured_details TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS farm_events (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                title VARCHAR(255) NOT NULL,
-                description TEXT NOT NULL,
-                revenue DECIMAL(10, 2) DEFAULT 0,
-                event_date DATETIME NOT NULL,
-                status ENUM('Scheduled', 'Cancelled', 'Completed') DEFAULT 'Scheduled',
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS farm_transactions (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                amount DECIMAL(15, 2) NOT NULL,
-                category ENUM('Income', 'Expense', 'Expenditure', 'Employee Cut') NOT NULL,
-                description TEXT NOT NULL,
-                transaction_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS financial_settings (
+            CREATE TABLE IF NOT EXISTS app_settings (
                 setting_key VARCHAR(255) NOT NULL PRIMARY KEY,
                 setting_value TEXT
             );
@@ -140,55 +94,11 @@ async function createFarmTables(connection: any) {
         `);
 
         await connection.query(`
-            CREATE TABLE IF NOT EXISTS staff_incidents (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                personnel_name VARCHAR(255) NOT NULL,
-                reason TEXT NOT NULL,
-                issued_by VARCHAR(255) NOT NULL,
-                incident_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_products (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
                 category VARCHAR(100) NOT NULL,
                 price DECIMAL(10, 2) DEFAULT 0
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS manager_plans (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                title VARCHAR(255) NOT NULL,
-                content TEXT NOT NULL,
-                author VARCHAR(255) NOT NULL,
-                status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
-                feedback TEXT,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS promotion_suggestions (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                personnel_name VARCHAR(255) NOT NULL,
-                suggested_rank VARCHAR(255) NOT NULL,
-                reason TEXT NOT NULL,
-                suggested_by VARCHAR(255) NOT NULL,
-                status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
-                feedback TEXT,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS ceo_chat (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                author VARCHAR(255) NOT NULL,
-                message TEXT NOT NULL,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
         `);
 
@@ -202,120 +112,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS application_form_fields (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                type ENUM('text', 'textarea', 'select') NOT NULL,
-                label VARCHAR(255) NOT NULL,
-                field_order INT NOT NULL,
-                required BOOLEAN DEFAULT TRUE
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS application_field_options (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                field_id VARCHAR(36) NOT NULL,
-                value VARCHAR(255) NOT NULL,
-                FOREIGN KEY (field_id) REFERENCES application_form_fields(id) ON DELETE CASCADE
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS applications (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                responses JSON NOT NULL,
-                status ENUM('Pending', 'Approved', 'Rejected', 'Under Review') NOT NULL DEFAULT 'Pending',
-                submittedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                reviewer_comment TEXT,
-                reviewer_id VARCHAR(36),
-                reviewedAt DATETIME
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS access_requests (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                requested_username VARCHAR(255) NOT NULL UNIQUE,
-                password VARCHAR(255) NOT NULL,
-                status ENUM('Pending', 'Approved', 'Denied') NOT NULL DEFAULT 'Pending',
-                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS ranks (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL UNIQUE,
-                department VARCHAR(255) NOT NULL,
-                sort_order INT NOT NULL,
-                insignia_url VARCHAR(255),
-                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS app_settings (
-                setting_key VARCHAR(255) NOT NULL PRIMARY KEY,
-                setting_value TEXT
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS announcements (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                content TEXT NOT NULL,
-                is_urgent BOOLEAN DEFAULT FALSE,
-                user_id VARCHAR(36) NOT NULL,
-                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS gallery_images (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                src TEXT NOT NULL,
-                alt VARCHAR(255),
-                hint VARCHAR(255),
-                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS changelogs (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                version VARCHAR(20) NOT NULL,
-                added_features TEXT,
-                fixes TEXT,
-                removed_features TEXT,
-                other TEXT,
-                author_id VARCHAR(36) NOT NULL,
-                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS blacklisted_personnel (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                discord_username VARCHAR(255),
-                reason TEXT,
-                dateAdded DATETIME NOT NULL
-            );
-        `);
-        
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS archived_personnel (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                rank VARCHAR(255) NOT NULL,
-                discord_username VARCHAR(255),
-                status ENUM('Fired', 'Resigned') NOT NULL,
-                date DATETIME NOT NULL,
-                reason TEXT
-            );
-        `);
-
     } catch (error) {
         console.error("Failed to create farm tables:", error);
     }
@@ -323,13 +119,10 @@ async function createFarmTables(connection: any) {
 
 let isInitialized = false;
 
-/**
- * Ensures the database is initialized and tables are seeded.
- * Non-blocking: will return the pool even if initialization fails, allowing UI to render.
- */
 export async function ensureDbInitialized() {
     if (isInitialized) return pool;
     try {
+        // Attempt a quick connection test
         const connection = await pool.getConnection();
         try {
             await createFarmTables(connection);
@@ -343,7 +136,7 @@ export async function ensureDbInitialized() {
         }
     } catch (err: any) {
         console.warn("DB Initial Handshake Failed (Deferred):", err.message);
-        return pool;
+        return pool; // Return the pool even if offline so diagnostics can run
     }
 }
 
