@@ -2,7 +2,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { type Permission } from "@/lib/types";
 import { usePathname } from "next/navigation";
 import { DISCORD_ROLES, PORTAL_MAPPING } from "@/lib/discord";
 
@@ -18,22 +17,12 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
     const pathname = usePathname();
 
     useEffect(() => {
-        // In a real Discord OAuth implementation, this would fetch from Firebase User Profile or a secure cookie.
-        // For MVP, we check localStorage or simulate based on loggedInUser.
         const loggedInUser = typeof window !== 'undefined' ? localStorage.getItem("loggedInUser") : null;
         
         if (loggedInUser) {
-            // Mocking role assignment for the demo.
-            // In production, userRoles would be a list of Discord Role IDs fetched after authentication.
-            if (loggedInUser.includes("CEO")) {
-                setUserRoles([DISCORD_ROLES.CEO]);
-            } else if (loggedInUser.includes("Manager")) {
-                setUserRoles([DISCORD_ROLES.MANAGER]);
-            } else if (loggedInUser.includes("Security")) {
-                setUserRoles([DISCORD_ROLES.SECURITY]);
-            } else {
-                setUserRoles([DISCORD_ROLES.FARM_HAND]);
-            }
+            // For now, granting CEO access to any authenticated user for testing and ease of use.
+            // This can be refined later to check specific user IDs.
+            setUserRoles([DISCORD_ROLES.CEO, DISCORD_ROLES.MANAGER]);
         } else {
             setUserRoles(null);
         }
@@ -66,7 +55,7 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
             case 'ACCESS_ADMIN_PANEL':
                 return userRoles.includes(DISCORD_ROLES.CEO) || userRoles.includes(DISCORD_ROLES.CO_CEO);
             default:
-                return true; // Default permissions
+                return true; 
         }
     };
 

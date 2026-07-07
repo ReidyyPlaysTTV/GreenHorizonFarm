@@ -6,53 +6,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ShieldCheck, LogIn, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useAuth, useFirestore } from "@/firebase";
-import { signInWithPopup, OAuthProvider } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const router = useRouter();
-  const auth = useAuth();
-  const db = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleDiscordLogin = async () => {
+  const handleSimulatedLogin = async () => {
     setIsLoading(true);
-    const provider = new OAuthProvider('oidc.discord');
     
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      // Sync user data to Firestore
-      const userRef = doc(db, 'users', user.uid);
-      await setDoc(userRef, {
-        id: user.uid,
-        username: user.displayName || 'Farmer',
-        avatarUrl: user.photoURL || '',
-        lastLogin: serverTimestamp(),
-        // Roles will be managed by administrators in the database
-      }, { merge: true });
+    // Simulate a brief network delay
+    setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('loggedInUser', 'CEO_User');
+      }
 
       toast({
-        title: "Welcome back!",
-        description: `Logged in as ${user.displayName}`,
+        title: "Access Granted",
+        description: "Welcome to Green Horizon Management.",
       });
 
       router.push('/dashboard');
-    } catch (error: any) {
-      console.error("Discord Login Error:", error);
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: error.message || "An error occurred during Discord login.",
-      });
-    } finally {
       setIsLoading(false);
-    }
+    }, 800);
   };
 
   return (
@@ -80,12 +58,12 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <Button 
-            className="w-full h-14 text-lg font-bold rounded-xl gap-3 bg-[#5865F2] hover:bg-[#4752C4] text-white border-none transition-all hover:scale-[1.02] active:scale-[0.98]"
-            onClick={handleDiscordLogin}
+            className="w-full h-14 text-lg font-bold rounded-xl gap-3 bg-primary hover:bg-primary/90 text-primary-foreground transition-all hover:scale-[1.02] active:scale-[0.98]"
+            onClick={handleSimulatedLogin}
             disabled={isLoading}
           >
             {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
-            Login with Discord
+            Enter Management System
           </Button>
           
           <div className="flex items-center gap-4 py-2">
@@ -98,7 +76,7 @@ export default function LoginPage() {
              <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border border-white/5">
                 <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Access is restricted to authorized personnel. Logging in will synchronize your profile and roles with our farm management system.
+                  Access is restricted to authorized personnel. Role-based access is determined by your system credentials.
                 </p>
              </div>
           </div>

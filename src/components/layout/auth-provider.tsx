@@ -4,24 +4,33 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Loading from '@/app/(dashboard)/loading';
-import { useUser } from '@/firebase';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
-    const { user, loading } = useUser();
+    const [isLoading, setIsLoading] = useState(true);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
-        if (!loading) {
-            if (!user && pathname !== '/login' && pathname !== '/' && pathname !== '/apply' && pathname !== '/check-status') {
+        const checkAuth = () => {
+            const user = typeof window !== 'undefined' ? localStorage.getItem('loggedInUser') : null;
+            
+            const isPublicRoute = ['/login', '/', '/apply', '/check-status'].includes(pathname);
+            
+            if (!user && !isPublicRoute) {
                 router.replace('/login');
             } else if (user && pathname === '/login') {
                 router.replace('/dashboard');
             }
-        }
-    }, [user, loading, pathname, router]);
+            
+            setIsAuthenticated(!!user);
+            setIsLoading(false);
+        };
 
-    if (loading) {
+        checkAuth();
+    }, [pathname, router]);
+
+    if (isLoading) {
         return <Loading />;
     }
 
