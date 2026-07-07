@@ -1,7 +1,7 @@
 
 'use server';
 
-import db from '../db';
+import db, { ensureDbInitialized } from '../db';
 import type { AppUser, AccessRequest, Personnel } from '../types';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
@@ -70,7 +70,7 @@ async function createAccessRequestsTableIfNeeded(connection: any) {
 
 export async function getUsers(): Promise<AppUser[]> {
     try {
-        await createUsersTableIfNeeded();
+        await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
             const [users] = await connection.query('SELECT id, username, roles, createdAt, avatarUrl, status FROM users ORDER BY username ASC');
@@ -130,43 +130,46 @@ export async function loginUser(credentials: unknown) {
     }
     const { username, password } = validation.data;
 
-    const connection = await db.getConnection();
     try {
-        const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', [username]);
-        
-        if (!Array.isArray(rows) || rows.length === 0) {
-            return { success: false, message: 'Incorrect username or password. Please try again.' };
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', [username]);
+            
+            if (!Array.isArray(rows) || rows.length === 0) {
+                return { success: false, message: 'Incorrect username or password. Please try again.' };
+            }
+            
+            const user = (rows as any[])[0];
+            if (user.status === 'Banned') {
+                return { success: false, message: 'This account has been banned.' };
+            }
+
+            const passwordMatch = user.password === password;
+
+            if (!passwordMatch) {
+                return { success: false, message: 'Incorrect username or password. Please try again.' };
+            }
+            
+            await logUserAction(username, "Login", `User '${username}' signed in.`, connection);
+
+            let userRoles = [];
+            if(typeof user.roles === 'string') {
+                try {
+                    userRoles = JSON.parse(user.roles);
+                } catch(e) { console.error('Failed to parse roles for user', user.username)}
+            } else if (Array.isArray(user.roles)) {
+                userRoles = user.roles;
+            }
+
+            return { success: true, user: { id: user.id, username: user.username, roles: userRoles } };
+
+        } finally {
+            connection.release();
         }
-        
-        const user = (rows as any[])[0];
-        if (user.status === 'Banned') {
-            return { success: false, message: 'This account has been banned.' };
-        }
-
-        const passwordMatch = user.password === password;
-
-        if (!passwordMatch) {
-            return { success: false, message: 'Incorrect username or password. Please try again.' };
-        }
-        
-        await logUserAction(username, "Login", `User '${username}' signed in.`, connection);
-
-        let userRoles = [];
-        if(typeof user.roles === 'string') {
-            try {
-                userRoles = JSON.parse(user.roles);
-            } catch(e) { console.error('Failed to parse roles for user', user.username)}
-        } else if (Array.isArray(user.roles)) {
-            userRoles = user.roles;
-        }
-
-        return { success: true, user: { id: user.id, username: user.username, roles: userRoles } };
-
-    } catch (error) {
+    } catch (error: any) {
         console.error("Login failed:", error);
-        return { success: false, message: 'An internal server error occurred.' };
-    } finally {
-        connection.release();
+        return { success: false, message: error.message || 'An internal server error occurred.' };
     }
 }
 
@@ -182,6 +185,7 @@ export async function submitAccessRequest(data: unknown) {
   }
   const { username, password } = validation.data;
 
+  await ensureDbInitialized();
   const connection = await db.getConnection();
   try {
     await createAccessRequestsTableIfNeeded(connection);
@@ -212,6 +216,7 @@ export async function submitAccessRequest(data: unknown) {
 }
 
 export async function getAccessRequests(): Promise<AccessRequest[]> {
+    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
         await createAccessRequestsTableIfNeeded(connection);
@@ -247,6 +252,7 @@ export async function approveAccessRequest(data: unknown) {
         return { success: false, message: 'You do not have permission to perform this action.' };
     }
     
+    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -284,12 +290,19 @@ export async function approveAccessRequest(data: unknown) {
     }
 }
 
+const denyAccessRequestSchema = z.object({
+  requestId: z.string(),
+  username: z.string(),
+  adminUser: z.string(),
+});
+
 export async function denyAccessRequest(requestId: string, username: string, adminUser: string) {
     const hasPermission = await checkPermissions(adminUser, 'MANAGE_ACCESS_REQUESTS');
     if (!hasPermission) {
         return { success: false, message: 'You do not have permission to perform this action.' };
     }
 
+    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -328,6 +341,7 @@ export async function createUser(data: unknown) {
     return { success: false, message: 'You do not have permission to perform this action.' };
   }
   
+  await ensureDbInitialized();
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
@@ -371,6 +385,7 @@ export async function changeUserPassword(data: unknown) {
     }
     const { userId, currentPassword, newPassword } = validation.data;
 
+    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -417,6 +432,7 @@ export async function updateProfilePicture(data: unknown) {
     }
     const { userId, url, user } = validation.data;
 
+    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -438,6 +454,7 @@ export async function updateProfilePicture(data: unknown) {
 }
 
 export async function getReviewedApplicationsCount(userId: string): Promise<number> {
+    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
         const [rows] = await connection.query(
@@ -475,6 +492,7 @@ export async function updateUser(data: unknown) {
         return { success: false, message: 'You do not have permission to perform this action.' };
     }
     
+    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -528,6 +546,7 @@ export async function setUserStatus(data: unknown) {
         return { success: false, message: 'You do not have permission to perform this action.' };
     }
     
+    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -577,6 +596,7 @@ export async function resetUserPassword(data: unknown) {
         return { success: false, message: 'You do not have permission to perform this action.' };
     }
     
+    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -608,6 +628,7 @@ export async function deleteUser(userId: string, adminUser: string) {
         return { success: false, message: 'You do not have permission to perform this action.' };
     }
     
+    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
