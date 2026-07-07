@@ -1,8 +1,7 @@
-
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sprout, ArrowRight, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function FarmLandingPage() {
   return (
@@ -12,15 +11,21 @@ export default function FarmLandingPage() {
         <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px]" />
 
         <div className="relative z-10 w-full max-w-2xl px-6 text-center">
-            <div className="mb-10 inline-flex p-4 rounded-3xl bg-primary/10 border border-primary/20">
-                <Sprout className="h-16 w-16 text-primary animate-pulse" />
+            <div className="mb-10 inline-flex p-1 rounded-full bg-primary/10 border border-primary/20">
+                <Image 
+                    src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Green_Horizon_Logo.png" 
+                    alt="Green Horizon Logo" 
+                    width={160} 
+                    height={160} 
+                    className="h-40 w-40 rounded-full object-cover"
+                />
             </div>
             
             <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-4 bg-gradient-to-br from-white to-white/40 bg-clip-text text-transparent">
                 GREEN HORIZON
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground mb-12 font-medium">
-                The future of sustainable agriculture and roleplay farm management.
+                Nature • Kindness • Future
             </p>
 
             <div className="grid gap-4 sm:grid-cols-2">

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
@@ -11,10 +10,9 @@ import {
   SidebarFooter,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home, Users, Briefcase, ClipboardList, BookOpen, GitBranch, Settings, LayoutDashboard, UserCircle, LogOut, Sprout } from "lucide-react";
+import { Home, Users, Briefcase, ClipboardList, BookOpen, GitBranch, Settings, LayoutDashboard, LogOut } from "lucide-react";
 import { Button } from "../ui/button";
 import Image from "next/image";
-import { Separator } from "../ui/separator";
 import { usePermissions } from "@/hooks/use-permissions";
 
 const mainMenuItems = [
@@ -61,7 +59,13 @@ export function SidebarNav() {
     <Sidebar collapsible="icon" className="border-r bg-card">
       <SidebarHeader>
         <div className="flex items-center gap-3 px-4 h-14">
-            <Sprout className="h-8 w-8 text-primary" />
+            <Image 
+                src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Green_Horizon_Logo.png" 
+                alt="Green Horizon Logo" 
+                width={32} 
+                height={32} 
+                className="h-8 w-8 rounded-full object-cover"
+            />
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">
                 <span className="text-sm font-bold tracking-tight">Green Horizon</span>
                 <span className="text-[10px] uppercase text-muted-foreground font-semibold">Farm Management</span>

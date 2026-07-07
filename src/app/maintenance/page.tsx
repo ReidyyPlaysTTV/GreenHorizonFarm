@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -17,17 +16,17 @@ export default function MaintenancePage() {
     return (
         <div className="flex flex-col min-h-screen items-center justify-center bg-background p-4">
              <Image 
-                src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png" 
-                alt="DOC Logo" 
+                src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Green_Horizon_Logo.png" 
+                alt="Green Horizon Logo" 
                 width={128} 
                 height={128} 
-                className="h-32 w-32 animate-pulse mb-8"
+                className="h-32 w-32 animate-pulse mb-8 rounded-full"
             />
-            <h1 className="text-4xl font-bold tracking-tight mb-4">Under Maintenance</h1>
-            <p className="text-lg text-muted-foreground">
-                Sorry, this application is under scheduled maintenance. We'll be back online soon!
+            <h1 className="text-4xl font-bold tracking-tight mb-4 text-primary">Farm Maintenance</h1>
+            <p className="text-lg text-muted-foreground text-center max-w-md">
+                We're currently tending to the digital fields. The system will be back online shortly!
             </p>
-             <Button onClick={handleLogout} variant="outline" className="mt-8 gap-2">
+             <Button onClick={handleLogout} variant="outline" className="mt-8 gap-2 border-primary/20">
                 <LogOut />
                 Logout
             </Button>

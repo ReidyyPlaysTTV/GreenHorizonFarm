@@ -3,8 +3,8 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: "DOC Roster",
-  description: "Department of Corrections Roster Management System",
+  title: "Green Horizon Farm",
+  description: "Sustainable Agriculture Management System",
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
-        <link rel="icon" href="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png" />
+        <link rel="icon" href="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Green_Horizon_Logo.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link

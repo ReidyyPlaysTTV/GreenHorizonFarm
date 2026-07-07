@@ -1,4 +1,3 @@
-
 import { getPersonnel, getRanks } from "@/lib/actions";
 import { departments } from "@/lib/data";
 import type { Personnel, PersonnelStatus, Rank } from "@/lib/types";
@@ -13,7 +12,6 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Recycle } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 const RosterTable = ({ personnel, ranks }: { personnel: Personnel[], ranks: Rank[] }) => {
   
@@ -64,8 +62,8 @@ const RosterTable = ({ personnel, ranks }: { personnel: Personnel[], ranks: Rank
           <TableRow>
             <TableHead className="w-[60px]">Insignia</TableHead>
             <TableHead>Name</TableHead>
-            <TableHead>Rank</TableHead>
-            <TableHead>Callsign</TableHead>
+            <TableHead>Position</TableHead>
+            <TableHead>ID</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Discord</TableHead>
             <TableHead className="text-right w-[200px]">Actions</TableHead>
@@ -77,7 +75,7 @@ const RosterTable = ({ personnel, ranks }: { personnel: Personnel[], ranks: Rank
               <TableRow key={p.id} className={cn(getStatusRowClass(p))}>
                 <TableCell>
                   <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted p-1">
-                    <Image src={rankInsignias[p.rank] || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png"} alt={`${p.rank} insignia`} width={25} height={25} className="rounded-md object-contain" />
+                    <Image src={rankInsignias[p.rank] || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Green_Horizon_Logo.png"} alt={`${p.rank} insignia`} width={25} height={25} className="rounded-md object-contain" />
                   </div>
                 </TableCell>
                 <TableCell className="font-medium">
@@ -120,7 +118,7 @@ const RosterTable = ({ personnel, ranks }: { personnel: Personnel[], ranks: Rank
           ) : (
             <TableRow>
               <TableCell colSpan={7} className="h-24 text-center">
-                No personnel found in this department.
+                No personnel found in this division.
               </TableCell>
             </TableRow>
           )}
@@ -153,9 +151,9 @@ export default async function RosterPage() {
         <div className="flex-none p-4 md:p-8">
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Personnel Roster</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Staff Roster</h1>
                     <p className="text-muted-foreground">
-                    Browse active personnel across all departments.
+                    Browse active farm personnel across all divisions.
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -168,7 +166,6 @@ export default async function RosterPage() {
             <div className="space-y-8">
                 {departments.map(dep => {
                 const departmentPersonnel = sortedPersonnel.filter(p => p.department === dep);
-                // Do not render department card if there are no personnel
                 if (departmentPersonnel.length === 0) return null;
                 return (
                     <Card key={dep}>

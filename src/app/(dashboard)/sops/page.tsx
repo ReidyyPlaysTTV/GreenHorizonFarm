@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { getSopLink } from "@/lib/actions";
@@ -14,9 +13,9 @@ export default async function SOPsPage() {
         <div className="container mx-auto p-4 md:p-8">
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">DOC Standard Operating Procedures</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Farm Guidelines & SOPs</h1>
                     <p className="text-muted-foreground">
-                    Official guidelines and procedures for all personnel.
+                    Official operating procedures for all Green Horizon personnel.
                     </p>
                 </div>
                 <RefreshButton />
@@ -43,7 +42,7 @@ export default async function SOPsPage() {
                         <ShieldAlert className="h-4 w-4" />
                         <AlertTitle>SOPs Not Configured</AlertTitle>
                         <AlertDescription>
-                            The link for the Standard Operating Procedures has not been set.
+                            The link for the Farm Standard Operating Procedures has not been set.
                             An administrator can set this in the{' '}
                             <Link href="/admin" className="font-bold underline">
                                 Admin Panel

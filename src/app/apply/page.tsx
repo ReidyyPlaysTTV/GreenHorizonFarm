@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, FileText, XCircle } from "lucide-react";
 import Link from "next/link";
 import { getApplicationStatus } from "@/lib/actions";
+import Image from "next/image";
 
 export default async function ApplyPage() {
   const applicationsOpen = await getApplicationStatus();
@@ -13,13 +14,19 @@ export default async function ApplyPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-2xl space-y-6">
         <div className="text-center text-foreground">
-          <FileText className="mx-auto h-12 w-12 text-primary" />
+          <Image 
+            src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Green_Horizon_Logo.png" 
+            alt="Green Horizon Logo" 
+            width={80} 
+            height={80} 
+            className="mx-auto rounded-full h-20 w-20 mb-4"
+          />
           <h1 className="mt-4 text-3xl font-bold tracking-tight">
-            DOC Application
+            Green Horizon Employment
           </h1>
           <p className="mt-2 text-muted-foreground">
             {applicationsOpen
-              ? "Complete the form below to apply to the Department of Corrections."
+              ? "Join our team and help us grow a greener tomorrow."
               : "Applications are currently closed."}
           </p>
         </div>
@@ -28,7 +35,7 @@ export default async function ApplyPage() {
             <CardTitle>Application Form</CardTitle>
             <CardDescription>
               {applicationsOpen
-                ? "All fields are required. Please be truthful and concise."
+                ? "All fields are required. Tell us why you'd be a great fit for the farm."
                 : "Check back at a later date."}
             </CardDescription>
           </CardHeader>
@@ -40,7 +47,7 @@ export default async function ApplyPage() {
                 <XCircle className="h-4 w-4" />
                 <AlertTitle>Applications Closed</AlertTitle>
                 <AlertDescription>
-                  Unfortunately, Department of Corrections Applications are Currently Closed and we cannot give you a time frame before you will be able to Apply.
+                  Unfortunately, Green Horizon Farm is not currently hiring. Please check back later or follow our announcements.
                 </AlertDescription>
               </Alert>
             )}
@@ -50,7 +57,7 @@ export default async function ApplyPage() {
             <Button variant="ghost" asChild>
                 <Link href="/" className="flex items-center justify-center gap-2">
                     <ArrowLeft className="h-4 w-4" />
-                    Back to Login
+                    Back to Main Page
                 </Link>
             </Button>
         </div>
