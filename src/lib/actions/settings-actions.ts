@@ -1,8 +1,7 @@
 
-
 'use server';
 
-import db from '../db';
+import db, { ensureDbInitialized } from '../db';
 import { revalidatePath } from 'next/cache';
 import { checkPermissions } from '../permissions';
 import { logUserAction } from './audit-log-actions';
@@ -23,28 +22,31 @@ async function createSettingsTableIfNeeded(connection: any) {
 }
 
 export async function getSopLink(): Promise<string | null> {
-    const connection = await db.getConnection();
     try {
-        await createSettingsTableIfNeeded(connection);
-        const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [SOP_LINK_KEY]);
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            await createSettingsTableIfNeeded(connection);
+            const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [SOP_LINK_KEY]);
 
-        if (Array.isArray(rows) && rows.length > 0) {
-            return (rows[0] as any).setting_value;
+            if (Array.isArray(rows) && rows.length > 0) {
+                return (rows[0] as any).setting_value;
+            }
+            
+            // If not found, insert the default and return it
+            const defaultUrl = "https://docs.google.com/presentation/d/1jjUe1Jx2odazolqiyGnuCiEVEE3NPrHQVMn3_cw9A2s/embed?start=false&loop=false&delayms=3000";
+            await connection.query(
+                'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = setting_value',
+                [SOP_LINK_KEY, defaultUrl]
+            );
+            return defaultUrl;
+
+        } finally {
+            connection.release();
         }
-        
-        // If not found, insert the default and return it
-        const defaultUrl = "https://docs.google.com/presentation/d/1jjUe1Jx2odazolqiyGnuCiEVEE3NPrHQVMn3_cw9A2s/embed?start=false&loop=false&delayms=3000";
-        await connection.query(
-            'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?)',
-            [SOP_LINK_KEY, defaultUrl]
-        );
-        return defaultUrl;
-
     } catch (error) {
         console.error("Failed to get SOP link:", error);
         return null;
-    } finally {
-        connection.release();
     }
 }
 
@@ -54,60 +56,63 @@ export async function updateSopLink(newLink: string, user: string) {
         return { success: false, message: 'You do not have permission to perform this action.' };
     }
 
-    const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+            await createSettingsTableIfNeeded(connection);
 
-        await createSettingsTableIfNeeded(connection);
+            await connection.query(
+                `INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?)
+                 ON DUPLICATE KEY UPDATE setting_value = ?`,
+                [SOP_LINK_KEY, newLink, newLink]
+            );
+            
+            await logUserAction(user, 'Update Settings', 'Updated the SOP link.', connection);
+            await connection.commit();
+            
+            revalidatePath('/sops');
+            revalidatePath('/admin');
+            revalidatePath('/logs');
 
-        // Use INSERT ... ON DUPLICATE KEY UPDATE to handle both cases
-        await connection.query(
-            `INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?)
-             ON DUPLICATE KEY UPDATE setting_value = ?`,
-            [SOP_LINK_KEY, newLink, newLink]
-        );
-        
-        await logUserAction(user, 'Update Settings', 'Updated the SOP link.', connection);
-
-        await connection.commit();
-        
-        revalidatePath('/sops');
-        revalidatePath('/admin');
-        revalidatePath('/logs');
-
-        return { success: true };
+            return { success: true };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
     } catch (error) {
-        await connection.rollback();
         console.error("Failed to update SOP link:", error);
         return { success: false, message: 'Database operation failed.' };
-    } finally {
-        connection.release();
     }
 }
 
 export async function getApplicationStatus(): Promise<boolean> {
-    const connection = await db.getConnection();
     try {
-        await createSettingsTableIfNeeded(connection);
-        const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [APPLICATIONS_OPEN_KEY]);
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            await createSettingsTableIfNeeded(connection);
+            const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [APPLICATIONS_OPEN_KEY]);
 
-        if (Array.isArray(rows) && rows.length > 0) {
-            // setting_value is a string 'true' or 'false'
-            return (rows[0] as any).setting_value === 'true';
+            if (Array.isArray(rows) && rows.length > 0) {
+                return (rows[0] as any).setting_value === 'true';
+            }
+            
+            await connection.query(
+                'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = setting_value',
+                [APPLICATIONS_OPEN_KEY, 'true']
+            );
+            return true;
+
+        } finally {
+            connection.release();
         }
-        
-        // Default to true if not set
-        await connection.query(
-            'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?)',
-            [APPLICATIONS_OPEN_KEY, 'true']
-        );
-        return true;
-
     } catch (error) {
         console.error("Failed to get application status:", error);
-        return true; // Default to open on error
-    } finally {
-        connection.release();
+        return true; 
     }
 }
 
@@ -117,60 +122,67 @@ export async function updateApplicationStatusSetting(isOpen: boolean, user: stri
         return { success: false, message: 'You do not have permission to perform this action.' };
     }
 
-    const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-        await createSettingsTableIfNeeded(connection);
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+            await createSettingsTableIfNeeded(connection);
 
-        await connection.query(
-            `INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?)
-             ON DUPLICATE KEY UPDATE setting_value = ?`,
-            [APPLICATIONS_OPEN_KEY, isOpen.toString(), isOpen.toString()]
-        );
-        
-        const logMessage = `Set applications to ${isOpen ? 'OPEN' : 'CLOSED'}.`;
-        await logUserAction(user, 'Update Settings', logMessage, connection);
+            await connection.query(
+                `INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?)
+                 ON DUPLICATE KEY UPDATE setting_value = ?`,
+                [APPLICATIONS_OPEN_KEY, isOpen.toString(), isOpen.toString()]
+            );
+            
+            const logMessage = `Set applications to ${isOpen ? 'OPEN' : 'CLOSED'}.`;
+            await logUserAction(user, 'Update Settings', logMessage, connection);
+            await connection.commit();
+            
+            revalidatePath('/apply');
+            revalidatePath('/applications');
+            revalidatePath('/admin');
+            revalidatePath('/logs');
 
-        await connection.commit();
-        
-        revalidatePath('/apply');
-        revalidatePath('/applications');
-        revalidatePath('/admin');
-        revalidatePath('/logs');
-
-        return { success: true };
+            return { success: true };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
     } catch (error) {
-        await connection.rollback();
         console.error("Failed to update application status setting:", error);
         return { success: false, message: 'Database operation failed.' };
-    } finally {
-        connection.release();
     }
 }
 
 
 export async function getLoginBackgroundImage(): Promise<string> {
-    const connection = await db.getConnection();
+    const defaultUrl = "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/e1b8daf9b26a971543cc901fc4fcec33ab7af144.png";
     try {
-        await createSettingsTableIfNeeded(connection);
-        const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [LOGIN_BACKGROUND_IMAGE_KEY]);
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            await createSettingsTableIfNeeded(connection);
+            const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [LOGIN_BACKGROUND_IMAGE_KEY]);
 
-        if (Array.isArray(rows) && rows.length > 0 && (rows[0] as any).setting_value) {
-            return (rows[0] as any).setting_value;
+            if (Array.isArray(rows) && rows.length > 0 && (rows[0] as any).setting_value) {
+                return (rows[0] as any).setting_value;
+            }
+            
+            await connection.query(
+                'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = setting_value',
+                [LOGIN_BACKGROUND_IMAGE_KEY, defaultUrl]
+            );
+            return defaultUrl;
+
+        } finally {
+            connection.release();
         }
-        
-        const defaultUrl = "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/e1b8daf9b26a971543cc901fc4fcec33ab7af144.png";
-        await connection.query(
-            'INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
-            [LOGIN_BACKGROUND_IMAGE_KEY, defaultUrl, defaultUrl]
-        );
-        return defaultUrl;
-
     } catch (error) {
         console.error("Failed to get login background image:", error);
-        return "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/e1b8daf9b26a971543cc901fc4fcec33ab7af144.png";
-    } finally {
-        connection.release();
+        return defaultUrl;
     }
 }
 
@@ -181,48 +193,55 @@ export async function updateLoginBackgroundImage(newUrl: string, user: string) {
         return { success: false, message: 'You do not have permission to perform this action.' };
     }
 
-    const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-        await createSettingsTableIfNeeded(connection);
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+            await createSettingsTableIfNeeded(connection);
 
-        await connection.query(
-            `INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?)
-             ON DUPLICATE KEY UPDATE setting_value = ?`,
-            [LOGIN_BACKGROUND_IMAGE_KEY, newUrl, newUrl]
-        );
-        
-        await logUserAction(user, 'Update Settings', 'Updated the login page background image.', connection);
+            await connection.query(
+                `INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?)
+                 ON DUPLICATE KEY UPDATE setting_value = ?`,
+                [LOGIN_BACKGROUND_IMAGE_KEY, newUrl, newUrl]
+            );
+            
+            await logUserAction(user, 'Update Settings', 'Updated the login page background image.', connection);
+            await connection.commit();
+            
+            revalidatePath('/');
+            revalidatePath('/admin');
 
-        await connection.commit();
-        
-        revalidatePath('/');
-        revalidatePath('/admin');
-
-        return { success: true };
+            return { success: true };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
     } catch (error) {
-        await connection.rollback();
         console.error("Failed to update login background image:", error);
         return { success: false, message: 'Database operation failed.' };
-    } finally {
-        connection.release();
     }
 }
 
 export async function getMaintenanceMode(): Promise<boolean> {
-    const connection = await db.getConnection();
     try {
-        await createSettingsTableIfNeeded(connection);
-        const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [MAINTENANCE_MODE_KEY]);
-        if (Array.isArray(rows) && rows.length > 0) {
-            return (rows[0] as any).setting_value === 'true';
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            await createSettingsTableIfNeeded(connection);
+            const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [MAINTENANCE_MODE_KEY]);
+            if (Array.isArray(rows) && rows.length > 0) {
+                return (rows[0] as any).setting_value === 'true';
+            }
+            return false;
+        } finally {
+            connection.release();
         }
-        return false;
     } catch (error) {
         console.error("Failed to get maintenance mode status:", error);
         return false;
-    } finally {
-        connection.release();
     }
 }
 
@@ -232,28 +251,32 @@ export async function updateMaintenanceMode(isMaintenance: boolean, user: string
         return { success: false, message: 'You do not have permission to perform this action.' };
     }
 
-    const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-        await createSettingsTableIfNeeded(connection);
-        await connection.query(
-            `INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?)
-             ON DUPLICATE KEY UPDATE setting_value = ?`,
-            [MAINTENANCE_MODE_KEY, isMaintenance.toString(), isMaintenance.toString()]
-        );
-        
-        const logMessage = `Set maintenance mode to ${isMaintenance ? 'ON' : 'OFF'}.`;
-        await logUserAction(user, 'Update Settings', logMessage, connection);
-
-        await connection.commit();
-        
-        revalidatePath('/admin');
-        return { success: true };
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+            await createSettingsTableIfNeeded(connection);
+            await connection.query(
+                `INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?)
+                 ON DUPLICATE KEY UPDATE setting_value = ?`,
+                [MAINTENANCE_MODE_KEY, isMaintenance.toString(), isMaintenance.toString()]
+            );
+            
+            const logMessage = `Set maintenance mode to ${isMaintenance ? 'ON' : 'OFF'}.`;
+            await logUserAction(user, 'Update Settings', logMessage, connection);
+            await connection.commit();
+            
+            revalidatePath('/admin');
+            return { success: true };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
     } catch (error) {
-        await connection.rollback();
         console.error("Failed to update maintenance mode:", error);
         return { success: false, message: 'Database operation failed.' };
-    } finally {
-        connection.release();
     }
 }

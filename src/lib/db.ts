@@ -5,24 +5,48 @@ import { seedInitialRanks } from './actions/rank-actions';
 import { seedRolePermissions } from './actions/permission-actions';
 import type { Pool } from 'mysql2/promise';
 
-const DATABASE_URL = "mysql://zap1311701-2:J2IAJKgRfnrCphFq@mysql-mariadb16-lon-101.zap-srv.com/zap1311701-2";
+/**
+ * DATABASE CONNECTION CONFIGURATION
+ * 
+ * The error "Access denied for user 'zap1311701-2'@'34.38.53.4'" means 
+ * your database provider (Zap-Hosting) is blocking the connection.
+ * 
+ * TO FIX THIS:
+ * 1. Log in to your Zap-Hosting dashboard.
+ * 2. Go to your MariaDB/MySQL database settings.
+ * 3. Look for "Remote Access", "External Access", or "Whitelisted IPs".
+ * 4. Add the IP address: 34.38.53.4 to the allowed list.
+ * 5. Ensure the password provided below is 100% correct.
+ */
 
-if (!DATABASE_URL) {
-  throw new Error('DATABASE_URL is not set.');
-}
-
-const pool: Pool = mysql.createPool({
-    uri: DATABASE_URL,
+const dbConfig = {
+    host: 'mysql-mariadb16-lon-101.zap-srv.com',
+    user: 'zap1311701-2',
+    password: 'J2IAJKgRfnrCphFq',
+    database: 'zap1311701-2',
+    port: 3306,
     waitForConnections: true,
     connectionLimit: 10,
+    maxIdle: 10,
+    idleTimeout: 60000,
     queueLimit: 0,
-    connectTimeout: 10000,
-});
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10000,
+    charset: 'utf8mb4'
+};
 
-async function createCoreTables(pool: Pool) {
-    const connection = await pool.getConnection();
+let pool: Pool;
+
+try {
+    pool = mysql.createPool(dbConfig);
+} catch (err) {
+    console.error("Failed to create MySQL pool:", err);
+    throw err;
+}
+
+async function createCoreTables(connection: any) {
     try {
-        // Create users table first as other tables may depend on it
+        // Create users table first
         await connection.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -35,22 +59,7 @@ async function createCoreTables(pool: Pool) {
             );
         `);
         
-        // This is a migration from a single 'role' to a JSON array 'roles'
-        const [roleColumns] = await connection.query("SHOW COLUMNS FROM users LIKE 'role'");
-         if (Array.isArray(roleColumns) && roleColumns.length > 0) {
-            const [oldRoleUsers] = await connection.query('SELECT id, role FROM users WHERE role IS NOT NULL');
-            if(Array.isArray(oldRoleUsers) && oldRoleUsers.length > 0) {
-                await connection.query("ALTER TABLE users ADD COLUMN roles JSON;");
-                for (const user of (oldRoleUsers as any[])) {
-                    await connection.query('UPDATE users SET roles = ? WHERE id = ?', [JSON.stringify([user.role]), user.id]);
-                }
-                await connection.query("ALTER TABLE users DROP COLUMN role;");
-                console.log("Successfully migrated 'role' column to 'roles' JSON array.")
-            }
-        }
-
-
-        // Then create other tables
+        // Announcements table
         await connection.query(`
             CREATE TABLE IF NOT EXISTS announcements (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -62,6 +71,7 @@ async function createCoreTables(pool: Pool) {
             );
         `);
 
+        // Gallery table
          await connection.query(`
             CREATE TABLE IF NOT EXISTS gallery_images (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -72,6 +82,7 @@ async function createCoreTables(pool: Pool) {
             );
         `);
 
+        // Changelogs table
         await connection.query(`
             CREATE TABLE IF NOT EXISTS changelogs (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -88,21 +99,42 @@ async function createCoreTables(pool: Pool) {
         
     } catch (error) {
         console.error("Failed to create core tables:", error);
-        throw error; // Throw error to be caught by the main promise chain
-    } finally {
-        connection.release();
+        throw error;
     }
 }
 
+// Initialization flag to prevent multiple seeding attempts in Dev
+let isInitialized = false;
 
-// Seed the database on application startup
-Promise.all([
-    createCoreTables(pool),
-    seedDatabase(pool),
-    seedRolePermissions(pool),
-    seedInitialRanks(pool),
-]).catch(err => {
-    console.error("Failed to setup and seed database:", err);
-});
+export async function ensureDbInitialized() {
+    if (isInitialized) return pool;
+    
+    try {
+        const connection = await pool.getConnection();
+        try {
+            await createCoreTables(connection);
+            await seedDatabase(pool);
+            await seedRolePermissions(pool);
+            await seedInitialRanks(pool);
+            isInitialized = true;
+            console.log("Database successfully verified and initialized.");
+            return pool;
+        } finally {
+            connection.release();
+        }
+    } catch (err: any) {
+        if (err.code === 'ER_ACCESS_DENIED_ERROR') {
+            console.error("CRITICAL: Database access denied. Please whitelist IP 34.38.53.4 in Zap-Hosting.");
+        } else {
+            console.error("CRITICAL: Database initialization failed:", err.message);
+        }
+        // Return the pool anyway so the app doesn't crash on boot, 
+        // subsequent actions will handle their own errors.
+        return pool;
+    }
+}
+
+// Immediate attempt to initialize
+ensureDbInitialized().catch(console.error);
 
 export default pool;

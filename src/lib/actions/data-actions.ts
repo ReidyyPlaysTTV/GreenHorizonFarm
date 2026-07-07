@@ -2,8 +2,7 @@
 'use server';
 
 import type { Personnel, ArchivedPersonnel, BlacklistedPersonnel, Application, PersonnelEvent, Rank } from "../types";
-import db from '../db';
-import { addPersonnel } from "./personnel-actions";
+import db, { ensureDbInitialized } from '../db';
 
 async function createPersonnelTableIfNeeded(connection: any) {
     await connection.query(`
@@ -20,18 +19,22 @@ async function createPersonnelTableIfNeeded(connection: any) {
             userId VARCHAR(36)
         )
     `);
+    
+    // Check for userId column
     const [columns] = await connection.query("SHOW COLUMNS FROM personnel LIKE 'userId'");
     if (Array.isArray(columns) && columns.length === 0) {
         await connection.query("ALTER TABLE personnel ADD COLUMN userId VARCHAR(36) NULL, ADD INDEX (userId)");
     }
+    
+    // Check for department column
     const [departmentColumns] = await connection.query("SHOW COLUMNS FROM personnel LIKE 'department'");
     if (Array.isArray(departmentColumns) && departmentColumns.length === 0) {
         await connection.query("ALTER TABLE personnel ADD COLUMN department VARCHAR(255)");
     }
 }
 
-
 export async function getPersonnel(): Promise<Personnel[]> {
+    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
         await createPersonnelTableIfNeeded(connection);
@@ -41,15 +44,13 @@ export async function getPersonnel(): Promise<Personnel[]> {
             return [];
         }
 
-        const personnel = (rows as any[]).map(p => ({
+        return (rows as any[]).map(p => ({
             ...p,
             discordUsername: p.discord_username,
             status: p.status || 'Active',
             loa_until: p.loa_until ? new Date(p.loa_until).toISOString() : null,
             is_rehired: !!p.is_rehired,
         }));
-        
-        return personnel;
 
     } catch (error) {
         console.error("Failed to fetch personnel:", error);
@@ -60,6 +61,7 @@ export async function getPersonnel(): Promise<Personnel[]> {
 }
 
 export async function getArchivedPersonnel(): Promise<ArchivedPersonnel[]> {
+    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
         const [rows] = await connection.query('SELECT * FROM archived_personnel ORDER BY date DESC');
@@ -67,11 +69,11 @@ export async function getArchivedPersonnel(): Promise<ArchivedPersonnel[]> {
             ...p,
             discordUsername: p.discord_username,
         }));
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to fetch archived personnel:", error);
-         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
+        if (error.code === 'ER_NO_SUCH_TABLE') {
             await connection.query(`
-                CREATE TABLE archived_personnel (
+                CREATE TABLE IF NOT EXISTS archived_personnel (
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
                     rank VARCHAR(255) NOT NULL,
@@ -82,13 +84,7 @@ export async function getArchivedPersonnel(): Promise<ArchivedPersonnel[]> {
                 )
             `);
             return [];
-         }
-          if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_UNKNOWN_COLUMN')) {
-             if (!(error as any).sqlMessage.includes('discord_username')) {
-                await connection.query("ALTER TABLE archived_personnel ADD COLUMN discord_username VARCHAR(255)");
-             }
-             return getArchivedPersonnel();
-         }
+        }
         return [];
     } finally {
         connection.release();
@@ -96,19 +92,20 @@ export async function getArchivedPersonnel(): Promise<ArchivedPersonnel[]> {
 }
 
 export async function getBlacklistedPersonnel(): Promise<BlacklistedPersonnel[]> {
+    await ensureDbInitialized();
     const connection = await db.getConnection();
-     try {
+    try {
         const [rows] = await connection.query('SELECT * FROM blacklisted_personnel');
         return (rows as any[]).map(p => ({
             ...p, 
             discordUsername: p.discord_username,
             dateAdded: new Date(p.dateAdded).toISOString().split('T')[0]
         }));
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to fetch blacklisted personnel:", error);
-         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
+        if (error.code === 'ER_NO_SUCH_TABLE') {
             await connection.query(`
-                CREATE TABLE blacklisted_personnel (
+                CREATE TABLE IF NOT EXISTS blacklisted_personnel (
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
                     discord_username VARCHAR(255),
@@ -118,27 +115,21 @@ export async function getBlacklistedPersonnel(): Promise<BlacklistedPersonnel[]>
             `);
             return [];
         }
-         if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_UNKNOWN_COLUMN')) {
-             if (!(error as any).sqlMessage.includes('discord_username')) {
-                await connection.query("ALTER TABLE blacklisted_personnel ADD COLUMN discord_username VARCHAR(255)");
-             }
-             return getBlacklistedPersonnel();
-         }
         return [];
     } finally {
         connection.release();
     }
 }
 
-// Helper to find a response by its label, case-insensitively
 const findResponse = (responses: any[], label: string) => {
-  return responses.find(r => r.label && r.label.toLowerCase().includes(label))?.answer || undefined;
+  return responses.find(r => r.label && r.label.toLowerCase().includes(label.toLowerCase()))?.answer || undefined;
 }
 
 export async function getApplications(): Promise<Application[]> {
+    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
-        // Ensure the columns exist before trying to update them.
+        // Ensure reviewer columns exist
         const [reviewerIdCol] = await connection.query("SHOW COLUMNS FROM applications LIKE 'reviewer_id'");
         if (Array.isArray(reviewerIdCol) && reviewerIdCol.length === 0) {
             await connection.query("ALTER TABLE applications ADD COLUMN reviewer_id VARCHAR(36) NULL, ADD COLUMN reviewedAt DATETIME NULL, ADD COLUMN reviewer_comment TEXT NULL");
@@ -161,26 +152,17 @@ export async function getApplications(): Promise<Application[]> {
 
         return (rows as any[]).map(app => {
             let parsedResponses = [];
-            if (typeof app.responses === 'string') {
-                try {
-                    parsedResponses = JSON.parse(app.responses);
-                } catch (e) {
-                    console.error(`Failed to parse responses for application ${app.id}:`, e);
-                }
-            } else if (Array.isArray(app.responses)) {
-                parsedResponses = app.responses;
+            try {
+                parsedResponses = typeof app.responses === 'string' ? JSON.parse(app.responses) : (app.responses || []);
+            } catch (e) {
+                console.error(`Failed to parse responses for application ${app.id}`);
             }
-
-            // Extract key information
-            const appName = findResponse(parsedResponses, 'name') || "Unknown Applicant";
-            const appDiscord = findResponse(parsedResponses, 'discord');
-            const reason = parsedResponses.find(r => r.type === 'textarea')?.answer || 'No reason provided.';
 
             return {
                 ...app,
-                name: appName,
-                discordUsername: appDiscord,
-                reasonForApplying: reason,
+                name: findResponse(parsedResponses, 'name') || "Unknown Applicant",
+                discordUsername: findResponse(parsedResponses, 'discord'),
+                reasonForApplying: parsedResponses.find((r: any) => r.type === 'textarea')?.answer || 'No reason provided.',
                 submittedAt: new Date(app.submittedAt),
                 reviewedAt: app.reviewedAt ? new Date(app.reviewedAt) : null,
                 reviewer: app.reviewerId ? {
@@ -191,11 +173,11 @@ export async function getApplications(): Promise<Application[]> {
                 responses: parsedResponses,
             }
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to fetch applications:", error);
-         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
+        if (error.code === 'ER_NO_SUCH_TABLE') {
              await connection.query(`
-                CREATE TABLE applications (
+                CREATE TABLE IF NOT EXISTS applications (
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
                     responses JSON NOT NULL,
                     status ENUM('Pending', 'Approved', 'Rejected', 'Under Review') NOT NULL DEFAULT 'Pending',
@@ -205,9 +187,7 @@ export async function getApplications(): Promise<Application[]> {
                     reviewedAt DATETIME
                 );
             `);
-            return [];
         }
-         // Re-throw other errors to be caught by withRetry
         return [];
     } finally {
         connection.release();
@@ -215,6 +195,7 @@ export async function getApplications(): Promise<Application[]> {
 }
 
 export async function getRecentActivity(): Promise<PersonnelEvent[]> {
+    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
         const [rows] = await connection.query('SELECT * FROM personnel_events ORDER BY date DESC LIMIT 10');
@@ -222,9 +203,9 @@ export async function getRecentActivity(): Promise<PersonnelEvent[]> {
             return [];
         }
         return (rows as any[]).map(e => ({...e, date: new Date(e.date)}));
-    } catch(error) {
+    } catch(error: any) {
         console.error("Failed to fetch recent activity:", error);
-        if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
+        if (error.code === 'ER_NO_SUCH_TABLE') {
             await connection.query(`
                 CREATE TABLE IF NOT EXISTS personnel_events (
                     id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -234,12 +215,6 @@ export async function getRecentActivity(): Promise<PersonnelEvent[]> {
                     date DATETIME NOT NULL
                 )
             `);
-            return [];
-        }
-        // Handle migration for new event_type
-        if (error instanceof Error && 'code' in error && (error as any).code.includes('ER_TRUNCATED_WRONG_VALUE_FOR_FIELD')) {
-            await connection.query("ALTER TABLE personnel_events MODIFY COLUMN event_type ENUM('Hired', 'Fired', 'Promoted', 'Demoted', 'Rehired') NOT NULL");
-            return getRecentActivity(); // Retry
         }
         return [];
     } finally {
