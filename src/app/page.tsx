@@ -1,5 +1,6 @@
+
 import { Button } from "@/components/ui/button";
-import { Sprout, ArrowRight, ShieldCheck } from "lucide-react";
+import { Sprout, ArrowRight, ShieldCheck, Search, FileText } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -30,14 +31,24 @@ export default function FarmLandingPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
                 <Button size="lg" className="h-16 text-lg font-bold rounded-2xl group" asChild>
-                    <Link href="/dashboard">
+                    <Link href="/login">
                         Enter Operations Room
                         <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                     </Link>
                 </Button>
                 <Button size="lg" variant="outline" className="h-16 text-lg font-bold rounded-2xl border-primary/20 hover:bg-primary/10" asChild>
                     <Link href="/apply">
+                        <FileText className="mr-2 h-5 w-5" />
                         Join Our Team
+                    </Link>
+                </Button>
+            </div>
+
+            <div className="mt-6 flex justify-center">
+                <Button variant="ghost" className="text-muted-foreground hover:text-primary gap-2" asChild>
+                    <Link href="/check-status">
+                        <Search className="h-4 w-4" />
+                        Track Application Status
                     </Link>
                 </Button>
             </div>

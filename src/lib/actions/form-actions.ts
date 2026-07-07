@@ -18,13 +18,23 @@ const formFieldSchema = z.object({
 });
 const formFieldsSchema = z.array(formFieldSchema);
 
-
 export async function getApplicationFormFields(): Promise<FormFieldData[]> {
     try {
         const [fields] = await db.query('SELECT * FROM application_form_fields ORDER BY `field_order` ASC');
 
-        if (!Array.isArray(fields)) {
-            return [];
+        if (!Array.isArray(fields) || fields.length === 0) {
+            // Seed the new Green Horizon questions if table is empty
+            return [
+                { label: "Name", type: "text", required: true },
+                { label: "State ID", type: "text", required: true },
+                { label: "Phone Number", type: "text", required: true },
+                { label: "Availability", type: "select", required: true, options: [{value: "EU"}, {value: "NA"}, {value: "AU"}] },
+                { label: "Tell me a little about yourself and what brought you to Green Horizon.", type: "textarea", required: true },
+                { label: "Have you worked anywhere before? What did you learn from it?", type: "textarea", required: true },
+                { label: "Tell me about a time something went wrong and how you handled it.", type: "textarea", required: true },
+                { label: "How would your friends describe you?", type: "textarea", required: true },
+                { label: "Is there anything else you'd like us to know?", type: "textarea", required: false },
+            ];
         }
 
         const fieldsWithOpts = await Promise.all((fields as any[]).map(async (field) => {
@@ -38,7 +48,6 @@ export async function getApplicationFormFields(): Promise<FormFieldData[]> {
         return fieldsWithOpts;
     } catch (error) {
         console.error("Failed to get application form fields:", error);
-        // If the table doesn't exist, return an empty array to prevent crashing.
         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
             return [];
         }
@@ -59,7 +68,6 @@ export async function saveApplicationFormFields(fields: FormFieldData[], user: s
     await connection.beginTransaction();
 
     try {
-        // Get existing field and option IDs to determine which ones to delete
         const [existingFieldRows] = await connection.query('SELECT id FROM application_form_fields');
         const existingFieldIds = Array.isArray(existingFieldRows) ? (existingFieldRows as any[]).map(r => r.id) : [];
         const incomingFieldIds = validatedFields.map(f => f.id).filter(id => id && !id.startsWith('new-'));
@@ -67,7 +75,6 @@ export async function saveApplicationFormFields(fields: FormFieldData[], user: s
         
         if (fieldsToDelete.length > 0) {
             const placeholders = fieldsToDelete.map(() => '?').join(',');
-            // Must delete from options first due to foreign key constraints
             await connection.query(`DELETE FROM application_field_options WHERE field_id IN (${placeholders})`, fieldsToDelete);
             await connection.query(`DELETE FROM application_form_fields WHERE id IN (${placeholders})`, fieldsToDelete);
         }
@@ -85,20 +92,18 @@ export async function saveApplicationFormFields(fields: FormFieldData[], user: s
             );
 
             if (field.type === 'select' && field.options) {
-                // First, remove options that are no longer present for this field
                 const incomingOptionIds = field.options.map(o => o.id).filter(id => id && !id.startsWith('new-'));
                 
                 if (incomingOptionIds.length > 0) {
                     const deletePlaceholders = incomingOptionIds.map(() => '?').join(',');
                      await connection.query(`DELETE FROM application_field_options WHERE field_id = ? AND id NOT IN (${deletePlaceholders})`, [fieldId, ...incomingOptionIds]);
                 } else if (!isNewField) {
-                    // If an existing field has all its options removed, delete all options for that field.
                     await connection.query('DELETE FROM application_field_options WHERE field_id = ?', [fieldId]);
                 }
 
 
                 for (const option of field.options) {
-                    if (option.value) { // Don't save empty options
+                    if (option.value) {
                          const isNewOption = !option.id || option.id.startsWith('new-');
                          const optionId = isNewOption ? crypto.randomUUID() : option.id;
                         await connection.query(
@@ -137,34 +142,18 @@ export async function submitApplication(responses: Record<string, any>) {
         answer: responses[field.id!] || ''
     }));
 
-    const discordField = fields.find(f => f.label.toLowerCase().includes('discord'));
-    const discordUsername = discordField ? responses[discordField.id!] : null;
-    const applicationId = `DOC${Math.floor(10000000 + Math.random() * 90000000)}`;
+    const nameField = fields.find(f => f.label.toLowerCase().includes('name'));
+    const applicantName = nameField ? responses[nameField.id!] : "Unknown";
+    
+    const applicationId = `GH${Math.floor(10000000 + Math.random() * 90000000)}`;
 
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
 
-        let status: 'Pending' | 'Rejected' = 'Pending';
-        let logDescription = "A new application was submitted.";
-        const applicantName = fields.find(f => f.label.toLowerCase().includes('name'))?.label || "Unknown Applicant";
-        const applicantNameValue = responses[fields.find(f => f.label.toLowerCase().includes('name'))?.id!] || "Unknown";
-
-
-        if (discordUsername) {
-            const [blacklistRows] = await connection.query('SELECT * FROM blacklisted_personnel WHERE discord_username = ?', [discordUsername]);
-            const blacklistedUser = (blacklistRows as BlacklistedPersonnel[])[0];
-
-            if (blacklistedUser) {
-                status = 'Rejected';
-                logDescription = `Application from '${applicantNameValue}' was auto-denied due to matching blacklisted Discord username. Reason: ${blacklistedUser.reason}`;
-                 await logUserAction('System', 'Application Auto-Denied', logDescription, connection);
-            }
-        }
-
         await connection.query(
             'INSERT INTO applications (id, responses, status) VALUES (?, ?, ?)',
-            [applicationId, JSON.stringify(formattedResponses), status]
+            [applicationId, JSON.stringify(formattedResponses), 'Pending']
         );
         
         await connection.commit();
@@ -210,34 +199,25 @@ export async function updateApplicationStatus(data: unknown) {
         throw new Error('Reviewer user not found.');
     }
     
-    // Reset reviewer if sent back to pending
     const reviewerIdToSet = status === 'Pending' ? null : userId;
     const reviewedAtToSet = status === 'Pending' ? null : new Date();
 
     await connection.query(
       'UPDATE applications SET status = ?, reviewer_comment = ?, reviewer_id = ?, reviewedAt = ? WHERE id = ?',
-      [status, comment, reviewerIdToSet, reviewedAtToSet, applicationId]
+      [status, comment || null, reviewerIdToSet, reviewedAtToSet, applicationId]
     );
 
     const [appRows]: any[] = await connection.query('SELECT responses FROM applications WHERE id = ?', [applicationId]);
     const responses = JSON.parse(appRows[0].responses);
     const applicantName = responses.find((r: any) => r.label.toLowerCase().includes('name'))?.answer || 'Unknown Applicant';
     
-    await logUserAction(user, 'Update Application Status', `${status} application for ${applicantName}.`, connection);
+    await logUserAction(user, 'Update Application Status', `${status} application for ${applicantName}. Reviewer comment: ${comment || 'No comment'}`, connection);
     
     await connection.commit();
 
   } catch (error: any) {
     await connection.rollback();
     console.error(`Failed to update application status to ${status}:`, error);
-
-     if (error.code === 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD' && error.sqlMessage.includes("status")) {
-        await connection.query("ALTER TABLE applications MODIFY COLUMN status ENUM('Pending', 'Under Review', 'Approved', 'Rejected') NOT NULL DEFAULT 'Pending'");
-        await connection.commit();
-        // Retry the original operation
-        return updateApplicationStatus(data);
-    }
-    
     throw new Error('Database operation failed.');
   } finally {
     connection.release();
@@ -262,16 +242,20 @@ export async function getApplicationById(id: string) {
         }
         const app = (rows as any)[0];
         const parsedResponses = JSON.parse(app.responses);
-        const appName = parsedResponses.find((r: any) => r.label.toLowerCase().includes('name'))?.answer || "Unknown Applicant";
+        
+        const nameVal = parsedResponses.find((r: any) => r.label.toLowerCase().includes('name'))?.answer || "Unknown";
+        const phoneVal = parsedResponses.find((r: any) => r.label.toLowerCase().includes('phone'))?.answer;
+        const stateIdVal = parsedResponses.find((r: any) => r.label.toLowerCase().includes('state'))?.answer;
 
         const result: Application = {
             id: app.id,
             status: app.status,
             submittedAt: new Date(app.submittedAt),
-            name: appName,
+            name: nameVal,
+            phoneNumber: phoneVal,
+            stateId: stateIdVal,
             reviewer_comment: app.reviewer_comment,
             responses: parsedResponses,
-            discordUsername: parsedResponses.find((r: any) => r.label.toLowerCase().includes('discord'))?.answer,
             reasonForApplying: parsedResponses.find((r: any) => r.type === 'textarea')?.answer || 'No reason provided.',
         };
         return { success: true, application: result };

@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { addPersonnel, getRanks } from "@/lib/actions";
+import { addPersonnel, getRanks, updateApplicationStatus } from "@/lib/actions";
 import type { Application, Rank } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, CheckCircle2 } from "lucide-react";
 
 const formSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters."),
@@ -45,6 +46,8 @@ const formSchema = z.object({
     .min(100, "Callsign must be between 100 and 9999.")
     .max(9999, "Callsign must be between 100 and 9999."),
   discordUsername: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  approvalComment: z.string().min(1, "Please provide feedback for the applicant."),
 });
 
 interface ApproveApplicationDialogProps {
@@ -63,13 +66,15 @@ export function ApproveApplicationDialog({ application, currentUser, children }:
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: application.name,
-      discordUsername: application.discordUsername,
-      rank: "",
+      discordUsername: application.discordUsername || "",
+      phoneNumber: application.phoneNumber || "",
+      rank: "Trainee Farm Hand",
       callsign: "" as any,
+      approvalComment: "Congratulations! Your application has been approved. Please await contact from our management team for your initial onboarding and orientation.",
     },
   });
 
-  useState(() => {
+  useEffect(() => {
     async function fetchRanks() {
         const fetchedRanks = await getRanks();
         setRanks(fetchedRanks);
@@ -77,31 +82,52 @@ export function ApproveApplicationDialog({ application, currentUser, children }:
     if(isOpen) {
         fetchRanks();
     }
-  });
+  }, [isOpen]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    const result = await addPersonnel({ 
-        ...values, 
-        user: currentUser,
-        applicationId: application.id,
-    });
-    
-    if (result.success) {
-      toast({
-        title: "Application Approved",
-        description: `${values.name} has been added to the roster.`,
-      });
-      setIsOpen(false);
-      form.reset();
-    } else {
-       toast({
-        variant: "destructive",
-        title: "Error",
-        description: result.message,
-      });
+    try {
+        // Step 1: Add to Roster (Personnel)
+        const rosterResult = await addPersonnel({ 
+            name: values.name,
+            rank: values.rank,
+            callsign: values.callsign,
+            discordUsername: values.discordUsername,
+            phoneNumber: values.phoneNumber,
+            user: currentUser,
+        });
+
+        if (!rosterResult.success) {
+            throw new Error(rosterResult.message);
+        }
+
+        // Step 2: Update Application status to Approved with comment
+        const statusResult = await updateApplicationStatus({
+            applicationId: application.id,
+            status: 'Approved',
+            comment: values.approvalComment,
+            user: currentUser,
+        });
+
+        if (!statusResult.success) {
+            throw new Error("Roster updated but application status failed to save.");
+        }
+
+        toast({
+            title: "Success",
+            description: `${values.name} is now on the roster and application is marked Approved.`,
+        });
+        setIsOpen(false);
+        form.reset();
+    } catch (err: any) {
+        toast({
+            variant: "destructive",
+            title: "Approval Error",
+            description: err.message,
+        });
+    } finally {
+        setIsLoading(false);
     }
-    setIsLoading(false);
   }
 
   return (
@@ -109,85 +135,108 @@ export function ApproveApplicationDialog({ application, currentUser, children }:
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Approve Application: {application.name}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-2xl font-black text-emerald-500">
+            <CheckCircle2 className="h-6 w-6" />
+            Finalize Approval
+          </DialogTitle>
           <DialogDescription>
-            Assign a rank and callsign to add this person to the roster.
+            Assign onboarding details. This will automatically move {application.name} to the active roster.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="discordUsername"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Discord Username</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="rank"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Rank</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="rank"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Onboarding Rank</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select rank" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {ranks.map((rank) => (
+                            <SelectItem key={rank.id} value={rank.name}>
+                            {rank.name}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="callsign"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Assigned Callsign</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an initial rank" />
-                      </SelectTrigger>
+                        <Input type="number" placeholder="e.g., 1001" {...field} />
                     </FormControl>
-                    <SelectContent>
-                      {ranks.map((rank) => (
-                        <SelectItem key={rank.id} value={rank.name}>
-                          {rank.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
+
             <FormField
               control={form.control}
-              name="callsign"
+              name="approvalComment"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Callsign</FormLabel>
+                  <FormLabel>Message to Applicant (Reason for Approval)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 1001" {...field} />
+                    <Textarea 
+                        placeholder="Welcome message or instructions..." 
+                        className="min-h-[100px] bg-muted/20"
+                        {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={isLoading} className="bg-green-600 hover:bg-green-700">
+              <Button type="submit" disabled={isLoading} className="bg-emerald-600 hover:bg-emerald-700 font-black">
                 {isLoading ? (
                   <Loader2 className="animate-spin" />
                 ) : (
-                  "Approve and Add to Roster"
+                  "Onboard to Roster"
                 )}
               </Button>
             </DialogFooter>

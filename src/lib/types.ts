@@ -80,6 +80,8 @@ export interface Application {
   id: string;
   name: string;
   discordUsername?: string;
+  phoneNumber?: string;
+  stateId?: string;
   reasonForApplying: string;
   status: "Pending" | "Under Review" | "Approved" | "Rejected";
   submittedAt: Date;
