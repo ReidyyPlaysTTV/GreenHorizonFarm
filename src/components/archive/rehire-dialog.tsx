@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,9 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { rehirePersonnel } from "@/lib/actions";
-import { rankOrder } from "@/lib/data";
-import type { ArchivedPersonnel } from "@/lib/types";
+import { rehirePersonnel, getRanks } from "@/lib/actions";
+import type { ArchivedPersonnel, Rank } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -54,6 +52,7 @@ interface RehireDialogProps {
 export function RehireDialog({ personnel }: RehireDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [ranks, setRanks] = useState<Rank[]>([]);
   const [currentUser, setCurrentUser] = useState("System");
   const { toast } = useToast();
   
@@ -62,6 +61,16 @@ export function RehireDialog({ personnel }: RehireDialogProps) {
       setCurrentUser(localStorage.getItem('loggedInUser') || "System");
     }
   }, []);
+
+  useEffect(() => {
+    async function fetchRanks() {
+        const fetchedRanks = await getRanks();
+        setRanks(fetchedRanks);
+    }
+    if (isOpen) {
+        fetchRanks();
+    }
+  }, [isOpen]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -147,9 +156,9 @@ export function RehireDialog({ personnel }: RehireDialogProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {rankOrder.map((rank) => (
-                        <SelectItem key={rank} value={rank}>
-                          {rank}
+                      {ranks.map((rank) => (
+                        <SelectItem key={rank.id} value={rank.name}>
+                          {rank.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

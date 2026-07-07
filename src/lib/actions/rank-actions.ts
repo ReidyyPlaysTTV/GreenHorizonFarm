@@ -6,8 +6,8 @@ import { revalidatePath } from 'next/cache';
 import db from '../db';
 import { checkPermissions } from '../permissions';
 import { logUserAction } from './audit-log-actions';
-import type { Department, Rank } from '../types';
-import { departments } from '../data';
+import type { Division, Rank } from '../types';
+import { divisions } from '../data';
 import type { Pool } from 'mysql2/promise';
 
 async function createRanksTableIfNeeded(connection: any) {
@@ -42,8 +42,8 @@ export async function getRanks(): Promise<Rank[]> {
 
 const rankSchema = z.object({
   id: z.string().optional(),
-  name: z.string().min(3, "Rank name must be at least 3 characters."),
-  department: z.enum(departments),
+  name: z.string().min(3, "Position name must be at least 3 characters."),
+  department: z.string(), // Division literal strings
   sort_order: z.coerce.number().int().min(1),
   insignia_url: z.string().url().optional().or(z.literal('')),
 });
@@ -66,7 +66,7 @@ export async function addRank(data: unknown, user: string) {
             'INSERT INTO ranks (id, name, department, sort_order, insignia_url) VALUES (?, ?, ?, ?, ?)',
             [id, name, department, sort_order, insignia_url]
         );
-        await logUserAction(user, "Create Rank", `Created new rank: ${name}`, connection);
+        await logUserAction(user, "Create Position", `Created new position: ${name}`, connection);
         await connection.commit();
         revalidatePath('/admin');
         revalidatePath('/roster');
@@ -75,9 +75,9 @@ export async function addRank(data: unknown, user: string) {
         await connection.rollback();
         console.error(e);
         if (e instanceof Error && 'code' in e && (e as any).code === 'ER_DUP_ENTRY') {
-            return { success: false, message: "A rank with this name already exists." };
+            return { success: false, message: "A position with this name already exists." };
         }
-        return { success: false, message: "Failed to create rank." };
+        return { success: false, message: "Failed to create position." };
     } finally {
         connection.release();
     }
@@ -100,7 +100,7 @@ export async function updateRank(data: unknown, user: string) {
             'UPDATE ranks SET name = ?, department = ?, sort_order = ?, insignia_url = ? WHERE id = ?',
             [name, department, sort_order, insignia_url, id]
         );
-        await logUserAction(user, "Update Rank", `Updated rank: ${name}`, connection);
+        await logUserAction(user, "Update Position", `Updated position: ${name}`, connection);
         await connection.commit();
         revalidatePath('/admin');
         revalidatePath('/roster');
@@ -109,9 +109,9 @@ export async function updateRank(data: unknown, user: string) {
         await connection.rollback();
         console.error(e);
         if (e instanceof Error && 'code' in e && (e as any).code === 'ER_DUP_ENTRY') {
-            return { success: false, message: "A rank with this name already exists." };
+            return { success: false, message: "A position with this name already exists." };
         }
-        return { success: false, message: "Failed to update rank." };
+        return { success: false, message: "Failed to update position." };
     } finally {
         connection.release();
     }
@@ -128,14 +128,14 @@ export async function deleteRank(id: string, user: string) {
         // Check if rank is in use
         const [personnel] = await connection.query('SELECT COUNT(*) as count FROM personnel WHERE rank = (SELECT name FROM ranks WHERE id = ?)', [id]);
         if (Array.isArray(personnel) && (personnel[0] as any).count > 0) {
-            throw new Error("Cannot delete rank. It is currently assigned to personnel.");
+            throw new Error("Cannot delete position. It is currently assigned to personnel.");
         }
         const [rank] = await connection.query('SELECT name FROM ranks WHERE id = ?', [id]);
         
         await connection.query('DELETE FROM ranks WHERE id = ?', [id]);
         
         const rankName = (rank as any)[0]?.name || `ID ${id}`;
-        await logUserAction(user, "Delete Rank", `Deleted rank: ${rankName}`, connection);
+        await logUserAction(user, "Delete Position", `Deleted position: ${rankName}`, connection);
         await connection.commit();
         
         revalidatePath('/admin');
@@ -144,7 +144,7 @@ export async function deleteRank(id: string, user: string) {
     } catch(e: any) {
         await connection.rollback();
         console.error(e);
-        return { success: false, message: e.message || "Failed to delete rank." };
+        return { success: false, message: e.message || "Failed to delete position." };
     } finally {
         connection.release();
     }
@@ -158,22 +158,14 @@ export async function seedInitialRanks(pool: Pool) {
 
         const [existingRows] = await connection.query('SELECT COUNT(*) as count FROM ranks');
         if (Array.isArray(existingRows) && (existingRows[0] as any).count === 0) {
-            console.log("No ranks found. Seeding default ranks...");
+            console.log("No positions found. Seeding default positions...");
             
             const initialRanks = [
-                { name: "Developer", department: "BCSO", sort_order: 1, insignia_url: "https://i.imgur.com/FxJ5c2v.png" },
-                { name: "Sheriff", department: "BCSO", sort_order: 2, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/gota.png" },
-                { name: "Commissioner", department: "Commissioners Office", sort_order: 3, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/gota.png" },
-                { name: "Deputy Comissioner", department: "Commissioners Office", sort_order: 4, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/gota.png" },
-                { name: "Warden", department: "High Command", sort_order: 5, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/general.png" },
-                { name: "Deputy Warden", department: "High Command", sort_order: 6, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/lt-general.png" },
-                { name: "Major", department: "High Command", sort_order: 7, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/major.png" },
-                { name: "Captain", department: "Command", sort_order: 8, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/captain.png" },
-                { name: "Lieutenant", department: "Command", sort_order: 9, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/first-lieutenant.png" },
-                { name: "Corrections Sergeant", department: "NCOS", sort_order: 10, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/staff-sergeant.png" },
-                { name: "Senior Corrections Officer", department: "Corrections", sort_order: 11, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/corporal.png" },
-                { name: "Correctional Officer", department: "Corrections", sort_order: 12, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png" },
-                { name: "Probationary Correctional Officer", department: "Training", sort_order: 13, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Doc_logo.png" }
+                { name: "CEO", department: "Management", sort_order: 1, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/gota.png" },
+                { name: "Manager", department: "Management", sort_order: 2, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/general.png" },
+                { name: "Division Lead", department: "Harvesting", sort_order: 3, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/major.png" },
+                { name: "Senior Farm Hand", department: "Harvesting", sort_order: 4, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/staff-sergeant.png" },
+                { name: "Farm Hand", department: "Harvesting", sort_order: 5, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Green_Horizon_Logo.png" }
             ];
 
             for (const rank of initialRanks) {
@@ -182,10 +174,10 @@ export async function seedInitialRanks(pool: Pool) {
                     [crypto.randomUUID(), rank.name, rank.department, rank.sort_order, rank.insignia_url]
                 );
             }
-            console.log("Default ranks seeded successfully.");
+            console.log("Default positions seeded successfully.");
         }
     } catch (error) {
-        console.error("Error during rank seeding:", error);
+        console.error("Error during position seeding:", error);
     } finally {
         connection.release();
     }

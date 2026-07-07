@@ -1,5 +1,6 @@
+
 import { getPersonnel, getRanks } from "@/lib/actions";
-import { departments } from "@/lib/data";
+import { divisions } from "@/lib/data";
 import type { Personnel, PersonnelStatus, Rank } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -164,16 +165,16 @@ export default async function RosterPage() {
         </div>
         <div className="flex-1 overflow-auto px-4 md:px-8 pb-8">
             <div className="space-y-8">
-                {departments.map(dep => {
-                const departmentPersonnel = sortedPersonnel.filter(p => p.department === dep);
-                if (departmentPersonnel.length === 0) return null;
+                {divisions.map(div => {
+                const divisionPersonnel = sortedPersonnel.filter(p => p.department === div);
+                if (divisionPersonnel.length === 0) return null;
                 return (
-                    <Card key={dep}>
+                    <Card key={div}>
                     <CardHeader>
-                        <CardTitle>{dep}</CardTitle>
+                        <CardTitle>{div}</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <RosterTable personnel={departmentPersonnel} ranks={ranks} />
+                        <RosterTable personnel={divisionPersonnel} ranks={ranks} />
                     </CardContent>
                     </Card>
                 )

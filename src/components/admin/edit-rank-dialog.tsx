@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { departments } from "@/lib/data";
+import { divisions } from "@/lib/data";
 import { addRank, updateRank } from "@/lib/actions/rank-actions";
 import type { Rank } from "@/lib/types";
 
@@ -34,8 +33,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 
 
 const formSchema = z.object({
-  name: z.string().min(3, "Rank name must be at least 3 characters."),
-  department: z.string({ required_error: "Please select a department."}),
+  name: z.string().min(3, "Position name must be at least 3 characters."),
+  department: z.string({ required_error: "Please select a division."}),
   sort_order: z.coerce.number().int().min(1, "Sort order must be at least 1."),
   insignia_url: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
 });
@@ -76,7 +75,7 @@ export function EditRankDialog({ rank, onSave, children }: EditRankDialogProps) 
         if (result.success) {
             toast({
                 title: "Success",
-                description: `Rank ${rank ? 'updated' : 'added'} successfully.`,
+                description: `Position ${rank ? 'updated' : 'added'} successfully.`,
             });
             onSave();
             setIsOpen(false);
@@ -88,7 +87,7 @@ export function EditRankDialog({ rank, onSave, children }: EditRankDialogProps) 
         toast({
             variant: "destructive",
             title: "Error",
-            description: error.message || "Failed to save rank.",
+            description: error.message || "Failed to save position.",
         });
     } finally {
         setIsLoading(false);
@@ -102,9 +101,9 @@ export function EditRankDialog({ rank, onSave, children }: EditRankDialogProps) 
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{rank ? "Edit Rank" : "Add New Rank"}</DialogTitle>
+          <DialogTitle>{rank ? "Edit Position" : "Add New Position"}</DialogTitle>
           <DialogDescription>
-            {rank ? "Update the details for this rank." : "Create a new rank for the roster."}
+            {rank ? "Update the details for this position." : "Create a new position for the roster."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -114,8 +113,8 @@ export function EditRankDialog({ rank, onSave, children }: EditRankDialogProps) 
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Rank Name</FormLabel>
-                  <FormControl><Input placeholder="e.g., Senior Officer" {...field} /></FormControl>
+                  <FormLabel>Position Name</FormLabel>
+                  <FormControl><Input placeholder="e.g., Senior Farm Hand" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -125,17 +124,17 @@ export function EditRankDialog({ rank, onSave, children }: EditRankDialogProps) 
               name="department"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Department</FormLabel>
+                  <FormLabel>Division</FormLabel>
                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a department" />
+                        <SelectValue placeholder="Select a division" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {departments.map((dep) => (
-                        <SelectItem key={dep} value={dep}>
-                          {dep}
+                      {divisions.map((div) => (
+                        <SelectItem key={div} value={div}>
+                          {div}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -150,7 +149,7 @@ export function EditRankDialog({ rank, onSave, children }: EditRankDialogProps) 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Sort Order</FormLabel>
-                  <FormControl><Input type="number" placeholder="Lower numbers are higher rank" {...field} /></FormControl>
+                  <FormControl><Input type="number" placeholder="Lower numbers are higher position" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
