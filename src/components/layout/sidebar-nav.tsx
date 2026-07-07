@@ -1,4 +1,3 @@
-
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
@@ -78,7 +77,7 @@ export function SidebarNav() {
       <SidebarHeader>
         <div className="flex items-center gap-3 px-4 h-14">
             <Image 
-                src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Green_Horizon_Logo.png" 
+                src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png" 
                 alt="Green Horizon Logo" 
                 width={32} 
                 height={32} 

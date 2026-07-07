@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -42,7 +41,7 @@ export default function LoginPage() {
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-24 h-24 rounded-full bg-primary/10 p-2 border border-primary/20">
             <Image 
-              src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Green_Horizon_Logo.png" 
+              src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png" 
               alt="Green Horizon Logo" 
               width={80} 
               height={80} 

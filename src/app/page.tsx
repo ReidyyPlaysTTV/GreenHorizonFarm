@@ -13,7 +13,7 @@ export default function FarmLandingPage() {
         <div className="relative z-10 w-full max-w-2xl px-6 text-center">
             <div className="mb-10 inline-flex p-1 rounded-full bg-primary/10 border border-primary/20">
                 <Image 
-                    src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Green_Horizon_Logo.png" 
+                    src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png" 
                     alt="Green Horizon Logo" 
                     width={160} 
                     height={160} 

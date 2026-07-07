@@ -1,4 +1,3 @@
-
 import { getPersonnel, getRanks } from "@/lib/actions";
 import { divisions } from "@/lib/data";
 import type { Personnel, PersonnelStatus, Rank } from "@/lib/types";
@@ -76,7 +75,7 @@ const RosterTable = ({ personnel, ranks }: { personnel: Personnel[], ranks: Rank
               <TableRow key={p.id} className={cn(getStatusRowClass(p))}>
                 <TableCell>
                   <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted p-1">
-                    <Image src={rankInsignias[p.rank] || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Green_Horizon_Logo.png"} alt={`${p.rank} insignia`} width={25} height={25} className="rounded-md object-contain" />
+                    <Image src={rankInsignias[p.rank] || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png"} alt={`${p.rank} insignia`} width={25} height={25} className="rounded-md object-contain" />
                   </div>
                 </TableCell>
                 <TableCell className="font-medium">

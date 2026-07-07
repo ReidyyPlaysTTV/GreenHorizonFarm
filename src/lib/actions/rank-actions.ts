@@ -1,4 +1,3 @@
-
 'use server';
 
 import { z } from 'zod';
@@ -165,7 +164,7 @@ export async function seedInitialRanks(pool: Pool) {
                 { name: "Manager", department: "Management", sort_order: 2, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/general.png" },
                 { name: "Division Lead", department: "Harvesting", sort_order: 3, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/major.png" },
                 { name: "Senior Farm Hand", department: "Harvesting", sort_order: 4, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/staff-sergeant.png" },
-                { name: "Farm Hand", department: "Harvesting", sort_order: 5, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Green_Horizon_Logo.png" }
+                { name: "Farm Hand", department: "Harvesting", sort_order: 5, insignia_url: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png" }
             ];
 
             for (const rank of initialRanks) {
