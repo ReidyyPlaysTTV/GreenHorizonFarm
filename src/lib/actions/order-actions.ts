@@ -23,6 +23,39 @@ const orderSchema = z.object({
   user: z.string(),
 });
 
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1523878492029194361/gqg_zA8_TQo10FUQBeX2dsecgcKtHQKC2aWyZyx9_t1bHqFu9jtjoSw2G-L7HLRGfTzo";
+
+async function sendOrderWebhook(order: any) {
+    try {
+        const itemsList = order.items_sold.map((i: any) => `- ${i.quantity}x ${i.product_name}`).join('\n');
+        
+        const payload = {
+            embeds: [{
+                title: "🚜 New Farm Order Completed",
+                color: 3066993, // Green Horizon Green
+                fields: [
+                    { name: "Client / Business", value: `**${order.business_name}**`, inline: true },
+                    { name: "Total Paid", value: `\`$${order.total_price.toLocaleString()}\``, inline: true },
+                    { name: "Completed By", value: order.user, inline: true },
+                    { name: "Yield Details", value: itemsList || "No items listed" },
+                    { name: "Logistics Used", value: order.logistics_used ? "✅ Yes" : "❌ No", inline: true },
+                    { name: "Employee Commission", value: `$${order.employee_cut_value.toLocaleString()} (${order.employee_cut_percentage}%)`, inline: true },
+                ],
+                timestamp: new Date().toISOString(),
+                footer: { text: "Green Horizon Management System • Ledger Update" }
+            }]
+        };
+
+        await fetch(DISCORD_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+    } catch (error) {
+        console.error("Failed to send Discord webhook:", error);
+    }
+}
+
 export async function submitDetailedOrder(data: unknown) {
     const validation = orderSchema.safeParse(data);
     if (!validation.success) {
@@ -52,6 +85,10 @@ export async function submitDetailedOrder(data: unknown) {
         await logUserAction(user, "Submit Order", `Submitted a completed order for ${business_name} totalling $${total_price}.`, connection);
 
         await connection.commit();
+        
+        // Trigger Discord Notification
+        await sendOrderWebhook(validation.data);
+
         revalidatePath('/farmers');
         revalidatePath('/manager');
         revalidatePath('/ceo');
