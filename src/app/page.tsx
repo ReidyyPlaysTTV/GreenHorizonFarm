@@ -31,7 +31,7 @@ export default function FarmLandingPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
                 <Button size="lg" className="h-16 text-lg font-bold rounded-2xl group" asChild>
-                    <Link href="/login">
+                    <Link href="/dashboard">
                         Enter Operations Room
                         <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                     </Link>

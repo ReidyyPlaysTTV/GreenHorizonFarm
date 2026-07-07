@@ -14,10 +14,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const checkAuth = () => {
             if (typeof window !== 'undefined') {
                 // TEMPORARY DEBUG BYPASS: 
-                // Automatically set the session to Leon Green to allow database testing.
-                if (!localStorage.getItem('loggedInUser')) {
-                    localStorage.setItem('loggedInUser', 'Leon Green');
-                }
+                // Force auth to Leon Green to allow database testing without a working DB connection.
+                localStorage.setItem('loggedInUser', 'Leon Green');
             }
             setIsLoading(false);
         };
