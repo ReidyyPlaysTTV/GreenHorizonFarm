@@ -1,0 +1,32 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Information about a farm employee synchronized from Discord.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique Firebase UID." },
+        "discordId": { "type": "string", "description": "The Discord user ID." },
+        "username": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "roles": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of Discord Role IDs the user has."
+        },
+        "lastLogin": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "discordId", "username"]
+    }
+  },
+  "auth": {
+    "providers": ["oidc.discord", "password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/backend/entities/UserProfile" },
+      "description": "Stores user profile data."
+    }
+  }
+}

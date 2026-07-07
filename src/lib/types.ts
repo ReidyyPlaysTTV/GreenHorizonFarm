@@ -5,13 +5,17 @@ export type Role = typeof roles[number];
 export const permissions = [
     // Page Access
     'ACCESS_DASHBOARD',
+    'ACCESS_FARMERS',
+    'ACCESS_SECURITY',
+    'ACCESS_EVENTS',
+    'ACCESS_FINANCES',
+    'ACCESS_MANAGER_PORTAL',
+    'ACCESS_CEO_PORTAL',
+    'VIEW_SOPS',
     'VIEW_EMPLOYEES',
     'VIEW_USERS',
     'VIEW_ORDERS',
-    'VIEW_SOPS',
     'VIEW_ARCHIVE',
-    'ACCESS_MANAGER_PORTAL',
-    'ACCESS_CEO_PORTAL',
     'VIEW_APPLICATIONS',
     'VIEW_LOGS',
     'ACCESS_ADMIN_PANEL',
@@ -52,12 +56,13 @@ export interface Employee {
   userId?: string | null;
 }
 
-export interface Position {
-    id: string;
-    name: string;
-    division: Division;
-    sort_order: number;
-    icon_url?: string | null;
+export interface UserProfile {
+  id: string;
+  discordId: string;
+  username: string;
+  avatarUrl?: string;
+  roles: string[];
+  lastLogin: Date;
 }
 
 export interface FarmOrder {
@@ -84,7 +89,7 @@ export interface Application {
 export interface AppUser {
   id: string;
   username: string;
-  roles: Role[];
+  roles: string[];
   status: UserStatus;
   createdAt?: string;
   avatarUrl?: string;

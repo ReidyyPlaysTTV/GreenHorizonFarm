@@ -1,0 +1,71 @@
+
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ShieldCheck, LogIn } from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+
+export default function LoginPage() {
+  const router = useRouter();
+
+  const handleDiscordLogin = () => {
+    // In a real app, this would trigger Firebase OAuthProvider for Discord.
+    // For this MVP, we simulate a successful login.
+    localStorage.setItem('loggedInUser', 'CEO_User');
+    router.push('/dashboard');
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+      {/* Decorative background */}
+      <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px]" />
+
+      <Card className="w-full max-w-md relative z-10 border-primary/10 shadow-2xl bg-card/50 backdrop-blur-xl">
+        <CardHeader className="text-center space-y-4">
+          <div className="mx-auto w-24 h-24 rounded-full bg-primary/10 p-2 border border-primary/20">
+            <Image 
+              src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/Green_Horizon_Logo.png" 
+              alt="Green Horizon Logo" 
+              width={80} 
+              height={80} 
+              className="rounded-full"
+            />
+          </div>
+          <div className="space-y-1">
+            <CardTitle className="text-3xl font-black tracking-tighter">Staff Access</CardTitle>
+            <CardDescription className="text-muted-foreground font-medium">
+              Secure entrance for Green Horizon Farm employees.
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <Button 
+            className="w-full h-14 text-lg font-bold rounded-xl gap-3 bg-[#5865F2] hover:bg-[#4752C4] text-white border-none transition-all hover:scale-[1.02] active:scale-[0.98]"
+            onClick={handleDiscordLogin}
+          >
+            <LogIn className="h-5 w-5" />
+            Login with Discord
+          </Button>
+          
+          <div className="flex items-center gap-4 py-2">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Authorized Only</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <div className="space-y-3">
+             <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border border-white/5">
+                <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Your access is determined by your roles in the <span className="text-foreground font-bold">Green Horizon Community</span> Discord server.
+                </p>
+             </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

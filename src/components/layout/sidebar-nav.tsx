@@ -1,3 +1,4 @@
+
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
@@ -10,15 +11,32 @@ import {
   SidebarFooter,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home, Users, Briefcase, ClipboardList, BookOpen, GitBranch, Settings, LayoutDashboard, LogOut } from "lucide-react";
+import { 
+  Home, 
+  Users, 
+  Briefcase, 
+  ClipboardList, 
+  BookOpen, 
+  GitBranch, 
+  Settings, 
+  LayoutDashboard, 
+  LogOut,
+  Sprout,
+  Shield,
+  Calendar,
+  DollarSign
+} from "lucide-react";
 import { Button } from "../ui/button";
 import Image from "next/image";
 import { usePermissions } from "@/hooks/use-permissions";
+import { UserProfile } from "./user-profile";
 
 const mainMenuItems = [
   { href: "/dashboard", label: "Farm Overview", icon: Home, permission: 'ACCESS_DASHBOARD' },
-  { href: "/employees", label: "Employee List", icon: Users, permission: 'VIEW_EMPLOYEES' },
-  { href: "/orders", label: "Order Tracking", icon: ClipboardList, permission: 'VIEW_ORDERS' },
+  { href: "/farmers", label: "Farmers Portal", icon: Sprout, permission: 'ACCESS_FARMERS' },
+  { href: "/security", label: "Security Portal", icon: Shield, permission: 'ACCESS_SECURITY' },
+  { href: "/events", label: "Events Portal", icon: Calendar, permission: 'ACCESS_EVENTS' },
+  { href: "/finances", label: "Finances Portal", icon: DollarSign, permission: 'ACCESS_FINANCES' },
   { href: "/sops", label: "Farm Guidelines", icon: BookOpen, permission: 'VIEW_SOPS' },
 ];
 
@@ -72,7 +90,12 @@ export function SidebarNav() {
             </div>
         </div>
       </SidebarHeader>
+      
       <SidebarMenu className="flex-1 p-2 space-y-4">
+        <div className="px-2 pb-4 border-b border-white/5">
+            <UserProfile />
+        </div>
+
         <div>
             <p className="text-[10px] font-bold text-muted-foreground/60 px-3 pb-2 uppercase tracking-wider group-data-[collapsible=icon]:hidden">Operations</p>
             {renderMenuItems(mainMenuItems)}
