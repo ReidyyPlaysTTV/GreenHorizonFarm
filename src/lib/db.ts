@@ -5,27 +5,13 @@ import { seedDatabase } from './db-seed';
 import { seedRolePermissions } from './actions/permission-actions';
 import { seedInitialRanks } from './actions/rank-actions';
 
-const dbConfig = {
-    host: 'mysql-mariadb-20-104.zap-srv.com',
-    user: 'zap1311701-1',
-    password: 'gFtXgwwIs09GtYtx',
-    database: 'zap1311701-1',
-    port: 3306,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    connectTimeout: 30000, // 30 seconds
-    acquireTimeout: 30000,
-    charset: 'utf8mb4',
-    ssl: {
-        rejectUnauthorized: false
-    }
-};
+// Precise connection string as requested
+const connectionString = "mysql://zap1311701-1:gFtXgwwIs09GtYtx@mysql-mariadb-20-104.zap-srv.com:3306/zap1311701-1";
 
 let pool: Pool;
 
 try {
-    pool = mysql.createPool(dbConfig);
+    pool = mysql.createPool(connectionString);
 } catch (err) {
     console.error("Failed to create MySQL pool:", err);
     throw err;
