@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Application } from "@/lib/types";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Check, X, FileText, Loader2, ClipboardCopy, Minus, User, Undo2, Trash2, Clock } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "../ui/label";
 import { updateApplicationStatus, deleteApplication } from "@/lib/actions";
