@@ -14,7 +14,7 @@ const dbConfig = {
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    connectTimeout: 15000, // 15 seconds timeout
+    connectTimeout: 15000,
     charset: 'utf8mb4'
 };
 
@@ -29,7 +29,7 @@ try {
 
 async function createFarmTables(connection: any) {
     try {
-        // Users Table
+        // Users Table - Roles must be JSON
         await connection.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,

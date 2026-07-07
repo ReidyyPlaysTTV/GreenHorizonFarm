@@ -14,13 +14,15 @@ export async function seedDatabase(pool: Pool) {
         const [leonRows] = await connection.query('SELECT id FROM users WHERE username = ?', ['Leon Green']);
         if (Array.isArray(leonRows) && leonRows.length === 0) {
             console.log("Seeding Developer: Leon Green");
+            // Roles must be valid JSON array
+            const devRoles = JSON.stringify(['Developer']);
             await connection.query(
                 'INSERT INTO users (id, username, password, roles, avatarUrl) VALUES (?, ?, ?, ?, ?)',
                 [
                     crypto.randomUUID(), 
                     'Leon Green', 
                     'Katarina1997', 
-                    JSON.stringify(['Developer']), 
+                    devRoles, 
                     'https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png'
                 ]
             );
@@ -30,13 +32,14 @@ export async function seedDatabase(pool: Pool) {
         const [adminRows] = await connection.query('SELECT id FROM users WHERE username = ?', ['admin']);
         if (Array.isArray(adminRows) && adminRows.length === 0) {
             console.log("Seeding Administrator: admin");
+            const adminRoles = JSON.stringify(['Administrator']);
             await connection.query(
                 'INSERT INTO users (id, username, password, roles, avatarUrl) VALUES (?, ?, ?, ?, ?)',
                 [
                     crypto.randomUUID(), 
                     'admin', 
                     'adminpassword', 
-                    JSON.stringify(['Administrator']), 
+                    adminRoles, 
                     null
                 ]
             );

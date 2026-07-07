@@ -71,6 +71,7 @@ export async function loginUser(credentials: unknown) {
     const { username, password } = validation.data;
 
     try {
+        // Force initialization on every login attempt to ensure tables exist
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
@@ -85,7 +86,7 @@ export async function loginUser(credentials: unknown) {
                 return { success: false, message: 'This account has been banned.' };
             }
 
-            // Using simple string comparison for this simulation
+            // Using simple string comparison
             const passwordMatch = user.password === password;
 
             if (!passwordMatch) {
@@ -111,9 +112,12 @@ export async function loginUser(credentials: unknown) {
     } catch (error: any) {
         console.error("Login server error:", error);
         if (error.code === 'ETIMEDOUT') {
-            return { success: false, message: 'Database Connection Timeout. Please go to your ZAP-Hosting Webinterface and add "%" to your database Remote Access whitelist.' };
+            return { success: false, message: 'Database Connection Timeout. The server is not responding.' };
         }
-        return { success: false, message: error.message || 'An unexpected database error occurred.' };
+        if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+            return { success: false, message: 'Database Access Denied. Check credentials.' };
+        }
+        return { success: false, message: `System Error: ${error.message || 'Unknown error'}` };
     }
 }
 
