@@ -197,6 +197,10 @@ export interface Personnel {
     rank: string;
     badgeNumber: string;
     discordUsername?: string;
+    phoneNumber?: string;
+    bankAccount?: string;
+    hireDate?: string;
+    ordersCompleted?: number;
     department: string;
     status: PersonnelStatus;
     loa_until?: string | null;

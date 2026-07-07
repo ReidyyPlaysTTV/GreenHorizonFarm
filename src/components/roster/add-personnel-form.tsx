@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, PlusCircle } from "lucide-react";
+import { Loader2, PlusCircle, CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,10 @@ import {
 import { addPersonnel } from "@/lib/actions";
 import { usePermissions } from "@/hooks/use-permissions";
 import type { Rank } from "@/lib/types";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { Calendar } from "../ui/calendar";
 
 const formSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters."),
@@ -46,6 +50,9 @@ const formSchema = z.object({
     .min(100, "Callsign must be between 100 and 9999.")
     .max(9999, "Callsign must be between 100 and 9999."),
   discordUsername: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  bankAccount: z.string().optional(),
+  hireDate: z.date().default(() => new Date()),
 });
 
 interface AddPersonnelFormProps {
@@ -70,8 +77,11 @@ export function AddPersonnelForm({ ranks }: AddPersonnelFormProps) {
     defaultValues: {
       name: "",
       discordUsername: "",
+      phoneNumber: "",
+      bankAccount: "",
       rank: "",
       callsign: "" as any,
+      hireDate: new Date(),
     },
   });
 
@@ -107,7 +117,7 @@ export function AddPersonnelForm({ ranks }: AddPersonnelFormProps) {
           Add Personnel
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Personnel</DialogTitle>
           <DialogDescription>
@@ -116,76 +126,138 @@ export function AddPersonnelForm({ ranks }: AddPersonnelFormProps) {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="John Doe" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="discordUsername"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Discord Username</FormLabel>
-                  <FormControl>
-                    <Input placeholder="johndoe#1234" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="rank"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Rank</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a rank" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {ranks.map((rank) => (
-                        <SelectItem key={rank.id} value={rank.name}>
-                          {rank.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="callsign"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Callsign</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="e.g., 1001" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <Loader2 className="animate-spin" />
-                ) : (
-                  "Add to Roster"
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl><Input placeholder="John Doe" {...field} /></FormControl>
+                    <FormMessage />
+                    </FormItem>
                 )}
+                />
+                <FormField
+                control={form.control}
+                name="discordUsername"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Discord</FormLabel>
+                    <FormControl><Input placeholder="johndoe#1234" {...field} /></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl><Input placeholder="555-0199" {...field} /></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="bankAccount"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Bank Account</FormLabel>
+                    <FormControl><Input placeholder="GH-123456" {...field} /></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="rank"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Rank</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a rank" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {ranks.map((rank) => (
+                            <SelectItem key={rank.id} value={rank.name}>
+                            {rank.name}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="callsign"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Callsign</FormLabel>
+                    <FormControl>
+                        <Input type="number" placeholder="e.g., 1001" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
+
+            <FormField
+                control={form.control}
+                name="hireDate"
+                render={({ field }) => (
+                <FormItem className="flex flex-col">
+                    <FormLabel>Hire Date</FormLabel>
+                    <Popover>
+                    <PopoverTrigger asChild>
+                        <FormControl>
+                        <Button
+                            variant={"outline"}
+                            className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                            )}
+                        >
+                            {field.value ? (
+                            format(field.value, "PPP")
+                            ) : (
+                            <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                        </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                        />
+                    </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+
+            <DialogFooter>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? <Loader2 className="animate-spin" /> : "Add to Roster"}
               </Button>
             </DialogFooter>
           </form>

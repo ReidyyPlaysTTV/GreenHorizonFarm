@@ -4,42 +4,17 @@
 import type { Personnel, ArchivedPersonnel, BlacklistedPersonnel, Application, PersonnelEvent, Rank } from "../types";
 import db, { ensureDbInitialized } from '../db';
 
-async function createPersonnelTableIfNeeded(connection: any) {
-    await connection.query(`
-        CREATE TABLE IF NOT EXISTS personnel (
-            id VARCHAR(36) NOT NULL PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
-            rank VARCHAR(255) NOT NULL,
-            badgeNumber VARCHAR(10) NOT NULL UNIQUE,
-            discord_username VARCHAR(255),
-            department VARCHAR(255),
-            status ENUM('Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended') NOT NULL DEFAULT 'Active',
-            loa_until DATE,
-            is_rehired BOOLEAN NOT NULL DEFAULT FALSE,
-            userId VARCHAR(36)
-        )
-    `);
-    
-    // Check for userId column
-    const [columns] = await connection.query("SHOW COLUMNS FROM personnel LIKE 'userId'");
-    if (Array.isArray(columns) && columns.length === 0) {
-        await connection.query("ALTER TABLE personnel ADD COLUMN userId VARCHAR(36) NULL, ADD INDEX (userId)");
-    }
-    
-    // Check for department column
-    const [departmentColumns] = await connection.query("SHOW COLUMNS FROM personnel LIKE 'department'");
-    if (Array.isArray(departmentColumns) && departmentColumns.length === 0) {
-        await connection.query("ALTER TABLE personnel ADD COLUMN department VARCHAR(255)");
-    }
-}
-
 export async function getPersonnel(): Promise<Personnel[]> {
     await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
-        await createPersonnelTableIfNeeded(connection);
+        const [rows] = await connection.query(`
+            SELECT 
+                p.*,
+                (SELECT COUNT(*) FROM detailed_farm_orders o WHERE o.completed_by = p.name) as ordersCompleted
+            FROM personnel p
+        `);
 
-        const [rows] = await connection.query('SELECT * FROM personnel');
         if (!Array.isArray(rows)) {
             return [];
         }
@@ -47,9 +22,13 @@ export async function getPersonnel(): Promise<Personnel[]> {
         return (rows as any[]).map(p => ({
             ...p,
             discordUsername: p.discord_username,
+            phoneNumber: p.phone_number,
+            bankAccount: p.bank_account,
+            hireDate: p.hire_date ? new Date(p.hire_date).toISOString() : null,
             status: p.status || 'Active',
             loa_until: p.loa_until ? new Date(p.loa_until).toISOString() : null,
             is_rehired: !!p.is_rehired,
+            ordersCompleted: Number(p.ordersCompleted || 0)
         }));
 
     } catch (error) {

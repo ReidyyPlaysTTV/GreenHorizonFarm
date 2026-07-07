@@ -36,6 +36,39 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // Personnel (Extended Roster)
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS personnel (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                rank VARCHAR(255) NOT NULL,
+                badgeNumber VARCHAR(10) NOT NULL UNIQUE,
+                discord_username VARCHAR(255),
+                phone_number VARCHAR(20),
+                bank_account VARCHAR(50),
+                hire_date DATE DEFAULT (CURRENT_DATE),
+                department VARCHAR(255),
+                status ENUM('Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended') NOT NULL DEFAULT 'Active',
+                loa_until DATE,
+                is_rehired BOOLEAN NOT NULL DEFAULT FALSE,
+                userId VARCHAR(36)
+            );
+        `);
+
+        // Migration: Ensure new columns exist in personnel
+        const [columns] = await connection.query("SHOW COLUMNS FROM personnel");
+        const columnNames = (columns as any[]).map(c => c.Field);
+        
+        if (!columnNames.includes('phone_number')) {
+            await connection.query("ALTER TABLE personnel ADD COLUMN phone_number VARCHAR(20)");
+        }
+        if (!columnNames.includes('bank_account')) {
+            await connection.query("ALTER TABLE personnel ADD COLUMN bank_account VARCHAR(50)");
+        }
+        if (!columnNames.includes('hire_date')) {
+            await connection.query("ALTER TABLE personnel ADD COLUMN hire_date DATE DEFAULT (CURRENT_DATE)");
+        }
+
         // Detailed Farm Orders
         await connection.query(`
             CREATE TABLE IF NOT EXISTS detailed_farm_orders (

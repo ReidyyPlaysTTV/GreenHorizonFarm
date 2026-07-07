@@ -21,7 +21,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -66,6 +65,9 @@ const editFormSchema = z.object({
   badgeNumber: z.string().min(3, "Callsign must be 3-4 digits.").max(4, "Callsign must be 3-4 digits."),
   rank: z.string(),
   discordUsername: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  bankAccount: z.string().optional(),
+  hireDate: z.date().optional(),
 });
 
 const statusFormSchema = z.object({
@@ -111,6 +113,9 @@ export function PersonnelActions({ personnel, ranks }: PersonnelActionsProps) {
       badgeNumber: personnel.badgeNumber,
       rank: personnel.rank,
       discordUsername: personnel.discordUsername || "",
+      phoneNumber: personnel.phoneNumber || "",
+      bankAccount: personnel.bankAccount || "",
+      hireDate: personnel.hireDate ? new Date(personnel.hireDate) : undefined,
     },
   });
 
@@ -275,45 +280,107 @@ export function PersonnelActions({ personnel, ranks }: PersonnelActionsProps) {
       </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
                 <DialogTitle>Edit Personnel: {personnel.name}</DialogTitle>
             </DialogHeader>
             <Form {...editForm}>
                 <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4">
-                    <FormField control={editForm.control} name="name" render={({field}) => (
-                        <FormItem>
-                            <Label>Name</Label>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage/>
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField control={editForm.control} name="name" render={({field}) => (
+                            <FormItem>
+                                <Label>Name</Label>
+                                <FormControl><Input {...field} /></FormControl>
+                                <FormMessage/>
+                            </FormItem>
+                        )}/>
+                        <FormField control={editForm.control} name="discordUsername" render={({field}) => (
+                            <FormItem>
+                                <Label>Discord</Label>
+                                <FormControl><Input {...field} /></FormControl>
+                                <FormMessage/>
+                            </FormItem>
+                        )}/>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField control={editForm.control} name="phoneNumber" render={({field}) => (
+                            <FormItem>
+                                <Label>Phone</Label>
+                                <FormControl><Input {...field} /></FormControl>
+                                <FormMessage/>
+                            </FormItem>
+                        )}/>
+                        <FormField control={editForm.control} name="bankAccount" render={({field}) => (
+                            <FormItem>
+                                <Label>Bank Account</Label>
+                                <FormControl><Input {...field} /></FormControl>
+                                <FormMessage/>
+                            </FormItem>
+                        )}/>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField control={editForm.control} name="badgeNumber" render={({field}) => (
+                            <FormItem>
+                                <Label>Callsign</Label>
+                                <FormControl><Input {...field} /></FormControl>
+                                <FormMessage/>
+                            </FormItem>
+                        )}/>
+                        <FormField control={editForm.control} name="rank" render={({field}) => (
+                            <FormItem>
+                                <Label>Rank</Label>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {ranks.map(r => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage/>
+                            </FormItem>
+                        )}/>
+                    </div>
+
+                    <FormField
+                        control={editForm.control}
+                        name="hireDate"
+                        render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <Label>Hire Date</Label>
+                            <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                    "w-full pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                    )}
+                                >
+                                    {field.value ? (
+                                    format(field.value, "PPP")
+                                    ) : (
+                                    <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                initialFocus
+                                />
+                            </PopoverContent>
+                            </Popover>
+                            <FormMessage />
                         </FormItem>
-                    )}/>
-                    <FormField control={editForm.control} name="discordUsername" render={({field}) => (
-                        <FormItem>
-                            <Label>Discord Username</Label>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage/>
-                        </FormItem>
-                    )}/>
-                    <FormField control={editForm.control} name="badgeNumber" render={({field}) => (
-                        <FormItem>
-                            <Label>Callsign</Label>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage/>
-                        </FormItem>
-                    )}/>
-                    <FormField control={editForm.control} name="rank" render={({field}) => (
-                        <FormItem>
-                            <Label>Rank</Label>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {ranks.map(r => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage/>
-                        </FormItem>
-                    )}/>
+                        )}
+                    />
+
                     <DialogFooter>
                         <Button type="button" variant="ghost" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
                         <Button type="submit" disabled={isEditing}>
@@ -329,9 +396,6 @@ export function PersonnelActions({ personnel, ranks }: PersonnelActionsProps) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Fire {personnel.name}?</DialogTitle>
-            <DialogDescription>
-              This action will move the personnel to the Fired/Resigned archive. Please provide a reason.
-            </DialogDescription>
           </DialogHeader>
           <Form {...fireForm}>
             <form onSubmit={fireForm.handleSubmit(handleFireSubmit)} className="space-y-4">
@@ -387,7 +451,7 @@ export function PersonnelActions({ personnel, ranks }: PersonnelActionsProps) {
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setEditDialogOpen(true)}>
             <Edit className="mr-2 h-4 w-4" />
-            <span>Edit</span>
+            <span>Edit Details</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => setFireDialogOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">

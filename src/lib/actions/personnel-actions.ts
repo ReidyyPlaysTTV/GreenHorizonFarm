@@ -173,6 +173,9 @@ const updatePersonnelSchema = z.object({
   badgeNumber: z.string().min(3, "Callsign must be 3-4 digits.").max(4, "Callsign must be 3-4 digits."),
   rank: z.string(),
   discordUsername: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  bankAccount: z.string().optional(),
+  hireDate: z.date().optional(),
   user: z.string(),
 });
 
@@ -181,7 +184,7 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
   if (!validation.success) {
     return { success: false, message: 'Invalid data.', issues: validation.error.issues };
   }
-  const { name, badgeNumber, rank, discordUsername, user } = validation.data;
+  const { name, badgeNumber, rank, discordUsername, phoneNumber, bankAccount, hireDate, user } = validation.data;
   
   const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
   if (!hasPermission) {
@@ -196,7 +199,11 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
       throw new Error('Personnel not found.');
     }
 
-    await connection.query('UPDATE personnel SET name = ?, badgeNumber = ?, rank = ?, discord_username = ? WHERE id = ?', [name, badgeNumber, rank, discordUsername, personnelId]);
+    await connection.query(
+        'UPDATE personnel SET name = ?, badgeNumber = ?, rank = ?, discord_username = ?, phone_number = ?, bank_account = ?, hire_date = ? WHERE id = ?', 
+        [name, badgeNumber, rank, discordUsername, phoneNumber, bankAccount, hireDate || null, personnelId]
+    );
+
     await logUserAction(user, "Update Personnel", `Updated details for ${name} (formerly ${originalPersonnel.name}).`, connection);
 
 
@@ -228,6 +235,9 @@ const addPersonnelSchema = z.object({
     .min(100, "Callsign must be between 100 and 9999.")
     .max(9999, "Callsign must be between 100 and 9999."),
   discordUsername: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  bankAccount: z.string().optional(),
+  hireDate: z.date().default(() => new Date()),
   user: z.string(),
   applicationId: z.string().optional(),
 });
@@ -237,7 +247,7 @@ export async function addPersonnel(data: unknown) {
     if (!validation.success) {
         return { success: false, message: 'Invalid data.', issues: validation.error.issues };
     }
-    const { name, rank, callsign, discordUsername, user, applicationId } = validation.data;
+    const { name, rank, callsign, discordUsername, phoneNumber, bankAccount, hireDate, user, applicationId } = validation.data;
     
     const hasPermission = await checkPermissions(user, 'HIRE_PERSONNEL');
     if (!hasPermission) {
@@ -253,8 +263,8 @@ export async function addPersonnel(data: unknown) {
 
         const personnelId = crypto.randomUUID();
         await connection.query(
-            'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, status, loa_until, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [personnelId, name, rank, callsign.toString(), discordUsername, 'Active', null, userId]
+            'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, phone_number, bank_account, hire_date, status, loa_until, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [personnelId, name, rank, callsign.toString(), discordUsername, phoneNumber, bankAccount, hireDate, 'Active', null, userId]
         );
         await logEvent(name, 'Hired', `Hired as ${rank}`, connection);
         await logCallsignChange(callsign.toString(), name, 'Assigned', connection);
@@ -291,66 +301,4 @@ export async function addPersonnel(data: unknown) {
     } finally {
         connection.release();
     }
-}
-
-
-const rehirePersonnelSchema = z.object({
-  archivedId: z.string(),
-  name: z.string(),
-  rank: z.string(),
-  discordUsername: z.string().optional(),
-  callsign: z.coerce.number().min(100).max(9999),
-  user: z.string(),
-});
-
-export async function rehirePersonnel(data: unknown) {
-  const validation = rehirePersonnelSchema.safeParse(data);
-  if (!validation.success) {
-    return { success: false, message: 'Invalid data provided.' };
-  }
-  const { archivedId, name, rank, discordUsername, callsign, user } = validation.data;
-  
-  const hasPermission = await checkPermissions(user, 'HIRE_PERSONNEL');
-    if (!hasPermission) {
-        return { success: false, message: 'You do not have permission to perform this action.' };
-    }
-
-  const connection = await db.getConnection();
-  try {
-    await connection.beginTransaction();
-
-    const [userRows] = await connection.query('SELECT id FROM users WHERE username = ?', [name]);
-    const userId = (userRows as any)[0]?.id || null;
-
-    const newId = crypto.randomUUID();
-    await connection.query(
-      'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, is_rehired, userId) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [newId, name, rank, callsign.toString(), discordUsername, true, userId]
-    );
-
-    await connection.query('DELETE FROM archived_personnel WHERE id = ?', [archivedId]);
-
-    await logEvent(name, 'Rehired', `Rehired as ${rank} with callsign ${callsign}`, connection);
-    await logCallsignChange(callsign.toString(), name, 'Assigned', connection);
-    await logUserAction(user, 'Rehire Personnel', `Rehired ${name} as ${rank} with callsign ${callsign}`, connection);
-
-    await connection.commit();
-
-    revalidatePath('/roster');
-    revalidatePath('/archive');
-    revalidatePath('/callsigns');
-    revalidatePath('/logs');
-    revalidatePath('/');
-
-    return { success: true, message: `${name} has been rehired.` };
-  } catch (error: any) {
-    await connection.rollback();
-    console.error("Failed to rehire personnel:", error);
-     if (error instanceof Error && 'code' in error && (error as any).code === 'ER_DUP_ENTRY') {
-       return { success: false, message: 'That callsign is already in use.' };
-    }
-    return { success: false, message: error.message || 'Database operation failed.' };
-  } finally {
-    connection.release();
-  }
 }

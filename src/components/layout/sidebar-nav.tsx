@@ -1,3 +1,4 @@
+
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
@@ -32,6 +33,7 @@ import { UserProfile } from "./user-profile";
 
 const mainMenuItems = [
   { href: "/dashboard", label: "Farm Overview", icon: Home, permission: 'ACCESS_DASHBOARD' },
+  { href: "/roster", label: "Staff Roster", icon: Users, permission: 'VIEW_EMPLOYEES' },
   { href: "/farmers", label: "Farmers Portal", icon: Sprout, permission: 'ACCESS_FARMERS' },
   { href: "/security", label: "Security Portal", icon: Shield, permission: 'ACCESS_SECURITY' },
   { href: "/events", label: "Events Portal", icon: Calendar, permission: 'ACCESS_EVENTS' },
