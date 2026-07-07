@@ -14,9 +14,8 @@ const dbConfig = {
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    connectTimeout: 20000, // Increased to 20s
+    connectTimeout: 30000,
     charset: 'utf8mb4',
-    // Often required for remote MySQL connections that are "Public"
     ssl: {
         rejectUnauthorized: false
     }

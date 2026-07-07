@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { logUserAction } from './audit-log-actions';
 import { checkPermissions } from '../permissions';
-import { roles } from '../data';
 
 export async function getUsers(): Promise<AppUser[]> {
     try {
@@ -116,6 +115,55 @@ export async function loginUser(credentials: unknown) {
     }
 }
 
+const createUserSchema = z.object({
+  username: z.string().min(3),
+  password: z.string().min(8),
+  roles: z.array(z.string()),
+  adminUser: z.string(),
+});
+
+export async function createUser(data: unknown) {
+  const validation = createUserSchema.safeParse(data);
+  if (!validation.success) {
+    return { success: false, message: 'Invalid data.' };
+  }
+  const { username, password, roles, adminUser } = validation.data;
+
+  const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
+  if (!hasPermission) {
+    return { success: false, message: 'You do not have permission to perform this action.' };
+  }
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // Check if user already exists
+    const [existing] = await connection.query('SELECT id FROM users WHERE username = ?', [username]);
+    if (Array.isArray(existing) && existing.length > 0) {
+       return { success: false, message: 'A user with that username already exists.' };
+    }
+
+    const userId = crypto.randomUUID();
+    await connection.query(
+      'INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)',
+      [userId, username, password, JSON.stringify(roles), 'Active']
+    );
+
+    await logUserAction(adminUser, 'Create User', `Manually created new user account: ${username}`, connection);
+
+    await connection.commit();
+    revalidatePath('/admin');
+    return { success: true, message: `User '${username}' created successfully.` };
+  } catch (error: any) {
+    await connection.rollback();
+    console.error('Failed to create user:', error);
+    return { success: false, message: 'Database operation failed.' };
+  } finally {
+    connection.release();
+  }
+}
+
 export async function submitAccessRequest(data: unknown) {
   const validation = z.object({
     username: z.string().min(3),
@@ -157,15 +205,40 @@ export async function approveAccessRequest(data: any) {
     try {
         await connection.beginTransaction();
         const [requestRows]: any = await connection.query('SELECT * FROM access_requests WHERE id = ?', [requestId]);
+        if (!Array.isArray(requestRows) || requestRows.length === 0) throw new Error("Request not found");
         const request = requestRows[0];
         await connection.query(
             'INSERT INTO users (id, username, password, roles) VALUES (?, ?, ?, ?)',
             [crypto.randomUUID(), username, request.password, JSON.stringify(roles)]
         );
         await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Approved', requestId]);
+        await logUserAction(adminUser, 'Approve Access Request', `Approved access for user: ${username}`, connection);
         await connection.commit();
         revalidatePath('/admin');
         return { success: true };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function denyAccessRequest(requestId: string, requestedUsername: string, adminUser: string) {
+    const hasPermission = await checkPermissions(adminUser, 'MANAGE_ACCESS_REQUESTS');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission to perform this action.' };
+    }
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Denied', requestId]);
+        await logUserAction(adminUser, 'Deny Access Request', `Denied access request for user: ${requestedUsername}`, connection);
+        await connection.commit();
+        revalidatePath('/admin');
+        return { success: true, message: 'Access request denied.' };
+    } catch (error) {
+        await connection.rollback();
+        console.error("Failed to deny access request:", error);
+        return { success: false, message: 'Database operation failed.' };
     } finally {
         connection.release();
     }
