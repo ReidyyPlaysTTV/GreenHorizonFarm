@@ -1,22 +1,42 @@
 
 import type { Division, Permission, Role } from "./types";
 
-export const divisions: Division[] = ["Management", "Harvesting", "Processing", "Logistics", "Sales", "Maintenance"];
+export const divisions: Division[] = ["Management", "Harvesting", "Processing", "Logistics", "Sales", "Maintenance", "Security"];
 
-export const roles: Role[] = ["CEO", "Manager", "Division Lead", "Employee", "User"];
+export const roles: Role[] = [
+    "CEO", 
+    "Co-CEO", 
+    "Manager", 
+    "Book-Keeper", 
+    "Business Co-Ordinator", 
+    "Events Planner", 
+    "Security", 
+    "Senior Farm Hand", 
+    "Farm Hand", 
+    "Trainee Farm Hand",
+    "Administrator",
+    "Developer",
+    "User"
+];
 
 export const permissionDescriptions: Record<Permission, string> = {
     ACCESS_DASHBOARD: "Access Farm Dashboard",
+    ACCESS_FARMERS: "Access Farmers Portal",
+    ACCESS_SECURITY: "Access Security Portal",
+    ACCESS_EVENTS: "Access Events Portal",
+    ACCESS_FINANCES: "Access Finances Portal",
+    ACCESS_MANAGER_PORTAL: "Access Manager Portal",
+    ACCESS_CEO_PORTAL: "Access CEO Executive Portal",
+    VIEW_SOPS: "View Farm Guidelines",
     VIEW_EMPLOYEES: "View Employee List",
     VIEW_USERS: "View Registered Users",
     VIEW_ORDERS: "View Farm Orders",
-    VIEW_SOPS: "View Farm Guidelines",
     VIEW_ARCHIVE: "View Former Employees",
-    ACCESS_MANAGER_PORTAL: "Access Manager Portal",
-    ACCESS_CEO_PORTAL: "Access CEO Executive Portal",
     VIEW_APPLICATIONS: "View Job Applications",
     VIEW_LOGS: "View Audit Logs",
     ACCESS_ADMIN_PANEL: "Access Technical Admin Panel",
+    VIEW_ANNOUNCEMENTS: "Read Farm News",
+    VIEW_CHANGELOGS: "View App Updates",
     MANAGE_EMPLOYEES: "Promote/Demote/Fire Employees",
     HIRE_EMPLOYEES: "Onboard New Staff",
     MANAGE_APPLICATIONS: "Review Job Apps",
@@ -28,18 +48,29 @@ export const permissionDescriptions: Record<Permission, string> = {
     MANAGE_ROLES_PERMISSIONS: "Configure Access Groups",
     MANAGE_POSITIONS: "Define Employee Positions",
     MANAGE_APP_SETTINGS: "Global App Settings",
-    VIEW_ANNOUNCEMENTS: "Read Farm News",
     MANAGE_ANNOUNCEMENTS: "Post Farm News",
     MANAGE_GALLERY: "Update Farm Photo Gallery",
     MANAGE_PROCEDURES: "Manage Farm Guidelines",
-    VIEW_CHANGELOGS: "View App Updates",
     BYPASS_MAINTENANCE_MODE: "Access during maintenance",
 };
 
 export const initialPermissionsMap: Record<Role, Permission[]> = {
+    CEO: Object.keys(permissionDescriptions) as Permission[],
+    "Co-CEO": Object.keys(permissionDescriptions) as Permission[],
+    Manager: [
+        'ACCESS_DASHBOARD', 'ACCESS_FARMERS', 'ACCESS_SECURITY', 'ACCESS_EVENTS', 'ACCESS_FINANCES', 
+        'ACCESS_MANAGER_PORTAL', 'VIEW_SOPS', 'VIEW_EMPLOYEES', 'VIEW_USERS', 'VIEW_APPLICATIONS',
+        'MANAGE_EMPLOYEES', 'HIRE_EMPLOYEES', 'MANAGE_APPLICATIONS', 'MANAGE_ANNOUNCEMENTS', 'MANAGE_PROCEDURES',
+        'VIEW_ANNOUNCEMENTS'
+    ],
+    "Book-Keeper": ['ACCESS_DASHBOARD', 'ACCESS_FINANCES', 'VIEW_SOPS', 'VIEW_EMPLOYEES', 'VIEW_ANNOUNCEMENTS'],
+    "Business Co-Ordinator": ['ACCESS_DASHBOARD', 'ACCESS_FARMERS', 'MANAGE_ORDERS', 'VIEW_SOPS', 'VIEW_EMPLOYEES', 'VIEW_ANNOUNCEMENTS'],
+    "Events Planner": ['ACCESS_DASHBOARD', 'ACCESS_EVENTS', 'VIEW_SOPS', 'VIEW_EMPLOYEES', 'VIEW_ANNOUNCEMENTS'],
+    Security: ['ACCESS_DASHBOARD', 'ACCESS_SECURITY', 'VIEW_SOPS', 'VIEW_EMPLOYEES', 'VIEW_ANNOUNCEMENTS'],
+    "Senior Farm Hand": ['ACCESS_DASHBOARD', 'ACCESS_FARMERS', 'VIEW_SOPS', 'VIEW_EMPLOYEES', 'VIEW_ANNOUNCEMENTS'],
+    "Farm Hand": ['ACCESS_DASHBOARD', 'ACCESS_FARMERS', 'VIEW_SOPS', 'VIEW_EMPLOYEES', 'VIEW_ANNOUNCEMENTS'],
+    "Trainee Farm Hand": ['ACCESS_DASHBOARD', 'VIEW_SOPS', 'VIEW_ANNOUNCEMENTS'],
+    Administrator: Object.keys(permissionDescriptions) as Permission[],
+    Developer: Object.keys(permissionDescriptions) as Permission[],
     User: ['ACCESS_DASHBOARD', 'VIEW_ANNOUNCEMENTS'],
-    Employee: ['ACCESS_DASHBOARD', 'VIEW_EMPLOYEES', 'VIEW_ORDERS', 'VIEW_SOPS', 'VIEW_ANNOUNCEMENTS'],
-    "Division Lead": ['ACCESS_DASHBOARD', 'VIEW_EMPLOYEES', 'VIEW_ORDERS', 'MANAGE_ORDERS', 'VIEW_SOPS', 'VIEW_ANNOUNCEMENTS'],
-    Manager: ['ACCESS_DASHBOARD', 'VIEW_EMPLOYEES', 'VIEW_ORDERS', 'MANAGE_ORDERS', 'VIEW_SOPS', 'ACCESS_MANAGER_PORTAL', 'VIEW_APPLICATIONS', 'MANAGE_APPLICATIONS', 'MANAGE_EMPLOYEES', 'VIEW_ANNOUNCEMENTS', 'MANAGE_ANNOUNCEMENTS', 'MANAGE_PROCEDURES'],
-    CEO: ['ACCESS_DASHBOARD', 'VIEW_EMPLOYEES', 'VIEW_ORDERS', 'MANAGE_ORDERS', 'VIEW_SOPS', 'ACCESS_MANAGER_PORTAL', 'ACCESS_CEO_PORTAL', 'VIEW_APPLICATIONS', 'MANAGE_APPLICATIONS', 'MANAGE_EMPLOYEES', 'HIRE_EMPLOYEES', 'ACCESS_ADMIN_PANEL', 'MANAGE_USERS', 'VIEW_ANNOUNCEMENTS', 'MANAGE_ANNOUNCEMENTS', 'MANAGE_GALLERY', 'MANAGE_PROCEDURES'],
 };

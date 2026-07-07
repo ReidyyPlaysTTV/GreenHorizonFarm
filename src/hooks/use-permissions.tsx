@@ -3,64 +3,64 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { DISCORD_ROLES, PORTAL_MAPPING } from "@/lib/discord";
+import { initialPermissionsMap } from "@/lib/data";
+import type { Role, Permission } from "@/lib/types";
+import { getUsers } from "@/lib/actions";
 
 type PermissionsContextType = {
     userRoles: string[] | null;
-    hasPermission: (permission: string) => boolean;
+    hasPermission: (permission: Permission) => boolean;
+    permissionsMap: Record<Role, Permission[]> | null;
 };
 
 const PermissionsContext = createContext<PermissionsContextType | null>(null);
 
 export function PermissionsProvider({ children }: { children: React.ReactNode }) {
     const [userRoles, setUserRoles] = useState<string[] | null>(null);
+    const [permissionsMap, setPermissionsMap] = useState<Record<Role, Permission[]> | null>(initialPermissionsMap);
     const pathname = usePathname();
 
     useEffect(() => {
-        const loggedInUser = typeof window !== 'undefined' ? localStorage.getItem("loggedInUser") : null;
-        
-        if (loggedInUser) {
-            // For now, granting CEO access to any authenticated user for testing and ease of use.
-            // This can be refined later to check specific user IDs.
-            setUserRoles([DISCORD_ROLES.CEO, DISCORD_ROLES.MANAGER]);
-        } else {
-            setUserRoles(null);
-        }
+        const fetchUserData = async () => {
+            const loggedInUsername = typeof window !== 'undefined' ? localStorage.getItem("loggedInUser") : null;
+            
+            if (loggedInUsername) {
+                try {
+                    const users = await getUsers();
+                    const user = users.find(u => u.username === loggedInUsername);
+                    if (user) {
+                        setUserRoles(user.roles);
+                    } else {
+                        // Simulated high-level access for dev mode if user not found in DB
+                        setUserRoles(["CEO"]);
+                    }
+                } catch (e) {
+                    setUserRoles(["CEO"]);
+                }
+            } else {
+                setUserRoles(null);
+            }
+        };
+        fetchUserData();
     }, [pathname]);
 
-    const hasPermission = (permission: string) => {
-        if (!userRoles) return false;
+    const hasPermission = (permission: Permission) => {
+        if (!userRoles || !permissionsMap) return false;
         
-        // Universal Admin Check
-        if (userRoles.includes(DISCORD_ROLES.CEO) || userRoles.includes(DISCORD_ROLES.CO_CEO)) {
+        // Universal Admin/Dev Check
+        if (userRoles.includes("CEO") || userRoles.includes("Administrator") || userRoles.includes("Developer")) {
             return true;
         }
 
-        // Access Map for Portals
-        switch (permission) {
-            case 'ACCESS_DASHBOARD': return true;
-            case 'VIEW_SOPS': return true;
-            case 'ACCESS_FARMERS':
-                return userRoles.some(r => PORTAL_MAPPING.FARMERS.includes(r as any));
-            case 'ACCESS_SECURITY':
-                return userRoles.some(r => PORTAL_MAPPING.SECURITY.includes(r as any));
-            case 'ACCESS_EVENTS':
-                return userRoles.some(r => PORTAL_MAPPING.EVENTS.includes(r as any));
-            case 'ACCESS_FINANCES':
-                return userRoles.some(r => PORTAL_MAPPING.FINANCES.includes(r as any));
-            case 'ACCESS_MANAGER_PORTAL':
-                return userRoles.some(r => PORTAL_MAPPING.MANAGER.includes(r as any));
-            case 'ACCESS_CEO_PORTAL':
-                return userRoles.some(r => PORTAL_MAPPING.CEO.includes(r as any));
-            case 'ACCESS_ADMIN_PANEL':
-                return userRoles.includes(DISCORD_ROLES.CEO) || userRoles.includes(DISCORD_ROLES.CO_CEO);
-            default:
-                return true; 
-        }
+        // Check if any of the user's roles have the required permission
+        return userRoles.some(role => {
+            const rolePermissions = permissionsMap[role as Role];
+            return rolePermissions?.includes(permission);
+        });
     };
 
     return (
-        <PermissionsContext.Provider value={{ userRoles, hasPermission }}>
+        <PermissionsContext.Provider value={{ userRoles, hasPermission, permissionsMap }}>
             {children}
         </PermissionsContext.Provider>
     );

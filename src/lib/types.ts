@@ -1,5 +1,19 @@
 
-export const roles = ["CEO", "Manager", "Division Lead", "Employee", "User"] as const;
+export const roles = [
+    "CEO", 
+    "Co-CEO", 
+    "Manager", 
+    "Book-Keeper", 
+    "Business Co-Ordinator", 
+    "Events Planner", 
+    "Security", 
+    "Senior Farm Hand", 
+    "Farm Hand", 
+    "Trainee Farm Hand",
+    "Administrator",
+    "Developer",
+    "User"
+] as const;
 export type Role = typeof roles[number];
 
 export const permissions = [
