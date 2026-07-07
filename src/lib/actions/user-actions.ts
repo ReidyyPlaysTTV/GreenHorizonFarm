@@ -8,6 +8,33 @@ import { revalidatePath } from 'next/cache';
 import { logUserAction } from './audit-log-actions';
 import { checkPermissions } from '../permissions';
 
+/**
+ * Tests the connection to the MariaDB database.
+ */
+export async function testDatabaseConnection() {
+    const startTime = Date.now();
+    try {
+        const pool = await ensureDbInitialized();
+        const connection = await pool.getConnection();
+        try {
+            const [rows] = await connection.query('SELECT 1 as ping');
+            const latency = Date.now() - startTime;
+            if (Array.isArray(rows) && (rows[0] as any).ping === 1) {
+                return { success: true, message: `Database Connected Successfully. Latency: ${latency}ms` };
+            }
+            return { success: false, message: 'Ping failed but connection established.' };
+        } finally {
+            connection.release();
+        }
+    } catch (error: any) {
+        console.error("Test Connection Error:", error);
+        return { 
+            success: false, 
+            message: `Connection Error: ${error.message || 'Unknown issue'}. Check ZAP firewall.` 
+        };
+    }
+}
+
 export async function getUsers(): Promise<AppUser[]> {
     try {
         await ensureDbInitialized();
