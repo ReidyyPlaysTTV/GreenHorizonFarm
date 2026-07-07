@@ -70,6 +70,30 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // Security Time Logs
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS security_time_logs (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                user VARCHAR(255) NOT NULL,
+                hours DECIMAL(5, 2) NOT NULL,
+                description TEXT,
+                date DATE NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Security Incidents
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS security_incidents (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT NOT NULL,
+                location VARCHAR(255) NOT NULL,
+                reported_by VARCHAR(255) NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
         // Announcements
         await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_announcements (

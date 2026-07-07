@@ -18,3 +18,4 @@ export * from './actions/gallery-actions';
 export * from './actions/changelog-actions';
 export * from './actions/rank-actions';
 export * from './actions/order-actions';
+export * from './actions/security-actions';

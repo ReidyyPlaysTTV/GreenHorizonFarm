@@ -40,7 +40,7 @@ export const permissions = [
 ] as const;
 export type Permission = typeof permissions[number];
 
-export type Division = "Harvesting" | "Processing" | "Logistics" | "Sales" | "Management" | "Maintenance";
+export type Division = "Harvesting" | "Processing" | "Logistics" | "Sales" | "Management" | "Maintenance" | "Security";
 export type EmployeeStatus = 'Active' | 'On Leave' | 'Inactive' | 'Probation';
 export type UserStatus = 'Active' | 'Banned';
 
@@ -139,4 +139,22 @@ export interface GalleryImage {
     alt: string;
     hint?: string;
     createdAt: Date;
+}
+
+export interface SecurityTimeLog {
+  id: string;
+  user: string;
+  hours: number;
+  description: string;
+  date: Date;
+  created_at: Date;
+}
+
+export interface SecurityIncident {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  reported_by: string;
+  created_at: Date;
 }
