@@ -97,6 +97,26 @@ export async function cancelFarmEvent(id: string, user: string) {
     }
 }
 
+export async function completeFarmEvent(id: string, user: string) {
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        await connection.query("UPDATE farm_events SET status = 'Completed' WHERE id = ?", [id]);
+        await logUserAction(user, "Complete Event", `Marked event as completed: ${id}`, connection);
+
+        await connection.commit();
+        revalidatePath('/events');
+        return { success: true, message: 'Event marked as completed.' };
+    } catch (error) {
+        await connection.rollback();
+        console.error("Failed to complete farm event:", error);
+        return { success: false, message: 'Database operation failed.' };
+    } finally {
+        connection.release();
+    }
+}
+
 export async function deleteFarmEvent(id: string, user: string) {
     const connection = await db.getConnection();
     try {

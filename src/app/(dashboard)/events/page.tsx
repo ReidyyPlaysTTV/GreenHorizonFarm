@@ -3,13 +3,13 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Calendar, PartyPopper, DollarSign, Clock, MoreVertical, Pencil, Ban, Trash2, MapPin } from "lucide-react";
+import { Calendar, PartyPopper, DollarSign, Clock, MoreVertical, Pencil, Ban, Trash2, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { EventDialog } from "@/components/events/event-dialog";
-import { getFarmEvents, cancelFarmEvent, deleteFarmEvent } from "@/lib/actions";
+import { getFarmEvents, cancelFarmEvent, deleteFarmEvent, completeFarmEvent } from "@/lib/actions";
 import type { FarmEvent } from "@/lib/types";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function EventsPortal() {
   const [events, setEvents] = useState<FarmEvent[]>([]);
@@ -44,6 +46,14 @@ export default function EventsPortal() {
     const res = await cancelFarmEvent(id, currentUser);
     if (res.success) {
         toast({ title: "Event Cancelled" });
+        fetchEvents();
+    }
+  }
+
+  const handleComplete = async (id: string) => {
+    const res = await completeFarmEvent(id, currentUser);
+    if (res.success) {
+        toast({ title: "Event Completed!" });
         fetchEvents();
     }
   }
@@ -137,12 +147,17 @@ export default function EventsPortal() {
                     {events.map((event) => (
                         <div key={event.id} className={cn(
                             "group p-5 rounded-2xl border transition-all hover:border-primary/30 relative overflow-hidden",
-                            event.status === 'Cancelled' ? 'bg-destructive/5 border-destructive/10' : 'bg-muted/10 border-white/5'
+                            event.status === 'Cancelled' ? 'bg-destructive/5 border-destructive/10' : 
+                            event.status === 'Completed' ? 'bg-emerald-500/5 border-emerald-500/10' :
+                            'bg-muted/10 border-white/5'
                         )}>
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div className="space-y-1 flex-1">
                                     <div className="flex items-center gap-3">
-                                        <h3 className="font-bold text-xl">{event.title}</h3>
+                                        <h3 className={cn(
+                                            "font-bold text-xl",
+                                            event.status === 'Completed' && "text-emerald-400 line-through opacity-60"
+                                        )}>{event.title}</h3>
                                         <Badge variant={event.status === 'Scheduled' ? 'secondary' : (event.status === 'Completed' ? 'default' : 'destructive')}>
                                             {event.status}
                                         </Badge>
@@ -167,6 +182,21 @@ export default function EventsPortal() {
                                 </div>
 
                                 <div className="flex items-center gap-2">
+                                    {event.status === 'Scheduled' && (
+                                        <div className="flex items-center gap-2 mr-2 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors">
+                                            <Checkbox 
+                                                id={`complete-${event.id}`} 
+                                                onCheckedChange={(checked) => {
+                                                    if (checked) handleComplete(event.id);
+                                                }}
+                                                className="h-5 w-5 border-emerald-500/50 data-[state=checked]:bg-emerald-500"
+                                            />
+                                            <label htmlFor={`complete-${event.id}`} className="text-[10px] font-black uppercase tracking-widest text-emerald-500 cursor-pointer">
+                                                Mark Completed
+                                            </label>
+                                        </div>
+                                    )}
+
                                     <EventDialog event={event}>
                                         <Button variant="outline" size="sm" className="gap-2 border-primary/20">
                                             <Pencil className="h-4 w-4" /> Edit
@@ -178,9 +208,14 @@ export default function EventsPortal() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             {event.status === 'Scheduled' && (
-                                                <DropdownMenuItem onClick={() => handleCancel(event.id)} className="text-orange-500">
-                                                    <Ban className="mr-2 h-4 w-4" /> Cancel Event
-                                                </DropdownMenuItem>
+                                                <>
+                                                    <DropdownMenuItem onClick={() => handleComplete(event.id)} className="text-emerald-500">
+                                                        <CheckCircle2 className="mr-2 h-4 w-4" /> Complete Event
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleCancel(event.id)} className="text-orange-500">
+                                                        <Ban className="mr-2 h-4 w-4" /> Cancel Event
+                                                    </DropdownMenuItem>
+                                                </>
                                             )}
                                             <DropdownMenuItem onClick={() => handleDelete(event.id)} className="text-destructive">
                                                 <Trash2 className="mr-2 h-4 w-4" /> Delete Permanently
