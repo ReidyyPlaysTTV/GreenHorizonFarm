@@ -9,16 +9,19 @@ import { seedInitialRanks } from './actions/rank-actions';
 const dbUri = 'mysql://zap1311701-1:gFtXgwwIs09GtYtx@mysql-mariadb-20-104.zap-srv.com:3306/zap1311701-1';
 
 let pool: Pool;
+let isInitialized = false;
+let dbOfflineUntil = 0;
+const OFFLINE_COOLDOWN = 30000; // 30 seconds circuit breaker
 
 try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 10,
+        connectionLimit: 5,
         queueLimit: 0,
-        // Strict 5s timeout to prevent app hanging during render
-        connectTimeout: 5000,
-        acquireTimeout: 5000,
+        // Aggressive 3s timeout to keep the app fast
+        connectTimeout: 3000,
+        acquireTimeout: 3000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });
@@ -117,12 +120,15 @@ async function createFarmTables(connection: any) {
     }
 }
 
-let isInitialized = false;
+export async function ensureDbInitialized(force: boolean = false) {
+    if (isInitialized && !force) return pool;
+    
+    // Circuit Breaker: Don't try if we recently failed
+    if (!force && Date.now() < dbOfflineUntil) {
+        throw new Error("DATABASE_OFFLINE_COOLDOWN");
+    }
 
-export async function ensureDbInitialized() {
-    if (isInitialized) return pool;
     try {
-        // Attempt a quick connection test
         const connection = await pool.getConnection();
         try {
             await createFarmTables(connection);
@@ -135,8 +141,9 @@ export async function ensureDbInitialized() {
             connection.release();
         }
     } catch (err: any) {
-        console.warn("DB Initial Handshake Failed (Deferred):", err.message);
-        return pool; // Return the pool even if offline so diagnostics can run
+        dbOfflineUntil = Date.now() + OFFLINE_COOLDOWN;
+        console.warn("DB Connection Failed (Circuit Breaker Engaged):", err.message);
+        throw err;
     }
 }
 
