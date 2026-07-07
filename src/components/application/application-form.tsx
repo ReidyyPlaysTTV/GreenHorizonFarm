@@ -27,10 +27,11 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 function buildZodSchema(fields: FormFieldData[]) {
   const schemaShape: { [key: string]: z.ZodTypeAny } = {};
-  fields.forEach(field => {
+  fields.forEach((field, index) => {
     let fieldSchema;
     const requiredError = `${field.label} is required.`;
     const fieldLabelLower = field.label.toLowerCase();
+    const fieldId = field.id || `field_${index}`;
 
     switch (field.type) {
       case 'text':
@@ -63,7 +64,7 @@ function buildZodSchema(fields: FormFieldData[]) {
       default:
         fieldSchema = z.any();
     }
-    schemaShape[field.id!] = fieldSchema;
+    schemaShape[fieldId] = fieldSchema;
   });
   return z.object(schemaShape);
 }
@@ -90,7 +91,7 @@ export function ApplicationForm() {
             const fields = await getApplicationFormFields();
             if (fields.length > 0) {
               const schema = buildZodSchema(fields);
-              const defaultValues = fields.reduce((acc, field) => ({ ...acc, [field.id!]: '' }), {});
+              const defaultValues = fields.reduce((acc, field, index) => ({ ...acc, [field.id || `field_${index}`]: '' }), {});
 
               // Now update the form with the schema and default values
               form.reset(defaultValues);
@@ -139,9 +140,10 @@ export function ApplicationForm() {
     }
   }
 
-  const renderFormField = (fieldData: FormFieldData) => {
+  const renderFormField = (fieldData: FormFieldData, index: number) => {
     const { id, type, label, options, required } = fieldData;
     const fieldLabelLower = label.toLowerCase();
+    const fieldId = id || `field_${index}`;
     
     let inputComponent;
     switch(type) {
@@ -161,7 +163,7 @@ export function ApplicationForm() {
                         <SelectValue placeholder={`Select an option for ${label}`} />
                     </SelectTrigger>
                     <SelectContent>
-                        {options?.map(opt => <SelectItem key={opt.id} value={opt.value}>{opt.value}</SelectItem>)}
+                        {options?.map(opt => <SelectItem key={opt.id || opt.value} value={opt.value}>{opt.value}</SelectItem>)}
                     </SelectContent>
                 </Select>
               );
@@ -173,9 +175,9 @@ export function ApplicationForm() {
 
     return (
         <FormField
-          key={id}
+          key={fieldId}
           control={form.control}
-          name={id!}
+          name={fieldId}
           render={({ field }) => {
             return (
                 <FormItem>
@@ -192,7 +194,7 @@ export function ApplicationForm() {
                                 </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                                {options?.map(opt => <SelectItem key={opt.id} value={opt.value}>{opt.value}</SelectItem>)}
+                                {options?.map(opt => <SelectItem key={opt.id || opt.value} value={opt.value}>{opt.value}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     ) : (
@@ -254,7 +256,7 @@ export function ApplicationForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {formFields.map(renderFormField)}
+        {formFields.map((field, index) => renderFormField(field, index))}
         <Button type="submit" className="w-full" disabled={isSubmitting}>
            {isSubmitting ? (
             <Loader2 className="animate-spin" />
@@ -266,4 +268,3 @@ export function ApplicationForm() {
     </Form>
   );
 }
-

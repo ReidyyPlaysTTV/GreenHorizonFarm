@@ -25,15 +25,15 @@ export async function getApplicationFormFields(): Promise<FormFieldData[]> {
         if (!Array.isArray(fields) || fields.length === 0) {
             // Seed the new Green Horizon questions if table is empty
             return [
-                { label: "Name", type: "text", required: true },
-                { label: "State ID", type: "text", required: true },
-                { label: "Phone Number", type: "text", required: true },
-                { label: "Availability", type: "select", required: true, options: [{value: "EU"}, {value: "NA"}, {value: "AU"}] },
-                { label: "Tell me a little about yourself and what brought you to Green Horizon.", type: "textarea", required: true },
-                { label: "Have you worked anywhere before? What did you learn from it?", type: "textarea", required: true },
-                { label: "Tell me about a time something went wrong and how you handled it.", type: "textarea", required: true },
-                { label: "How would your friends describe you?", type: "textarea", required: true },
-                { label: "Is there anything else you'd like us to know?", type: "textarea", required: false },
+                { id: "seed_name", label: "Name", type: "text", required: true },
+                { id: "seed_state_id", label: "State ID", type: "text", required: true },
+                { id: "seed_phone", label: "Phone Number", type: "text", required: true },
+                { id: "seed_availability", label: "Availability", type: "select", required: true, options: [{id: "opt_eu", value: "EU"}, {id: "opt_na", value: "NA"}, {id: "opt_au", value: "AU"}] },
+                { id: "seed_about", label: "Tell me a little about yourself and what brought you to Green Horizon.", type: "textarea", required: true },
+                { id: "seed_experience", label: "Have you worked anywhere before? What did you learn from it?", type: "textarea", required: true },
+                { id: "seed_situation", label: "Tell me about a time something went wrong and how you handled it.", type: "textarea", required: true },
+                { id: "seed_friends", label: "How would your friends describe you?", type: "textarea", required: true },
+                { id: "seed_other", label: "Is there anything else you'd like us to know?", type: "textarea", required: false },
             ];
         }
 
@@ -135,15 +135,15 @@ export async function saveApplicationFormFields(fields: FormFieldData[], user: s
 export async function submitApplication(responses: Record<string, any>) {
     const fields = await getApplicationFormFields();
     
-    const formattedResponses = fields.map(field => ({
-        fieldId: field.id,
+    const formattedResponses = fields.map((field, index) => ({
+        fieldId: field.id || `field_${index}`,
         label: field.label,
         type: field.type,
-        answer: responses[field.id!] || ''
+        answer: responses[field.id || `field_${index}`] || ''
     }));
 
     const nameField = fields.find(f => f.label.toLowerCase().includes('name'));
-    const applicantName = nameField ? responses[nameField.id!] : "Unknown";
+    const applicantName = nameField ? responses[nameField.id || `field_${fields.indexOf(nameField)}`] : "Unknown";
     
     const applicationId = `GH${Math.floor(10000000 + Math.random() * 90000000)}`;
 
