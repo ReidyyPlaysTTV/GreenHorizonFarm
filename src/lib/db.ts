@@ -175,6 +175,8 @@ async function createFarmTables(connection: any) {
                 title VARCHAR(255) NOT NULL,
                 content TEXT NOT NULL,
                 author VARCHAR(255) NOT NULL,
+                status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+                feedback TEXT,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
         `);
@@ -187,6 +189,18 @@ async function createFarmTables(connection: any) {
                 suggested_rank VARCHAR(255) NOT NULL,
                 reason TEXT NOT NULL,
                 suggested_by VARCHAR(255) NOT NULL,
+                status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+                feedback TEXT,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // CEO Chat
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS ceo_chat (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                author VARCHAR(255) NOT NULL,
+                message TEXT NOT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
         `);

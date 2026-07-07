@@ -1,79 +1,467 @@
 
 "use client";
 
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Briefcase, TrendingUp, Target, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { RefreshButton } from "@/components/layout/refresh-button";
+import { 
+    getDetailedOrders, 
+    getFarmTransactions, 
+    getPersonnel, 
+    getRecentActivity, 
+    getSecurityIncidents,
+} from "@/lib/actions";
+import { 
+    getManagerData, 
+    getCeoChatMessages, 
+    sendCeoChatMessage, 
+    reviewPromotionSuggestion, 
+    reviewManagerPlan 
+} from "@/lib/actions/manager-actions";
+import type { 
+    DetailedFarmOrder, 
+    FarmTransaction, 
+    Personnel, 
+    PersonnelEvent, 
+    SecurityIncident,
+    StaffIncident,
+    FarmProduct,
+    ManagerPlan,
+    PromotionSuggestion,
+    CeoChatMessage
+} from "@/lib/types";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
+import { 
+    ClipboardCheck, 
+    ReceiptText, 
+    TrendingUp, 
+    UserPlus, 
+    UserX, 
+    ShieldAlert, 
+    ExternalLink, 
+    ShieldCheck,
+    MessageSquare,
+    Send,
+    CheckCircle2,
+    XCircle,
+    Star,
+    Lightbulb,
+    LayoutDashboard
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { AddStaffIncidentDialog } from "@/components/manager/add-staff-incident-dialog";
+import { AddProductDialog } from "@/components/manager/add-product-dialog";
+import { AddPlanDialog } from "@/components/manager/add-plan-dialog";
+import { AddPromotionSuggestionDialog } from "@/components/manager/add-promotion-suggestion-dialog";
 
 export default function CEOPortal() {
+  const [orders, setOrders] = useState<DetailedFarmOrder[]>([]);
+  const [transactions, setTransactions] = useState<FarmTransaction[]>([]);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [activity, setActivity] = useState<PersonnelEvent[]>([]);
+  const [securityIncidents, setSecurityIncidents] = useState<SecurityIncident[]>([]);
+  const [managerData, setManagerData] = useState<{
+    staffIncidents: StaffIncident[];
+    farmProducts: FarmProduct[];
+    managerPlans: ManagerPlan[];
+    promotionSuggestions: PromotionSuggestion[];
+  } | null>(null);
+  const [chatMessages, setChatMessages] = useState<CeoChatMessage[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState("System");
+  const { toast } = useToast();
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+        const [o, t, p, a, s, m, c] = await Promise.all([
+            getDetailedOrders(),
+            getFarmTransactions(),
+            getPersonnel(),
+            getRecentActivity(),
+            getSecurityIncidents(),
+            getManagerData(),
+            getCeoChatMessages()
+        ]);
+        setOrders(o);
+        setTransactions(t);
+        setPersonnel(p);
+        setActivity(a);
+        setSecurityIncidents(s);
+        setManagerData(m);
+        setChatMessages(c);
+    } catch (e) {
+        console.error(e);
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  useEffect(() => { 
+    if (typeof window !== 'undefined') setCurrentUser(localStorage.getItem('loggedInUser') || "System");
+    fetchData(); 
+  }, []);
+
+  const handleSendMessage = async () => {
+      if (!newMessage.trim()) return;
+      await sendCeoChatMessage(newMessage, currentUser);
+      setNewMessage("");
+      fetchData();
+  };
+
+  const handleReviewPromotion = async (id: string, status: 'Approved' | 'Rejected') => {
+      const feedback = prompt("Enter CEO feedback/reasoning:");
+      if (feedback === null) return;
+      const res = await reviewPromotionSuggestion(id, status, feedback, currentUser);
+      if (res.success) {
+          toast({ title: `Promotion ${status}` });
+          fetchData();
+      }
+  };
+
+  const handleReviewPlan = async (id: string, status: 'Approved' | 'Rejected') => {
+      const feedback = prompt("Enter CEO feedback/reasoning:");
+      if (feedback === null) return;
+      const res = await reviewManagerPlan(id, status, feedback, currentUser);
+      if (res.success) {
+          toast({ title: `Plan ${status}` });
+          fetchData();
+      }
+  };
+
+  const inactivePersonnel = useMemo(() => 
+    personnel.filter(p => Number(p.ordersCompleted || 0) === 0 && p.status === 'Active')
+  , [personnel]);
+
+  const recentIncome = useMemo(() => {
+    const fromOrders = orders.map(o => ({ date: o.created_at, desc: `Order: ${o.business_name}`, amt: Number(o.total_price), type: 'Income' }));
+    const fromManual = transactions.filter(t => t.category === 'Income').map(t => ({ date: t.transaction_date, desc: t.description, amt: Number(t.amount), type: 'Income' }));
+    return [...fromOrders, ...fromManual].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 10);
+  }, [orders, transactions]);
+
+  const recentExpenses = useMemo(() => {
+    const fromManual = transactions.filter(t => t.category !== 'Income').map(t => ({ date: t.transaction_date, desc: t.description, amt: Number(t.amount), type: 'Expense' }));
+    return fromManual.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 10);
+  }, [transactions]);
+
+  if (loading) return <div className="p-10 space-y-4"><Skeleton className="h-20 w-64"/><Skeleton className="h-96 w-full"/></div>;
+
   return (
-    <div className="container mx-auto p-6 md:p-10 space-y-8 text-primary-foreground bg-primary/5 rounded-3xl border border-primary/10 m-4 shadow-2xl">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto p-6 md:p-10 space-y-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-8 bg-primary/10 rounded-3xl border border-primary/20 shadow-2xl">
         <div>
-          <h1 className="text-5xl font-black tracking-tighter text-primary">CEO Executive Portal</h1>
+          <h1 className="text-6xl font-black tracking-tighter text-primary flex items-center gap-4">
+            <ShieldCheck className="h-14 w-14 opacity-80" />
+            CEO Executive Portal
+          </h1>
           <p className="text-muted-foreground mt-2 text-xl font-medium">Strategic control and high-level business oversight.</p>
         </div>
-        <ShieldCheck className="h-16 w-16 text-primary opacity-20" />
+        <div className="flex items-center gap-3">
+             <Button asChild variant="secondary" className="font-bold h-12 px-6 rounded-xl border border-primary/20">
+                <Link href="/applications" className="gap-2">
+                    <ExternalLink className="h-5 w-5" /> Recruitment Center
+                </Link>
+            </Button>
+            <RefreshButton onRefresh={fetchData} />
+        </div>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-3">
-        <Card className="bg-card/50 border-primary/20 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 uppercase tracking-widest text-xs font-black text-muted-foreground">Business Value</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-black text-foreground">$1,240,000</div>
-            <Badge className="mt-2 bg-emerald-500/20 text-emerald-400">+12% Year Over Year</Badge>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-card/50 border-primary/20 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 uppercase tracking-widest text-xs font-black text-muted-foreground">Market Dominance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-black text-foreground">Level 4</div>
-            <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">Top Tier Producer</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/50 border-primary/20 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 uppercase tracking-widest text-xs font-black text-muted-foreground">Strategic Goals</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-black text-foreground">3/4</div>
-            <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-wider">Quarterly milestones met</p>
-          </CardContent>
-        </Card>
+      {/* Action Buttons Row */}
+      <div className="flex flex-wrap gap-3 p-4 bg-primary/5 rounded-2xl border border-primary/10">
+          <AddStaffIncidentDialog />
+          <AddProductDialog />
+          <AddPlanDialog />
+          <AddPromotionSuggestionDialog />
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2">
-        <Card className="border-primary/10">
-          <CardHeader>
-            <CardTitle>Division Performance</CardTitle>
-          </CardHeader>
-          <CardContent className="h-64 flex items-center justify-center border border-dashed rounded-xl">
-             <p className="text-muted-foreground font-medium">High-level analytics processing...</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-primary/10">
-          <CardHeader>
-            <CardTitle>Executive Roadmap</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-             <div className="p-4 bg-muted/40 rounded-xl border-l-4 border-primary">
-                <p className="font-bold text-sm">Expansion Phase 3</p>
-                <p className="text-xs text-muted-foreground mt-1">Acquisition of north-side processing facility.</p>
-             </div>
-             <div className="p-4 bg-muted/40 rounded-xl border-l-4 border-muted">
-                <p className="font-bold text-sm">Supply Chain Optimization</p>
-                <p className="text-xs text-muted-foreground mt-1">Refining logistics for better delivery times.</p>
-             </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-8 lg:grid-cols-3">
+          {/* Executive Chat */}
+          <Card className="border-primary/20 bg-card/60 shadow-xl lg:col-span-1">
+              <CardHeader className="bg-primary/5 border-b border-primary/10">
+                  <CardTitle className="flex items-center gap-2 text-primary">
+                      <MessageSquare className="h-5 w-5" />
+                      Executive Discussion
+                  </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                  <ScrollArea className="h-[400px] p-4">
+                      <div className="space-y-4">
+                          {chatMessages.map(msg => (
+                              <div key={msg.id} className="space-y-1">
+                                  <div className="flex items-center justify-between">
+                                      <span className="text-[10px] font-black uppercase text-primary">{msg.author}</span>
+                                      <span className="text-[8px] text-muted-foreground">{format(msg.created_at, 'HH:mm')}</span>
+                                  </div>
+                                  <p className="bg-muted/40 p-2 rounded-lg text-sm border border-white/5">{msg.message}</p>
+                              </div>
+                          ))}
+                          {chatMessages.length === 0 && <p className="text-center py-20 text-muted-foreground text-xs italic">No executive messages.</p>}
+                      </div>
+                  </ScrollArea>
+                  <div className="p-4 border-t border-primary/10 flex gap-2">
+                      <Input 
+                        placeholder="Discuss strategy..." 
+                        value={newMessage} 
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                        className="bg-background/50"
+                      />
+                      <Button size="icon" onClick={handleSendMessage} className="shrink-0"><Send className="h-4 w-4" /></Button>
+                  </div>
+              </CardContent>
+          </Card>
+
+          {/* Pending Promotions Review */}
+          <Card className="border-yellow-500/20 bg-yellow-500/5 shadow-xl lg:col-span-2">
+              <CardHeader className="bg-yellow-500/10 border-b border-yellow-500/20">
+                  <CardTitle className="flex items-center gap-2 text-yellow-500">
+                      <Star className="h-5 w-5" />
+                      Promotion Review Queue
+                  </CardTitle>
+                  <CardDescription>Management recommendations awaiting executive approval.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <ScrollArea className="h-[445px]">
+                    <div className="grid gap-4 mt-4">
+                        {managerData?.promotionSuggestions.filter(s => s.status === 'Pending').map(s => (
+                            <div key={s.id} className="p-5 bg-background/60 rounded-2xl border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div className="space-y-1">
+                                    <h4 className="text-xl font-black text-primary">{s.personnel_name}</h4>
+                                    <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-500">{s.suggested_rank}</Badge>
+                                    <p className="text-sm text-muted-foreground mt-2 italic">"{s.reason}"</p>
+                                    <p className="text-[10px] text-muted-foreground uppercase font-bold mt-2">Proposed by {s.suggested_by}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button size="sm" onClick={() => handleReviewPromotion(s.id, 'Approved')} className="bg-emerald-600 hover:bg-emerald-700 gap-2 font-bold">
+                                        <CheckCircle2 className="h-4 w-4" /> Approve
+                                    </Button>
+                                    <Button size="sm" variant="destructive" onClick={() => handleReviewPromotion(s.id, 'Rejected')} className="gap-2 font-bold">
+                                        <XCircle className="h-4 w-4" /> Deny
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                        {managerData?.promotionSuggestions.filter(s => s.status === 'Pending').length === 0 && (
+                            <div className="py-20 text-center text-muted-foreground font-medium italic">All promotion requests processed.</div>
+                        )}
+                    </div>
+                  </ScrollArea>
+              </CardContent>
+          </Card>
       </div>
+
+      <div className="grid gap-8 lg:grid-cols-2">
+           {/* Strategic Plan Review */}
+           <Card className="border-blue-500/20 bg-blue-500/5 shadow-xl">
+              <CardHeader className="bg-blue-500/10 border-b border-blue-500/20">
+                  <CardTitle className="flex items-center gap-2 text-blue-400">
+                      <Lightbulb className="h-5 w-5" />
+                      Strategic Plan Approval
+                  </CardTitle>
+              </CardHeader>
+              <CardContent>
+                  <ScrollArea className="h-[400px] mt-4">
+                    <div className="space-y-4">
+                        {managerData?.managerPlans.filter(p => p.status === 'Pending').map(p => (
+                             <div key={p.id} className="p-4 bg-background/50 rounded-xl border border-white/5 space-y-4">
+                                <div>
+                                    <h4 className="font-bold text-lg">{p.title}</h4>
+                                    <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{p.content}</p>
+                                    <p className="text-[10px] text-muted-foreground/60 uppercase font-black mt-3">Author: {p.author}</p>
+                                </div>
+                                <div className="flex gap-2 border-t border-white/5 pt-3">
+                                    <Button size="sm" variant="outline" onClick={() => handleReviewPlan(p.id, 'Approved')} className="flex-1 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20">Approve Plan</Button>
+                                    <Button size="sm" variant="outline" onClick={() => handleReviewPlan(p.id, 'Rejected')} className="flex-1 bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20">Deny Plan</Button>
+                                </div>
+                             </div>
+                        ))}
+                        {managerData?.managerPlans.filter(p => p.status === 'Pending').length === 0 && (
+                            <div className="py-20 text-center text-muted-foreground italic">No management plans awaiting review.</div>
+                        )}
+                    </div>
+                  </ScrollArea>
+              </CardContent>
+          </Card>
+
+          {/* Operational Overview Feeds */}
+          <div className="space-y-8">
+              <Card className="border-primary/10 bg-card/40">
+                  <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                          <ClipboardCheck className="h-5 w-5 text-primary" />
+                          Recent Job Completions
+                      </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <ScrollArea className="h-[300px]">
+                          <Table>
+                              <TableHeader><TableRow><TableHead>Staff</TableHead><TableHead>Value</TableHead><TableHead className="text-right">Time</TableHead></TableRow></TableHeader>
+                              <TableBody>
+                                  {orders.slice(0, 10).map(o => (
+                                      <TableRow key={o.id}>
+                                          <TableCell className="font-bold">{o.completed_by}</TableCell>
+                                          <TableCell className="text-emerald-500 font-black">${Number(o.total_price).toLocaleString()}</TableCell>
+                                          <TableCell className="text-right text-[10px] text-muted-foreground">{format(o.created_at, 'MMM dd HH:mm')}</TableCell>
+                                      </TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </ScrollArea>
+                  </CardContent>
+              </Card>
+          </div>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-3">
+          {/* Income Feed */}
+          <Card className="border-emerald-500/20 bg-emerald-500/5 shadow-lg">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-emerald-500">
+                      <TrendingUp className="h-5 w-5" />
+                      Global Income
+                  </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[250px]">
+                    <div className="space-y-2">
+                        {recentIncome.map((i, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-2 bg-background/40 rounded-lg border border-white/5">
+                                <span className="text-xs font-bold truncate max-w-[150px]">{i.desc}</span>
+                                <span className="text-emerald-500 font-black text-xs">+${i.amt.toLocaleString()}</span>
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+              </CardContent>
+          </Card>
+
+          {/* Expense Feed */}
+          <Card className="border-red-500/20 bg-red-500/5 shadow-lg">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-400">
+                      <ReceiptText className="h-5 w-5" />
+                      Global Outgoings
+                  </CardTitle>
+              </CardHeader>
+              <CardContent>
+                  <ScrollArea className="h-[250px]">
+                    <div className="space-y-2">
+                        {recentExpenses.map((e, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-2 bg-background/40 rounded-lg border border-white/5">
+                                <span className="text-xs font-bold truncate max-w-[150px]">{e.desc}</span>
+                                <span className="text-red-400 font-black text-xs">-${e.amt.toLocaleString()}</span>
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+              </CardContent>
+          </Card>
+
+          {/* Security Incidents */}
+          <Card className="border-destructive/20 bg-destructive/10 shadow-lg">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                      <ShieldAlert className="h-5 w-5" />
+                      High-Alert Incidents
+                  </CardTitle>
+              </CardHeader>
+              <CardContent>
+                   <ScrollArea className="h-[250px]">
+                      <div className="space-y-3">
+                          {securityIncidents.slice(0, 8).map(si => (
+                              <div key={si.id} className="p-2 bg-black/30 rounded-lg border border-destructive/10">
+                                  <h4 className="font-bold text-[10px] text-destructive truncate">{si.title}</h4>
+                                  <p className="text-[8px] text-muted-foreground">{si.location} • {format(si.created_at, 'MMM dd')}</p>
+                              </div>
+                          ))}
+                      </div>
+                  </ScrollArea>
+              </CardContent>
+          </Card>
+      </div>
+
+      {/* Staff Activity Rows */}
+      <div className="grid gap-8 lg:grid-cols-2">
+          {/* Inactive Personnel */}
+          <Card className="border-destructive/20 bg-destructive/5 shadow-lg">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                      <UserX className="h-5 w-5" />
+                      Zero-Yield Staff (Inactive)
+                  </CardTitle>
+              </CardHeader>
+              <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {inactivePersonnel.slice(0, 12).map(p => (
+                          <div key={p.id} className="p-3 bg-background/60 rounded-xl border border-destructive/10 text-center">
+                              <p className="font-black text-sm">{p.name}</p>
+                              <p className="text-[8px] text-muted-foreground uppercase mt-1">{p.rank}</p>
+                          </div>
+                      ))}
+                      {inactivePersonnel.length === 0 && <p className="col-span-full py-10 text-center text-muted-foreground text-sm italic">All staff are actively yielding orders.</p>}
+                  </div>
+              </CardContent>
+          </Card>
+
+          {/* Personnel Feed */}
+          <Card className="border-primary/10 bg-card/30">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                      <UserPlus className="h-5 w-5 text-primary" />
+                      Global Personnel Flow
+                  </CardTitle>
+              </CardHeader>
+              <CardContent>
+                  <ScrollArea className="h-[200px]">
+                      <div className="space-y-3">
+                          {activity.slice(0, 10).map(e => (
+                              <div key={e.id} className="flex items-center justify-between p-3 bg-muted/10 rounded-lg border border-white/5">
+                                  <div>
+                                      <p className="text-xs font-bold">{e.personnel_name}</p>
+                                      <p className="text-[10px] text-muted-foreground">{e.description}</p>
+                                  </div>
+                                  <Badge variant="outline" className="text-[8px] uppercase">{e.event_type}</Badge>
+                              </div>
+                          ))}
+                      </div>
+                  </ScrollArea>
+              </CardContent>
+          </Card>
+      </div>
+
+       {/* Product Price List */}
+       <Card className="border-primary/10 bg-black/20">
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle className="flex items-center gap-2 text-primary">
+                        <LayoutDashboard className="h-5 w-5" />
+                        Global Product Catalog
+                    </CardTitle>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {managerData?.farmProducts.map(p => (
+                        <div key={p.id} className="p-4 bg-muted/30 rounded-2xl border border-white/5 text-center">
+                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{p.category}</p>
+                            <h4 className="font-bold text-sm mt-1">{p.name}</h4>
+                            <p className="text-primary font-black mt-2 text-lg">${Number(p.price).toLocaleString()}</p>
+                        </div>
+                    ))}
+                    {managerData?.farmProducts.length === 0 && <p className="col-span-full py-10 text-center text-muted-foreground italic">No products listed.</p>}
+                </div>
+            </CardContent>
+        </Card>
     </div>
   );
 }

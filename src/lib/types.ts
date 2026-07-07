@@ -200,6 +200,8 @@ export interface ManagerPlan {
     title: string;
     content: string;
     author: string;
+    status: 'Pending' | 'Approved' | 'Rejected';
+    feedback?: string;
     created_at: Date;
 }
 
@@ -209,6 +211,15 @@ export interface PromotionSuggestion {
     suggested_rank: string;
     reason: string;
     suggested_by: string;
+    status: 'Pending' | 'Approved' | 'Rejected';
+    feedback?: string;
+    created_at: Date;
+}
+
+export interface CeoChatMessage {
+    id: string;
+    author: string;
+    message: string;
     created_at: Date;
 }
 

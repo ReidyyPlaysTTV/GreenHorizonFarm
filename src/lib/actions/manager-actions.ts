@@ -5,7 +5,8 @@ import { z } from 'zod';
 import db, { ensureDbInitialized } from '../db';
 import { revalidatePath } from 'next/cache';
 import { logUserAction } from './audit-log-actions';
-import type { StaffIncident, FarmProduct, ManagerPlan, PromotionSuggestion } from '../types';
+import { checkPermissions } from '../permissions';
+import type { StaffIncident, FarmProduct, ManagerPlan, PromotionSuggestion, CeoChatMessage } from '../types';
 
 const incidentSchema = z.object({
     personnel_name: z.string().min(1, "Personnel name is required."),
@@ -29,6 +30,7 @@ export async function addStaffIncident(data: unknown) {
         await logUserAction(issued_by, "Staff Disciplinary", `Issued disciplinary action to ${personnel_name}.`, connection);
         await connection.commit();
         revalidatePath('/manager');
+        revalidatePath('/ceo');
         return { success: true };
     } catch (error) {
         await connection.rollback();
@@ -59,6 +61,7 @@ export async function addFarmProduct(data: unknown, user: string) {
         await logUserAction(user, "Manage Products", `Added product: ${name}`, connection);
         await connection.commit();
         revalidatePath('/manager');
+        revalidatePath('/ceo');
         revalidatePath('/farmers');
         return { success: true };
     } catch (error) {
@@ -84,12 +87,13 @@ export async function addManagerPlan(data: unknown) {
     try {
         await connection.beginTransaction();
         await connection.query(
-            'INSERT INTO manager_plans (id, title, content, author) VALUES (?, ?, ?, ?)',
-            [crypto.randomUUID(), title, content, author]
+            'INSERT INTO manager_plans (id, title, content, author, status) VALUES (?, ?, ?, ?, ?)',
+            [crypto.randomUUID(), title, content, author, 'Pending']
         );
         await logUserAction(author, "Management Strategy", `Created plan: ${title}`, connection);
         await connection.commit();
         revalidatePath('/manager');
+        revalidatePath('/ceo');
         return { success: true };
     } catch (error) {
         await connection.rollback();
@@ -115,12 +119,13 @@ export async function addPromotionSuggestion(data: unknown) {
     try {
         await connection.beginTransaction();
         await connection.query(
-            'INSERT INTO promotion_suggestions (id, personnel_name, suggested_rank, reason, suggested_by) VALUES (?, ?, ?, ?, ?)',
-            [crypto.randomUUID(), personnel_name, suggested_rank, reason, suggested_by]
+            'INSERT INTO promotion_suggestions (id, personnel_name, suggested_rank, reason, suggested_by, status) VALUES (?, ?, ?, ?, ?, ?)',
+            [crypto.randomUUID(), personnel_name, suggested_rank, reason, suggested_by, 'Pending']
         );
         await logUserAction(suggested_by, "Staff Promotion Suggestion", `Suggested ${personnel_name} for ${suggested_rank}.`, connection);
         await connection.commit();
         revalidatePath('/manager');
+        revalidatePath('/ceo');
         return { success: true };
     } catch (error) {
         await connection.rollback();
@@ -145,6 +150,82 @@ export async function getManagerData() {
             managerPlans: (plans as any[]).map(p => ({ ...p, created_at: new Date(p.created_at) })),
             promotionSuggestions: (promotions as any[]).map(p => ({ ...p, created_at: new Date(p.created_at) })),
         };
+    } finally {
+        connection.release();
+    }
+}
+
+// CEO Specific Actions
+export async function reviewPromotionSuggestion(id: string, status: 'Approved' | 'Rejected', feedback: string, ceo: string) {
+    const hasPerm = await checkPermissions(ceo, 'ACCESS_CEO_PORTAL');
+    if (!hasPerm) return { success: false, message: "CEO Access Required" };
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        await connection.query(
+            'UPDATE promotion_suggestions SET status = ?, feedback = ? WHERE id = ?',
+            [status, feedback, id]
+        );
+        await logUserAction(ceo, "Executive Decision", `${status} promotion suggestion ${id} with feedback: ${feedback}`, connection);
+        await connection.commit();
+        revalidatePath('/ceo');
+        revalidatePath('/manager');
+        return { success: true };
+    } catch (e) {
+        await connection.rollback();
+        return { success: false, message: "Update failed" };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function reviewManagerPlan(id: string, status: 'Approved' | 'Rejected', feedback: string, ceo: string) {
+    const hasPerm = await checkPermissions(ceo, 'ACCESS_CEO_PORTAL');
+    if (!hasPerm) return { success: false, message: "CEO Access Required" };
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        await connection.query(
+            'UPDATE manager_plans SET status = ?, feedback = ? WHERE id = ?',
+            [status, feedback, id]
+        );
+        await logUserAction(ceo, "Executive Decision", `${status} manager plan ${id} with feedback: ${feedback}`, connection);
+        await connection.commit();
+        revalidatePath('/ceo');
+        revalidatePath('/manager');
+        return { success: true };
+    } catch (e) {
+        await connection.rollback();
+        return { success: false, message: "Update failed" };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function sendCeoChatMessage(message: string, author: string) {
+    const connection = await db.getConnection();
+    try {
+        await connection.query(
+            'INSERT INTO ceo_chat (id, author, message) VALUES (?, ?, ?)',
+            [crypto.randomUUID(), author, message]
+        );
+        revalidatePath('/ceo');
+        return { success: true };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function getCeoChatMessages(): Promise<CeoChatMessage[]> {
+    await ensureDbInitialized();
+    const connection = await db.getConnection();
+    try {
+        const [rows] = await connection.query('SELECT * FROM ceo_chat ORDER BY created_at DESC LIMIT 50');
+        return (rows as any[]).map(r => ({ ...r, created_at: new Date(r.created_at) }));
+    } catch (e) {
+        return [];
     } finally {
         connection.release();
     }
