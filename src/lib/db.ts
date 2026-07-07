@@ -342,9 +342,6 @@ export async function ensureDbInitialized() {
         }
     } catch (err: any) {
         console.error("DB Connection/Initialization failed:", err.message);
-        if (err.code === 'ETIMEDOUT') {
-            console.error("CRITICAL: Connection Timed Out. Please ensure your ZAP-Hosting database whitelists external connections (add '%' to your remote access list).");
-        }
         throw err;
     }
 }
