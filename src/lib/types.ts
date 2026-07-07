@@ -59,37 +59,6 @@ export type Division = "Harvesting" | "Processing" | "Logistics" | "Sales" | "Ma
 export type EmployeeStatus = 'Active' | 'On Leave' | 'Inactive' | 'Probation';
 export type UserStatus = 'Active' | 'Banned';
 
-export interface Employee {
-  id: string;
-  name: string;
-  position: string;
-  employeeId: string;
-  division: Division;
-  discordUsername?: string;
-  status: EmployeeStatus;
-  joinedAt: Date;
-  userId?: string | null;
-}
-
-export interface UserProfile {
-  id: string;
-  discordId: string;
-  username: string;
-  avatarUrl?: string;
-  roles: string[];
-  lastLogin: Date;
-}
-
-export interface FarmOrder {
-    id: string;
-    item_name: string;
-    quantity: number;
-    status: 'Pending' | 'Completed' | 'Cancelled';
-    completed_by?: string;
-    completed_at?: Date;
-    created_at: Date;
-}
-
 export interface DetailedFarmOrder {
     id: string;
     business_name: string;
@@ -116,6 +85,12 @@ export interface Application {
   submittedAt: Date;
   reviewer_comment?: string;
   responses: any[];
+  reviewer?: {
+      id: string;
+      username: string;
+      avatarUrl?: string;
+  } | null;
+  reviewedAt?: Date | null;
 }
 
 export interface AppUser {
@@ -205,6 +180,38 @@ export interface FarmProcedure {
     created_at: Date;
 }
 
+export interface StaffIncident {
+    id: string;
+    personnel_name: string;
+    reason: string;
+    issued_by: string;
+    incident_date: Date;
+}
+
+export interface FarmProduct {
+    id: string;
+    name: string;
+    category: string;
+    price: number;
+}
+
+export interface ManagerPlan {
+    id: string;
+    title: string;
+    content: string;
+    author: string;
+    created_at: Date;
+}
+
+export interface PromotionSuggestion {
+    id: string;
+    personnel_name: string;
+    suggested_rank: string;
+    reason: string;
+    suggested_by: string;
+    created_at: Date;
+}
+
 export interface Personnel {
     id: string;
     name: string;
@@ -232,15 +239,13 @@ export interface Rank {
     insignia_url?: string;
 }
 
-export interface CallsignLog {
+export interface PersonnelEvent {
     id: string;
-    callsign: string;
     personnel_name: string;
-    action: 'Assigned' | 'Unassigned';
-    timestamp: Date;
+    event_type: 'Hired' | 'Fired' | 'Promoted' | 'Demoted' | 'Rehired';
+    description: string;
+    date: Date;
 }
-
-export type ReportStatus = 'Pending' | 'In Progress' | 'Completed' | 'Rejected';
 
 export interface BugReport {
   id: string;
@@ -258,6 +263,8 @@ export interface Suggestion {
   submittedAt: Date;
 }
 
+export type ReportStatus = 'Pending' | 'In Progress' | 'Completed' | 'Rejected';
+
 export interface FormFieldData {
   id?: string;
   label: string;
@@ -271,4 +278,30 @@ export interface AccessRequest {
   requested_username: string;
   status: 'Pending' | 'Approved' | 'Denied';
   createdAt: Date;
+}
+
+export interface ArchivedPersonnel {
+    id: string;
+    name: string;
+    rank: string;
+    discordUsername?: string;
+    status: 'Fired' | 'Resigned';
+    date: Date;
+    reason?: string;
+}
+
+export interface BlacklistedPersonnel {
+    id: string;
+    name: string;
+    discordUsername?: string;
+    reason?: string;
+    dateAdded: string;
+}
+
+export interface CallsignLog {
+    id: string;
+    callsign: string;
+    personnel_name: string;
+    action: 'Assigned' | 'Unassigned';
+    timestamp: Date;
 }

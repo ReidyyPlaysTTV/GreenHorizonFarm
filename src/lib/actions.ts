@@ -22,3 +22,4 @@ export * from './actions/security-actions';
 export * from './actions/event-actions';
 export * from './actions/finance-actions';
 export * from './actions/procedure-actions';
+export * from './actions/manager-actions';

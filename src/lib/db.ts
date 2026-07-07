@@ -55,20 +55,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Migration: Ensure new columns exist in personnel
-        const [columns] = await connection.query("SHOW COLUMNS FROM personnel");
-        const columnNames = (columns as any[]).map(c => c.Field);
-        
-        if (!columnNames.includes('phone_number')) {
-            await connection.query("ALTER TABLE personnel ADD COLUMN phone_number VARCHAR(20)");
-        }
-        if (!columnNames.includes('bank_account')) {
-            await connection.query("ALTER TABLE personnel ADD COLUMN bank_account VARCHAR(50)");
-        }
-        if (!columnNames.includes('hire_date')) {
-            await connection.query("ALTER TABLE personnel ADD COLUMN hire_date DATE DEFAULT (CURRENT_DATE)");
-        }
-
         // Detailed Farm Orders
         await connection.query(`
             CREATE TABLE IF NOT EXISTS detailed_farm_orders (
@@ -158,6 +144,50 @@ async function createFarmTables(connection: any) {
                 author_name VARCHAR(255) NOT NULL,
                 author_rank VARCHAR(255) NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Staff Incidents (Disciplinaries)
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS staff_incidents (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                personnel_name VARCHAR(255) NOT NULL,
+                reason TEXT NOT NULL,
+                issued_by VARCHAR(255) NOT NULL,
+                incident_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Farm Products
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS farm_products (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                category VARCHAR(100) NOT NULL,
+                price DECIMAL(10, 2) DEFAULT 0
+            );
+        `);
+
+        // Manager Plans
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS manager_plans (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                content TEXT NOT NULL,
+                author VARCHAR(255) NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Promotion Suggestions
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS promotion_suggestions (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                personnel_name VARCHAR(255) NOT NULL,
+                suggested_rank VARCHAR(255) NOT NULL,
+                reason TEXT NOT NULL,
+                suggested_by VARCHAR(255) NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
         `);
         
