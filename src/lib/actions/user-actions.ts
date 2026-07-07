@@ -131,13 +131,14 @@ export async function loginUser(credentials: unknown) {
     const { username, password } = validation.data;
 
     try {
+        // Ensure DB is ready before querying
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
             const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', [username]);
             
             if (!Array.isArray(rows) || rows.length === 0) {
-                return { success: false, message: 'Incorrect username or password. Please try again.' };
+                return { success: false, message: 'Incorrect username or password.' };
             }
             
             const user = (rows as any[])[0];
@@ -145,10 +146,11 @@ export async function loginUser(credentials: unknown) {
                 return { success: false, message: 'This account has been banned.' };
             }
 
+            // Using simple string comparison as requested for the simulation
             const passwordMatch = user.password === password;
 
             if (!passwordMatch) {
-                return { success: false, message: 'Incorrect username or password. Please try again.' };
+                return { success: false, message: 'Incorrect username or password.' };
             }
             
             await logUserAction(username, "Login", `User '${username}' signed in.`, connection);
@@ -168,8 +170,11 @@ export async function loginUser(credentials: unknown) {
             connection.release();
         }
     } catch (error: any) {
-        console.error("Login failed:", error);
-        return { success: false, message: error.message || 'An internal server error occurred.' };
+        console.error("Login server error:", error);
+        if (error.code === 'ETIMEDOUT') {
+            return { success: false, message: 'Database Connection Timeout. Please ensure your ZAP-Hosting database whitelists external connections.' };
+        }
+        return { success: false, message: error.message || 'An unexpected database error occurred.' };
     }
 }
 

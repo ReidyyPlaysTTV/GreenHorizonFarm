@@ -13,6 +13,8 @@ const dbConfig = {
     port: 3306,
     waitForConnections: true,
     connectionLimit: 10,
+    queueLimit: 0,
+    connectTimeout: 10000, // 10 seconds timeout for initial connection
     charset: 'utf8mb4'
 };
 
@@ -229,13 +231,17 @@ export async function ensureDbInitialized() {
             await seedInitialRanks(pool);     // Roster positions
             
             isInitialized = true;
+            console.log("Database successfully connected and initialized.");
             return pool;
         } finally {
             connection.release();
         }
-    } catch (err) {
-        console.error("DB Init failed:", err);
-        return pool;
+    } catch (err: any) {
+        console.error("DB Connection/Initialization failed:", err.message);
+        if (err.code === 'ETIMEDOUT') {
+            console.error("CRITICAL: Connection Timed Out. Please check if your ZAP-Hosting database allows remote connections and whitelists '%'.");
+        }
+        throw err;
     }
 }
 
