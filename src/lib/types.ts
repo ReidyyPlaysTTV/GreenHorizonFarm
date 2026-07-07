@@ -170,3 +170,12 @@ export interface FarmEvent {
     status: 'Scheduled' | 'Cancelled' | 'Completed';
     created_at: Date;
 }
+
+export interface FarmTransaction {
+    id: string;
+    amount: number;
+    category: 'Income' | 'Expense' | 'Expenditure' | 'Employee Cut';
+    description: string;
+    transaction_date: Date;
+    created_at: Date;
+}

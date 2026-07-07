@@ -119,6 +119,26 @@ async function createFarmTables(connection: any) {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
+
+        // Financial Transactions
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS farm_transactions (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                amount DECIMAL(15, 2) NOT NULL,
+                category ENUM('Income', 'Expense', 'Expenditure', 'Employee Cut') NOT NULL,
+                description TEXT NOT NULL,
+                transaction_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Financial Settings
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS financial_settings (
+                setting_key VARCHAR(255) NOT NULL PRIMARY KEY,
+                setting_value TEXT
+            );
+        `);
         
     } catch (error) {
         console.error("Failed to create farm tables:", error);
