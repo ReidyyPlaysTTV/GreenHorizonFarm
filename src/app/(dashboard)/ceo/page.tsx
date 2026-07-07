@@ -32,7 +32,7 @@ import type {
     CeoChatMessage
 } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/Table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { 
     ClipboardCheck, 
