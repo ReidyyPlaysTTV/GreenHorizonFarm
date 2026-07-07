@@ -32,7 +32,7 @@ import type {
     CeoChatMessage
 } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/Table";
 import { format } from "date-fns";
 import { 
     ClipboardCheck, 
@@ -53,7 +53,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -143,13 +142,13 @@ export default function CEOPortal() {
   , [personnel]);
 
   const recentIncome = useMemo(() => {
-    const fromOrders = orders.map(o => ({ date: o.created_at, desc: `Order: ${o.business_name}`, amt: Number(o.total_price), type: 'Income' }));
-    const fromManual = transactions.filter(t => t.category === 'Income').map(t => ({ date: t.transaction_date, desc: t.description, amt: Number(t.amount), type: 'Income' }));
+    const fromOrders = orders.map(o => ({ date: new Date(o.created_at), desc: `Order: ${o.business_name}`, amt: Number(o.total_price), type: 'Income' }));
+    const fromManual = transactions.filter(t => t.category === 'Income').map(t => ({ date: new Date(t.transaction_date), desc: t.description, amt: Number(t.amount), type: 'Income' }));
     return [...fromOrders, ...fromManual].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 10);
   }, [orders, transactions]);
 
   const recentExpenses = useMemo(() => {
-    const fromManual = transactions.filter(t => t.category !== 'Income').map(t => ({ date: t.transaction_date, desc: t.description, amt: Number(t.amount), type: 'Expense' }));
+    const fromManual = transactions.filter(t => t.category !== 'Income').map(t => ({ date: new Date(t.transaction_date), desc: t.description, amt: Number(t.amount), type: 'Expense' }));
     return fromManual.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 10);
   }, [transactions]);
 
@@ -176,7 +175,6 @@ export default function CEOPortal() {
         </div>
       </div>
 
-      {/* Action Buttons Row */}
       <div className="flex flex-wrap gap-3 p-4 bg-primary/5 rounded-2xl border border-primary/10">
           <AddStaffIncidentDialog />
           <AddProductDialog />
@@ -185,7 +183,6 @@ export default function CEOPortal() {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
-          {/* Executive Chat */}
           <Card className="border-primary/20 bg-card/60 shadow-xl lg:col-span-1">
               <CardHeader className="bg-primary/5 border-b border-primary/10">
                   <CardTitle className="flex items-center gap-2 text-primary">
@@ -200,7 +197,7 @@ export default function CEOPortal() {
                               <div key={msg.id} className="space-y-1">
                                   <div className="flex items-center justify-between">
                                       <span className="text-[10px] font-black uppercase text-primary">{msg.author}</span>
-                                      <span className="text-[8px] text-muted-foreground">{format(msg.created_at, 'HH:mm')}</span>
+                                      <span className="text-[8px] text-muted-foreground">{format(new Date(msg.created_at), 'HH:mm')}</span>
                                   </div>
                                   <p className="bg-muted/40 p-2 rounded-lg text-sm border border-white/5">{msg.message}</p>
                               </div>
@@ -221,7 +218,6 @@ export default function CEOPortal() {
               </CardContent>
           </Card>
 
-          {/* Pending Promotions Review */}
           <Card className="border-yellow-500/20 bg-yellow-500/5 shadow-xl lg:col-span-2">
               <CardHeader className="bg-yellow-500/10 border-b border-yellow-500/20">
                   <CardTitle className="flex items-center gap-2 text-yellow-500">
@@ -261,7 +257,6 @@ export default function CEOPortal() {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
-           {/* Strategic Plan Review */}
            <Card className="border-blue-500/20 bg-blue-500/5 shadow-xl">
               <CardHeader className="bg-blue-500/10 border-b border-blue-500/20">
                   <CardTitle className="flex items-center gap-2 text-blue-400">
@@ -293,7 +288,6 @@ export default function CEOPortal() {
               </CardContent>
           </Card>
 
-          {/* Operational Overview Feeds */}
           <div className="space-y-8">
               <Card className="border-primary/10 bg-card/40">
                   <CardHeader>
@@ -311,7 +305,7 @@ export default function CEOPortal() {
                                       <TableRow key={o.id}>
                                           <TableCell className="font-bold">{o.completed_by}</TableCell>
                                           <TableCell className="text-emerald-500 font-black">${Number(o.total_price).toLocaleString()}</TableCell>
-                                          <TableCell className="text-right text-[10px] text-muted-foreground">{format(o.created_at, 'MMM dd HH:mm')}</TableCell>
+                                          <TableCell className="text-right text-[10px] text-muted-foreground">{format(new Date(o.created_at), 'MMM dd HH:mm')}</TableCell>
                                       </TableRow>
                                   ))}
                               </TableBody>
@@ -323,7 +317,6 @@ export default function CEOPortal() {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
-          {/* Income Feed */}
           <Card className="border-emerald-500/20 bg-emerald-500/5 shadow-lg">
               <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-emerald-500">
@@ -345,7 +338,6 @@ export default function CEOPortal() {
               </CardContent>
           </Card>
 
-          {/* Expense Feed */}
           <Card className="border-red-500/20 bg-red-500/5 shadow-lg">
               <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-red-400">
@@ -367,7 +359,6 @@ export default function CEOPortal() {
               </CardContent>
           </Card>
 
-          {/* Security Incidents */}
           <Card className="border-destructive/20 bg-destructive/10 shadow-lg">
               <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-destructive">
@@ -381,7 +372,7 @@ export default function CEOPortal() {
                           {securityIncidents.slice(0, 8).map(si => (
                               <div key={si.id} className="p-2 bg-black/30 rounded-lg border border-destructive/10">
                                   <h4 className="font-bold text-[10px] text-destructive truncate">{si.title}</h4>
-                                  <p className="text-[8px] text-muted-foreground">{si.location} • {format(si.created_at, 'MMM dd')}</p>
+                                  <p className="text-[8px] text-muted-foreground">{si.location} • {format(new Date(si.created_at), 'MMM dd')}</p>
                               </div>
                           ))}
                       </div>
@@ -390,9 +381,7 @@ export default function CEOPortal() {
           </Card>
       </div>
 
-      {/* Staff Activity Rows */}
       <div className="grid gap-8 lg:grid-cols-2">
-          {/* Inactive Personnel */}
           <Card className="border-destructive/20 bg-destructive/5 shadow-lg">
               <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-destructive">
@@ -413,7 +402,6 @@ export default function CEOPortal() {
               </CardContent>
           </Card>
 
-          {/* Personnel Feed */}
           <Card className="border-primary/10 bg-card/30">
               <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -439,7 +427,6 @@ export default function CEOPortal() {
           </Card>
       </div>
 
-       {/* Product Price List */}
        <Card className="border-primary/10 bg-black/20">
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>

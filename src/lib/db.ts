@@ -313,7 +313,7 @@ export async function ensureDbInitialized() {
         }
     } catch (err: any) {
         console.error("DB Initialization Error:", err.message);
-        // Don't throw here to prevent the entire app layout from crashing on DB failure
+        // Return the pool even on failure so client calls can try again/handle specific errors
         return pool;
     }
 }
