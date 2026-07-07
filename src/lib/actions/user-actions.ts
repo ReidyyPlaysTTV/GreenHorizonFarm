@@ -80,7 +80,7 @@ export async function getUsers(): Promise<AppUser[]> {
             connection.release();
         }
     } catch (error) {
-        console.error("Failed to fetch users:", error);
+        console.error("Action Error (getUsers):", error);
         return [];
     }
 }
@@ -136,198 +136,254 @@ export async function loginUser(credentials: unknown) {
         }
     } catch (error: any) {
         console.error("Login server error:", error);
-        if (error.code === 'ETIMEDOUT') {
-            return { success: false, message: 'Database Connection Timeout. Please check ZAP-Hosting public accessibility.' };
-        }
-        return { success: false, message: `System Error: ${error.message || 'Unknown error'}` };
+        return { success: false, message: `System Error: ${error.message || 'Database connection unreachable'}` };
     }
 }
 
 export async function createUser(data: any) {
     const { username, password, roles, adminUser } = data;
 
-    const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
-    if (!hasPermission) {
-        return { success: false, message: 'You do not have permission to perform this action.' };
-    }
-
-    const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-
-        const [existing] = await connection.query('SELECT id FROM users WHERE username = ?', [username]);
-        if (Array.isArray(existing) && existing.length > 0) {
-            return { success: false, message: 'A user with that username already exists.' };
+        const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
+        if (!hasPermission) {
+            return { success: false, message: 'You do not have permission to perform this action.' };
         }
 
-        const userId = crypto.randomUUID();
-        await connection.query(
-            'INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)',
-            [userId, username, password, JSON.stringify(roles), 'Active']
-        );
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
 
-        await logUserAction(adminUser, 'Create User', `Manually created user account: ${username}`, connection);
-        await connection.commit();
-        revalidatePath('/admin');
-        return { success: true, message: `User '${username}' created.` };
-    } catch (error: any) {
-        await connection.rollback();
-        console.error('Failed to create user:', error);
-        return { success: false, message: 'Database operation failed.' };
-    } finally {
-        connection.release();
+            const [existing] = await connection.query('SELECT id FROM users WHERE username = ?', [username]);
+            if (Array.isArray(existing) && existing.length > 0) {
+                return { success: false, message: 'A user with that username already exists.' };
+            }
+
+            const userId = crypto.randomUUID();
+            await connection.query(
+                'INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)',
+                [userId, username, password, JSON.stringify(roles), 'Active']
+            );
+
+            await logUserAction(adminUser, 'Create User', `Manually created user account: ${username}`, connection);
+            await connection.commit();
+            revalidatePath('/admin');
+            return { success: true, message: `User '${username}' created.` };
+        } catch (error: any) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error("Action Error (createUser):", error);
+        return { success: false, message: 'Operation failed.' };
     }
 }
 
 export async function submitAccessRequest(data: any) {
   const { username, password } = data;
-  await ensureDbInitialized();
-  const connection = await db.getConnection();
   try {
-    await connection.query(
-      'INSERT INTO access_requests (id, requested_username, password) VALUES (?, ?, ?)',
-      [crypto.randomUUID(), username, password]
-    );
-    return { success: true };
+    await ensureDbInitialized();
+    const connection = await db.getConnection();
+    try {
+        await connection.query(
+        'INSERT INTO access_requests (id, requested_username, password) VALUES (?, ?, ?)',
+        [crypto.randomUUID(), username, password]
+        );
+        return { success: true };
+    } finally {
+        connection.release();
+    }
   } catch (error) {
+    console.error("Action Error (submitAccessRequest):", error);
     return { success: false, message: 'Request failed.' };
-  } finally {
-    connection.release();
   }
 }
 
 export async function getAccessRequests(): Promise<AccessRequest[]> {
-    await ensureDbInitialized();
-    const connection = await db.getConnection();
     try {
-        const [rows] = await connection.query("SELECT id, requested_username, status, createdAt FROM access_requests WHERE status = 'Pending' ORDER BY createdAt ASC");
-        return (rows as any[]).map(r => ({ ...r, createdAt: new Date(r.createdAt) }));
-    } finally {
-        connection.release();
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            const [rows] = await connection.query("SELECT id, requested_username, status, createdAt FROM access_requests WHERE status = 'Pending' ORDER BY createdAt ASC");
+            return (rows as any[]).map(r => ({ ...r, createdAt: new Date(r.createdAt) }));
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error("Action Error (getAccessRequests):", error);
+        return [];
     }
 }
 
 export async function approveAccessRequest(data: any) {
     const { requestId, username, roles, adminUser } = data;
-    const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-        const [requestRows]: any = await connection.query('SELECT * FROM access_requests WHERE id = ?', [requestId]);
-        if (!Array.isArray(requestRows) || requestRows.length === 0) throw new Error("Request not found");
-        const request = requestRows[0];
-        await connection.query(
-            'INSERT INTO users (id, username, password, roles) VALUES (?, ?, ?, ?)',
-            [crypto.randomUUID(), username, request.password, JSON.stringify(roles)]
-        );
-        await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Approved', requestId]);
-        await logUserAction(adminUser, 'Approve Access Request', `Approved access for user: ${username}`, connection);
-        await connection.commit();
-        revalidatePath('/admin');
-        return { success: true };
-    } finally {
-        connection.release();
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+            const [requestRows]: any = await connection.query('SELECT * FROM access_requests WHERE id = ?', [requestId]);
+            if (!Array.isArray(requestRows) || requestRows.length === 0) throw new Error("Request not found");
+            const request = requestRows[0];
+            await connection.query(
+                'INSERT INTO users (id, username, password, roles) VALUES (?, ?, ?, ?)',
+                [crypto.randomUUID(), username, request.password, JSON.stringify(roles)]
+            );
+            await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Approved', requestId]);
+            await logUserAction(adminUser, 'Approve Access Request', `Approved access for user: ${username}`, connection);
+            await connection.commit();
+            revalidatePath('/admin');
+            return { success: true };
+        } catch (e) {
+            await connection.rollback();
+            throw e;
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error("Action Error (approveAccessRequest):", error);
+        return { success: false, message: 'Approval failed.' };
     }
 }
 
 export async function denyAccessRequest(requestId: string, requestedUsername: string, adminUser: string) {
-    const hasPermission = await checkPermissions(adminUser, 'MANAGE_ACCESS_REQUESTS');
-    if (!hasPermission) {
-        return { success: false, message: 'You do not have permission.' };
-    }
-
-    const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-        await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Denied', requestId]);
-        await logUserAction(adminUser, 'Deny Access Request', `Denied access for user: ${requestedUsername}`, connection);
-        await connection.commit();
-        revalidatePath('/admin');
-        return { success: true, message: 'Access request denied.' };
+        const hasPermission = await checkPermissions(adminUser, 'MANAGE_ACCESS_REQUESTS');
+        if (!hasPermission) {
+            return { success: false, message: 'You do not have permission.' };
+        }
+
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+            await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Denied', requestId]);
+            await logUserAction(adminUser, 'Deny Access Request', `Denied access for user: ${requestedUsername}`, connection);
+            await connection.commit();
+            revalidatePath('/admin');
+            return { success: true, message: 'Access request denied.' };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
     } catch (error) {
-        await connection.rollback();
-        return { success: false, message: 'Database operation failed.' };
-    } finally {
-        connection.release();
+        console.error("Action Error (denyAccessRequest):", error);
+        return { success: false, message: 'Operation failed.' };
     }
 }
 
 export async function changeUserPassword(data: any) {
     const { userId, currentPassword, newPassword } = data;
-    const connection = await db.getConnection();
     try {
-        const [rows]: any = await connection.query('SELECT password, username FROM users WHERE id = ?', [userId]);
-        if (rows[0].password !== currentPassword) return { success: false, message: "Incorrect password" };
-        await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
-        return { success: true, message: "Password updated" };
-    } finally {
-        connection.release();
+        const connection = await db.getConnection();
+        try {
+            const [rows]: any = await connection.query('SELECT password, username FROM users WHERE id = ?', [userId]);
+            if (rows[0].password !== currentPassword) return { success: false, message: "Incorrect password" };
+            await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
+            return { success: true, message: "Password updated" };
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error("Action Error (changeUserPassword):", error);
+        return { success: false, message: 'Password update failed.' };
     }
 }
 
 export async function updateProfilePicture(data: any) {
     const { userId, url, user } = data;
-    const connection = await db.getConnection();
     try {
-        await connection.query('UPDATE users SET avatarUrl = ? WHERE id = ?', [url, userId]);
-        revalidatePath(`/users/${encodeURIComponent(user)}`);
-        return { success: true, message: "Picture updated" };
-    } finally {
-        connection.release();
+        const connection = await db.getConnection();
+        try {
+            await connection.query('UPDATE users SET avatarUrl = ? WHERE id = ?', [url, userId]);
+            revalidatePath(`/users/${encodeURIComponent(user)}`);
+            return { success: true, message: "Picture updated" };
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error("Action Error (updateProfilePicture):", error);
+        return { success: false, message: 'Update failed.' };
     }
 }
 
 export async function getReviewedApplicationsCount(userId: string): Promise<number> {
-    const connection = await db.getConnection();
     try {
-        const [rows]: any = await connection.query("SELECT COUNT(*) as count FROM applications WHERE reviewer_id = ? AND status IN ('Approved', 'Rejected')", [userId]);
-        return rows[0].count;
-    } finally {
-        connection.release();
+        const connection = await db.getConnection();
+        try {
+            const [rows]: any = await connection.query("SELECT COUNT(*) as count FROM applications WHERE reviewer_id = ? AND status IN ('Approved', 'Rejected')", [userId]);
+            return rows[0].count;
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        return 0;
     }
 }
 
 export async function updateUser(data: any) {
     const { userId, username, roles, adminUser } = data;
-    const connection = await db.getConnection();
     try {
-        await connection.query('UPDATE users SET username = ?, roles = ? WHERE id = ?', [username, JSON.stringify(roles), userId]);
-        revalidatePath('/admin');
-        return { success: true, message: "User updated" };
-    } finally {
-        connection.release();
+        const connection = await db.getConnection();
+        try {
+            await connection.query('UPDATE users SET username = ?, roles = ? WHERE id = ?', [username, JSON.stringify(roles), userId]);
+            revalidatePath('/admin');
+            return { success: true, message: "User updated" };
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error("Action Error (updateUser):", error);
+        return { success: false, message: 'Update failed.' };
     }
 }
 
 export async function setUserStatus(data: any) {
     const { userId, status, adminUser } = data;
-    const connection = await db.getConnection();
     try {
-        await connection.query('UPDATE users SET status = ? WHERE id = ?', [status, userId]);
-        revalidatePath('/admin');
-        return { success: true, message: "Status set" };
-    } finally {
-        connection.release();
+        const connection = await db.getConnection();
+        try {
+            await connection.query('UPDATE users SET status = ? WHERE id = ?', [status, userId]);
+            revalidatePath('/admin');
+            return { success: true, message: "Status set" };
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error("Action Error (setUserStatus):", error);
+        return { success: false, message: 'Status update failed.' };
     }
 }
 
 export async function resetUserPassword(data: any) {
     const { userId, newPassword, adminUser } = data;
-    const connection = await db.getConnection();
     try {
-        await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
-        return { success: true, message: "Password reset" };
-    } finally {
-        connection.release();
+        const connection = await db.getConnection();
+        try {
+            await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
+            return { success: true, message: "Password reset" };
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error("Action Error (resetUserPassword):", error);
+        return { success: false, message: 'Reset failed.' };
     }
 }
 
 export async function deleteUser(userId: string, adminUser: string) {
-    const connection = await db.getConnection();
     try {
-        await connection.query('DELETE FROM users WHERE id = ?', [userId]);
-        revalidatePath('/admin');
-        return { success: true, message: "User deleted" };
-    } finally {
-        connection.release();
+        const connection = await db.getConnection();
+        try {
+            await connection.query('DELETE FROM users WHERE id = ?', [userId]);
+            revalidatePath('/admin');
+            return { success: true, message: "User deleted" };
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error("Action Error (deleteUser):", error);
+        return { success: false, message: 'Deletion failed.' };
     }
 }

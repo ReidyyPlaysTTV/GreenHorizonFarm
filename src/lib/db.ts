@@ -5,19 +5,23 @@ import { seedDatabase } from './db-seed';
 import { seedRolePermissions } from './actions/permission-actions';
 import { seedInitialRanks } from './actions/rank-actions';
 
-// Precise connection string as requested
-const connectionString = "mysql://zap1311701-1:gFtXgwwIs09GtYtx@mysql-mariadb-20-104.zap-srv.com:3306/zap1311701-1";
+// Standard object config for better compatibility with ZAP-Hosting
+const dbConfig = {
+    host: 'mysql-mariadb-20-104.zap-srv.com',
+    user: 'zap1311701-1',
+    password: 'gFtXgwwIs09GtYtx',
+    database: 'zap1311701-1',
+    port: 3306,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    connectTimeout: 15000, // 15 seconds
+};
 
 let pool: Pool;
 
 try {
-    pool = mysql.createPool({
-        uri: connectionString,
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit: 0,
-        connectTimeout: 30000, // 30 seconds
-    });
+    pool = mysql.createPool(dbConfig);
 } catch (err) {
     console.error("Failed to create MySQL pool:", err);
     throw err;
@@ -312,8 +316,7 @@ export async function ensureDbInitialized() {
             connection.release();
         }
     } catch (err: any) {
-        console.error("DB Initialization Error:", err.message);
-        // Return the pool even on failure so client calls can try again/handle specific errors
+        console.warn("DB Initial Handshake Failed (Deferred):", err.message);
         return pool;
     }
 }
