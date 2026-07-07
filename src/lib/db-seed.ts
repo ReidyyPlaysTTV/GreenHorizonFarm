@@ -3,8 +3,8 @@
 import type { Pool } from 'mysql2/promise';
 
 /**
- * Seeds the initial users into the database if the users table is empty.
- * This ensures the Leon Green developer account and a technical admin exist on first run.
+ * Seeds the initial users into the database.
+ * This ensures the Leon Green developer account and a technical admin exist.
  */
 export async function seedDatabase(pool: Pool) {
     const connection = await pool.getConnection();
@@ -22,44 +22,44 @@ export async function seedDatabase(pool: Pool) {
             );
         `);
         
-        // Check if there are any users already
-        const [users] = await connection.query('SELECT COUNT(*) as count FROM users');
-        
-        if (Array.isArray(users) && (users[0] as any).count === 0) {
-            console.log("No users found. Seeding default base users...");
-
-            // Developer User: Leon Green
-            const leonId = crypto.randomUUID();
+        // Check for Leon Green
+        const [leonRows] = await connection.query('SELECT id FROM users WHERE username = ?', ['Leon Green']);
+        if (Array.isArray(leonRows) && leonRows.length === 0) {
+            console.log("Seeding Developer: Leon Green");
             await connection.query(
                 'INSERT INTO users (id, username, password, roles, avatarUrl) VALUES (?, ?, ?, ?, ?)',
                 [
-                    leonId, 
+                    crypto.randomUUID(), 
                     'Leon Green', 
                     'password123', 
                     JSON.stringify(['Developer']), 
                     'https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png'
                 ]
             );
+        }
 
-            // Technical Admin
-            const adminId = crypto.randomUUID();
+        // Check for technical admin
+        const [adminRows] = await connection.query('SELECT id FROM users WHERE username = ?', ['admin']);
+        if (Array.isArray(adminRows) && adminRows.length === 0) {
+            console.log("Seeding Administrator: admin");
             await connection.query(
                 'INSERT INTO users (id, username, password, roles, avatarUrl) VALUES (?, ?, ?, ?, ?)',
                 [
-                    adminId, 
+                    crypto.randomUUID(), 
                     'admin', 
                     'adminpassword', 
                     JSON.stringify(['Administrator']), 
                     null
                 ]
             );
-
-            console.log("-----------------------------------------");
-            console.log("BASE USERS CREATED SUCCESSFULLY");
-            console.log("Developer: Leon Green / password123");
-            console.log("Admin: admin / adminpassword");
-            console.log("-----------------------------------------");
         }
+
+        console.log("-----------------------------------------");
+        console.log("BASE USERS SYNCED");
+        console.log("Developer: Leon Green / password123");
+        console.log("Admin: admin / adminpassword");
+        console.log("-----------------------------------------");
+        
     } catch (error) {
         console.error("Error during database seeding:", error);
     } finally {
