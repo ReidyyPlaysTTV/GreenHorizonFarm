@@ -24,7 +24,8 @@ import {
   Sprout,
   Shield,
   Calendar,
-  DollarSign
+  DollarSign,
+  UserCircle
 } from "lucide-react";
 import { Button } from "../ui/button";
 import Image from "next/image";
@@ -34,6 +35,7 @@ import { UserProfile } from "./user-profile";
 const mainMenuItems = [
   { href: "/dashboard", label: "Farm Overview", icon: Home, permission: 'ACCESS_DASHBOARD' },
   { href: "/roster", label: "Staff Roster", icon: Users, permission: 'VIEW_EMPLOYEES' },
+  { href: "/users", label: "User Directory", icon: UserCircle, permission: 'VIEW_USERS' },
   { href: "/farmers", label: "Farmers Portal", icon: Sprout, permission: 'ACCESS_FARMERS' },
   { href: "/security", label: "Security Portal", icon: Shield, permission: 'ACCESS_SECURITY' },
   { href: "/events", label: "Events Portal", icon: Calendar, permission: 'ACCESS_EVENTS' },

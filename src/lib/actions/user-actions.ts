@@ -78,18 +78,21 @@ export async function getUsers(): Promise<AppUser[]> {
                 return [];
             }
 
-            const [personnel] = await connection.query('SELECT name, rank, department, userId FROM personnel');
+            const [personnel] = await connection.query('SELECT name, rank, department, userId, phone_number as phoneNumber, hire_date as hireDate FROM personnel');
             const personnelMap = new Map<string, Partial<Personnel>>();
             if (Array.isArray(personnel)) {
                 personnel.forEach((p: any) => {
                     if (p.userId) {
                         personnelMap.set(p.userId, p);
+                    } else {
+                        // Also map by name as a fallback for users created manually without explicit linkage
+                        personnelMap.set(p.name, p);
                     }
                 });
             }
 
             return (users as any[]).map((u: any) => {
-                const pRecord = personnelMap.get(u.id);
+                const pRecord = personnelMap.get(u.id) || personnelMap.get(u.username);
                 let userRoles = [];
                 if(typeof u.roles === 'string') {
                     try {
@@ -578,7 +581,7 @@ export async function resetUserPassword(data: unknown) {
     try {
         await connection.beginTransaction();
         
-        const [rows] = await connection.query('SELECT username FROM users WHERE id = ?', [userId]);
+        const [rows] = await connection.query('SELECT username, password FROM users WHERE id = ?', [userId]);
         if ((rows as any[]).length === 0) {
             return { success: false, message: "User not found." };
         }
