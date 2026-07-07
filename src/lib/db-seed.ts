@@ -14,16 +14,17 @@ export async function seedDatabase(pool: Pool) {
         const [leonRows] = await connection.query('SELECT id FROM users WHERE username = ?', ['Leon Green']);
         if (Array.isArray(leonRows) && leonRows.length === 0) {
             console.log("Seeding Developer: Leon Green");
-            // Roles must be valid JSON array
+            // Important: Roles must be stringified JSON array to pass DB constraint
             const devRoles = JSON.stringify(['Developer']);
             await connection.query(
-                'INSERT INTO users (id, username, password, roles, avatarUrl) VALUES (?, ?, ?, ?, ?)',
+                'INSERT INTO users (id, username, password, roles, avatarUrl, status) VALUES (?, ?, ?, ?, ?, ?)',
                 [
                     crypto.randomUUID(), 
                     'Leon Green', 
                     'Katarina1997', 
                     devRoles, 
-                    'https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png'
+                    'https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png',
+                    'Active'
                 ]
             );
         }
@@ -34,23 +35,17 @@ export async function seedDatabase(pool: Pool) {
             console.log("Seeding Administrator: admin");
             const adminRoles = JSON.stringify(['Administrator']);
             await connection.query(
-                'INSERT INTO users (id, username, password, roles, avatarUrl) VALUES (?, ?, ?, ?, ?)',
+                'INSERT INTO users (id, username, password, roles, avatarUrl, status) VALUES (?, ?, ?, ?, ?, ?)',
                 [
                     crypto.randomUUID(), 
                     'admin', 
                     'adminpassword', 
                     adminRoles, 
-                    null
+                    null,
+                    'Active'
                 ]
             );
         }
-
-        console.log("-----------------------------------------");
-        console.log("BASE USERS SYNCED");
-        console.log("Developer: Leon Green / Katarina1997");
-        console.log("Admin: admin / adminpassword");
-        console.log("-----------------------------------------");
-        
     } catch (error) {
         console.error("Error during database seeding:", error);
     } finally {

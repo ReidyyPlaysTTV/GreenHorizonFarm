@@ -54,82 +54,60 @@ export const permissionDescriptions: Record<Permission, string> = {
     BYPASS_MAINTENANCE_MODE: "Access during maintenance",
 };
 
+const staffCore: Permission[] = [
+    'ACCESS_DASHBOARD',
+    'VIEW_EMPLOYEES',
+    'VIEW_USERS',
+    'VIEW_SOPS',
+    'VIEW_ANNOUNCEMENTS'
+];
+
 export const initialPermissionsMap: Record<Role, Permission[]> = {
     CEO: Object.keys(permissionDescriptions) as Permission[],
     "Co-CEO": Object.keys(permissionDescriptions) as Permission[],
     Manager: [
-        'ACCESS_DASHBOARD', 
-        'VIEW_EMPLOYEES', 
-        'VIEW_USERS', 
-        'ACCESS_FARMERS', 
-        'VIEW_SOPS', 
-        'ACCESS_EVENTS', 
-        'ACCESS_MANAGER_PORTAL', 
-        'ACCESS_FINANCES', 
+        ...staffCore,
+        'ACCESS_FARMERS',
+        'ACCESS_EVENTS',
+        'ACCESS_MANAGER_PORTAL',
+        'ACCESS_FINANCES',
         'VIEW_APPLICATIONS',
-        'VIEW_ANNOUNCEMENTS'
+        'MANAGE_APPLICATIONS',
+        'HIRE_EMPLOYEES'
     ],
     "Book-Keeper": [
-        'ACCESS_DASHBOARD', 
-        'VIEW_EMPLOYEES', 
-        'VIEW_USERS', 
-        'ACCESS_FARMERS', 
-        'VIEW_SOPS', 
-        'ACCESS_EVENTS', 
-        'ACCESS_MANAGER_PORTAL', 
-        'ACCESS_FINANCES',
-        'VIEW_ANNOUNCEMENTS'
+        ...staffCore,
+        'ACCESS_FARMERS',
+        'ACCESS_EVENTS',
+        'ACCESS_MANAGER_PORTAL',
+        'ACCESS_FINANCES'
     ],
     "Business Co-Ordinator": [
-        'ACCESS_DASHBOARD', 
-        'VIEW_EMPLOYEES', 
-        'VIEW_USERS', 
-        'ACCESS_FARMERS', 
-        'VIEW_SOPS', 
-        'ACCESS_EVENTS', 
-        'ACCESS_MANAGER_PORTAL',
-        'VIEW_ANNOUNCEMENTS'
+        ...staffCore,
+        'ACCESS_FARMERS',
+        'ACCESS_EVENTS',
+        'ACCESS_MANAGER_PORTAL'
     ],
     "Events Planner": [
-        'ACCESS_DASHBOARD', 
-        'VIEW_EMPLOYEES', 
-        'VIEW_USERS', 
-        'ACCESS_FARMERS', 
-        'VIEW_SOPS', 
-        'ACCESS_EVENTS',
-        'VIEW_ANNOUNCEMENTS'
+        ...staffCore,
+        'ACCESS_FARMERS',
+        'ACCESS_EVENTS'
     ],
     Security: [
-        'ACCESS_DASHBOARD', 
-        'VIEW_EMPLOYEES', 
-        'VIEW_USERS', 
-        'ACCESS_SECURITY', 
-        'VIEW_SOPS',
-        'VIEW_ANNOUNCEMENTS'
+        ...staffCore,
+        'ACCESS_SECURITY'
     ],
     "Senior Farm Hand": [
-        'ACCESS_DASHBOARD', 
-        'VIEW_EMPLOYEES', 
-        'VIEW_USERS', 
-        'ACCESS_FARMERS', 
-        'VIEW_SOPS',
-        'VIEW_ANNOUNCEMENTS'
+        ...staffCore,
+        'ACCESS_FARMERS'
     ],
     "Farm Hand": [
-        'ACCESS_DASHBOARD', 
-        'VIEW_EMPLOYEES', 
-        'VIEW_USERS', 
-        'ACCESS_FARMERS', 
-        'VIEW_SOPS',
-        'VIEW_ANNOUNCEMENTS'
+        ...staffCore,
+        'ACCESS_FARMERS'
     ],
     "Trainee Farm Hand": [
-        'ACCESS_DASHBOARD', 
-        'VIEW_EMPLOYEES', 
-        'VIEW_USERS', 
-        'ACCESS_FARMERS', 
-        'VIEW_SOPS',
-        'VIEW_ANNOUNCEMENTS'
+        ...staffCore,
+        'ACCESS_FARMERS'
     ],
     Administrator: Object.keys(permissionDescriptions) as Permission[],
     Developer: Object.keys(permissionDescriptions) as Permission[],

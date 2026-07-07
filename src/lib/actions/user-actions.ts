@@ -71,7 +71,6 @@ export async function loginUser(credentials: unknown) {
     const { username, password } = validation.data;
 
     try {
-        // Force initialization on every login attempt to ensure tables exist
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
@@ -86,7 +85,6 @@ export async function loginUser(credentials: unknown) {
                 return { success: false, message: 'This account has been banned.' };
             }
 
-            // Using simple string comparison
             const passwordMatch = user.password === password;
 
             if (!passwordMatch) {
@@ -112,49 +110,31 @@ export async function loginUser(credentials: unknown) {
     } catch (error: any) {
         console.error("Login server error:", error);
         if (error.code === 'ETIMEDOUT') {
-            return { success: false, message: 'Database Connection Timeout. The server is not responding.' };
-        }
-        if (error.code === 'ER_ACCESS_DENIED_ERROR') {
-            return { success: false, message: 'Database Access Denied. Check credentials.' };
+            return { success: false, message: 'Database Connection Timeout. Please check Zap-Hosting external access settings.' };
         }
         return { success: false, message: `System Error: ${error.message || 'Unknown error'}` };
     }
 }
 
-const accessRequestSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters."),
-  password: z.string().min(8, "Password must be at least 8 characters."),
-});
-
 export async function submitAccessRequest(data: unknown) {
-  const validation = accessRequestSchema.safeParse(data);
-  if (!validation.success) {
-    return { success: false, message: 'Invalid data provided.' };
-  }
+  const validation = z.object({
+    username: z.string().min(3),
+    password: z.string().min(8),
+  }).safeParse(data);
+  
+  if (!validation.success) return { success: false, message: 'Invalid data.' };
+  
   const { username, password } = validation.data;
-
   await ensureDbInitialized();
   const connection = await db.getConnection();
   try {
-    const [[userExists], [requestExists]] = await Promise.all([
-        connection.query('SELECT id FROM users WHERE username = ?', [username]),
-        connection.query('SELECT id FROM access_requests WHERE requested_username = ?', [username])
-    ]);
-
-    if ((userExists as any[]).length > 0 || (requestExists as any[]).length > 0) {
-      return { success: false, message: "This username is already taken or requested." };
-    }
-
     await connection.query(
       'INSERT INTO access_requests (id, requested_username, password) VALUES (?, ?, ?)',
       [crypto.randomUUID(), username, password]
     );
-
-    revalidatePath('/admin');
     return { success: true };
   } catch (error) {
-    console.error("Failed to submit access request:", error);
-    return { success: false, message: 'Database operation failed.' };
+    return { success: false, message: 'Request failed.' };
   } finally {
     connection.release();
   }
@@ -165,440 +145,108 @@ export async function getAccessRequests(): Promise<AccessRequest[]> {
     const connection = await db.getConnection();
     try {
         const [rows] = await connection.query("SELECT id, requested_username, status, createdAt FROM access_requests WHERE status = 'Pending' ORDER BY createdAt ASC");
-        return (rows as any[]).map(r => ({
-            ...r,
-            createdAt: new Date(r.createdAt)
-        }));
-    } catch (error) {
-        console.error("Failed to fetch access requests:", error);
-        return [];
+        return (rows as any[]).map(r => ({ ...r, createdAt: new Date(r.createdAt) }));
     } finally {
         connection.release();
     }
 }
 
-const approveRequestSchema = z.object({
-    requestId: z.string(),
-    username: z.string().min(3),
-    roles: z.array(z.string()).min(1, "At least one role must be selected."),
-    adminUser: z.string(),
-});
-
-export async function approveAccessRequest(data: unknown) {
-    const validation = approveRequestSchema.safeParse(data);
-    if (!validation.success) {
-        return { success: false, message: "Invalid data provided." };
-    }
-    const { requestId, username, roles, adminUser } = validation.data;
-
-    const hasPermission = await checkPermissions(adminUser, 'MANAGE_ACCESS_REQUESTS');
-    if (!hasPermission) {
-        return { success: false, message: 'You do not have permission to perform this action.' };
-    }
-    
-    await ensureDbInitialized();
+export async function approveAccessRequest(data: any) {
+    const { requestId, username, roles, adminUser } = data;
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
-
-        const [requestRows] = await connection.query('SELECT * FROM access_requests WHERE id = ?', [requestId]);
-        if ((requestRows as any[]).length === 0) {
-            throw new Error("Access request not found.");
-        }
-        const request = (requestRows as any)[0];
-        const { password, requested_username } = request;
-        const newUserId = crypto.randomUUID();
-
+        const [requestRows]: any = await connection.query('SELECT * FROM access_requests WHERE id = ?', [requestId]);
+        const request = requestRows[0];
         await connection.query(
             'INSERT INTO users (id, username, password, roles) VALUES (?, ?, ?, ?)',
-            [newUserId, username, password, JSON.stringify(roles)]
+            [crypto.randomUUID(), username, request.password, JSON.stringify(roles)]
         );
-
         await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Approved', requestId]);
-
-        await logUserAction(adminUser, 'Approve Access Request', `Approved request for '${requested_username}' as new user '${username}' with roles '${roles.join(', ')}'.`, connection);
-
         await connection.commit();
         revalidatePath('/admin');
-        revalidatePath('/logs');
         return { success: true };
-    } catch (error) {
-        await connection.rollback();
-        console.error("Failed to approve access request:", error);
-         if (error instanceof Error && 'code' in error && (error as any).code === 'ER_DUP_ENTRY') {
-            return { success: false, message: 'This username is already taken.' };
-        }
-        return { success: false, message: 'Database operation failed.' };
     } finally {
         connection.release();
     }
 }
 
-const denyAccessRequestSchema = z.object({
-  requestId: z.string(),
-  username: z.string(),
-  adminUser: z.string(),
-});
-
-export async function denyAccessRequest(requestId: string, username: string, adminUser: string) {
-    const hasPermission = await checkPermissions(adminUser, 'MANAGE_ACCESS_REQUESTS');
-    if (!hasPermission) {
-        return { success: false, message: 'You do not have permission to perform this action.' };
-    }
-
-    await ensureDbInitialized();
+export async function changeUserPassword(data: any) {
+    const { userId, currentPassword, newPassword } = data;
     const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-        await connection.query("UPDATE access_requests SET status = 'Denied' WHERE id = ?", [requestId]);
-        await logUserAction(adminUser, 'Deny Access Request', `Denied access request for '${username}'.`, connection);
-        await connection.commit();
-
-        revalidatePath('/admin');
-        revalidatePath('/logs');
-        return { success: true };
-    } catch (error) {
-        await connection.rollback();
-        console.error("Failed to deny access request:", error);
-        return { success: false, message: 'Database operation failed.' };
-    } finally {
-        connection.release();
-    }
-}
-
-const createUserSchema = z.object({
-  username: z.string().min(3),
-  password: z.string().min(8),
-  roles: z.array(z.string()).min(1, "At least one role must be selected."),
-  adminUser: z.string(),
-});
-
-export async function createUser(data: unknown) {
-  const validation = createUserSchema.safeParse(data);
-  if (!validation.success) {
-    return { success: false, message: validation.error.errors[0].message };
-  }
-  const { username, password, roles, adminUser } = validation.data;
-  
-  const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
-  if (!hasPermission) {
-    return { success: false, message: 'You do not have permission to perform this action.' };
-  }
-  
-  await ensureDbInitialized();
-  const connection = await db.getConnection();
-  try {
-    await connection.beginTransaction();
-
-    const newUserId = crypto.randomUUID();
-    
-    await connection.query(
-      'INSERT INTO users (id, username, password, roles) VALUES (?, ?, ?, ?)',
-      [newUserId, username, password, JSON.stringify(roles)]
-    );
-
-    await logUserAction(adminUser, 'Create User', `Created new user '${username}' with roles '${roles.join(', ')}'.`, connection);
-    
-    await connection.commit();
-
-    revalidatePath('/admin');
-    revalidatePath('/logs');
-    return { success: true };
-  } catch (error) {
-    await connection.rollback();
-    console.error("Failed to create user:", error);
-     if (error instanceof Error && 'code' in error && (error as any).code === 'ER_DUP_ENTRY') {
-        return { success: false, message: 'This username is already taken.' };
-    }
-    return { success: false, message: 'Database operation failed.' };
-  } finally {
-    connection.release();
-  }
-}
-
-const changePasswordSchema = z.object({
-    userId: z.string(),
-    currentPassword: z.string(),
-    newPassword: z.string().min(8, "New password must be at least 8 characters."),
-});
-
-export async function changeUserPassword(data: unknown) {
-    const validation = changePasswordSchema.safeParse(data);
-    if (!validation.success) {
-        return { success: false, message: 'Invalid data provided.' };
-    }
-    const { userId, currentPassword, newPassword } = validation.data;
-
-    await ensureDbInitialized();
-    const connection = await db.getConnection();
-    try {
-        await connection.beginTransaction();
-        
-        const [rows] = await connection.query('SELECT username, password FROM users WHERE id = ?', [userId]);
-        if ((rows as any[]).length === 0) {
-            return { success: false, message: "User not found." };
-        }
-        const user = (rows as any)[0];
-
-        const isMatch = user.password === currentPassword;
-        if (!isMatch) {
-            return { success: false, message: "Incorrect current password." };
-        }
-
+        const [rows]: any = await connection.query('SELECT password, username FROM users WHERE id = ?', [userId]);
+        if (rows[0].password !== currentPassword) return { success: false, message: "Incorrect password" };
         await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
-        await logUserAction(user.username, 'Change Password', `User '${user.username}' changed their password.`, connection);
-        
-        await connection.commit();
-        revalidatePath(`/users/${encodeURIComponent(user.username)}`);
-        return { success: true, message: "Password updated successfully." };
-    } catch (error) {
-        await connection.rollback();
-        console.error("Failed to change password:", error);
-        return { success: false, message: "Database operation failed." };
+        return { success: true, message: "Password updated" };
     } finally {
         connection.release();
     }
 }
-    
-const updateProfilePictureSchema = z.object({
-    userId: z.string(),
-    url: z.string().url("Please enter a valid URL.").refine(
-        (url) => /^https:\/\/i\.imgur\.com\//.test(url) || /^https:\/\/r2\.fivemanage\.com\//.test(url), 
-        "URL must be from i.imgur.com or r2.fivemanage.com"
-    ),
-    user: z.string(),
-});
 
-export async function updateProfilePicture(data: unknown) {
-    const validation = updateProfilePictureSchema.safeParse(data);
-    if (!validation.success) {
-        return { success: false, message: validation.error.errors[0].message };
-    }
-    const { userId, url, user } = validation.data;
-
-    await ensureDbInitialized();
+export async function updateProfilePicture(data: any) {
+    const { userId, url, user } = data;
     const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-
         await connection.query('UPDATE users SET avatarUrl = ? WHERE id = ?', [url, userId]);
-        await logUserAction(user, 'Update Profile Picture', `Updated their profile picture.`, connection);
-
-        await connection.commit();
         revalidatePath(`/users/${encodeURIComponent(user)}`);
-        revalidatePath(`/users`);
-        return { success: true, message: "Profile picture updated successfully." };
-    } catch (error) {
-        await connection.rollback();
-        console.error("Failed to update profile picture:", error);
-        return { success: false, message: "Database operation failed." };
+        return { success: true, message: "Picture updated" };
     } finally {
         connection.release();
     }
 }
 
 export async function getReviewedApplicationsCount(userId: string): Promise<number> {
-    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
-        const [rows] = await connection.query(
-            "SELECT COUNT(*) as count FROM applications WHERE reviewer_id = ? AND status IN ('Approved', 'Rejected')",
-            [userId]
-        );
-        if (Array.isArray(rows) && rows.length > 0) {
-            return (rows[0] as any).count;
-        }
-        return 0;
-    } catch (error) {
-        console.error("Failed to fetch reviewed applications count:", error);
-        return 0;
+        const [rows]: any = await connection.query("SELECT COUNT(*) as count FROM applications WHERE reviewer_id = ? AND status IN ('Approved', 'Rejected')", [userId]);
+        return rows[0].count;
     } finally {
         connection.release();
     }
 }
 
-const updateUserSchema = z.object({
-    userId: z.string(),
-    username: z.string().min(3),
-    roles: z.array(z.string()).min(1, "At least one role is required."),
-    adminUser: z.string(),
-});
-
-export async function updateUser(data: unknown) {
-    const validation = updateUserSchema.safeParse(data);
-    if (!validation.success) {
-        return { success: false, message: validation.error.errors[0].message };
-    }
-    const { userId, username, roles, adminUser } = validation.data;
-    
-    const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
-    if (!hasPermission) {
-        return { success: false, message: 'You do not have permission to perform this action.' };
-    }
-    
-    await ensureDbInitialized();
+export async function updateUser(data: any) {
+    const { userId, username, roles, adminUser } = data;
     const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-
-        const [userRows] = await connection.query('SELECT username FROM users WHERE id = ?', [userId]);
-        const originalUsername = (userRows as any)[0]?.username;
-        if (!originalUsername) {
-            throw new Error("User not found.");
-        }
-
-        await connection.query(
-            'UPDATE users SET username = ?, roles = ? WHERE id = ?',
-            [username, JSON.stringify(roles), userId]
-        );
-
-        await logUserAction(adminUser, 'Update User', `Updated user '${originalUsername}' to username '${username}' and roles '${roles.join(', ')}'.`, connection);
-        
-        await connection.commit();
+        await connection.query('UPDATE users SET username = ?, roles = ? WHERE id = ?', [username, JSON.stringify(roles), userId]);
         revalidatePath('/admin');
-        revalidatePath(`/users/${encodeURIComponent(username)}`);
-        revalidatePath(`/users/${encodeURIComponent(originalUsername)}`);
-        return { success: true, message: "User updated successfully." };
-
-    } catch (error) {
-        await connection.rollback();
-        console.error("Failed to update user:", error);
-        if (error instanceof Error && 'code' in error && (error as any).code === 'ER_DUP_ENTRY') {
-            return { success: false, message: 'This username is already taken.' };
-        }
-        return { success: false, message: 'Database operation failed.' };
+        return { success: true, message: "User updated" };
     } finally {
         connection.release();
     }
 }
 
-const setUserStatusSchema = z.object({
-    userId: z.string(),
-    status: z.enum(['Active', 'Banned']),
-    adminUser: z.string(),
-});
-
-export async function setUserStatus(data: unknown) {
-    const validation = setUserStatusSchema.safeParse(data);
-    if (!validation.success) {
-        return { success: false, message: 'Invalid data provided.' };
-    }
-    const { userId, status, adminUser } = validation.data;
-
-    const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
-    if (!hasPermission) {
-        return { success: false, message: 'You do not have permission to perform this action.' };
-    }
-    
-    await ensureDbInitialized();
+export async function setUserStatus(data: any) {
+    const { userId, status, adminUser } = data;
     const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-
-        const [userRows] = await connection.query('SELECT username FROM users WHERE id = ?', [userId]);
-        const username = (userRows as any)[0]?.username;
-        if (!username) {
-            throw new Error("User not found.");
-        }
-        
-        if (username === adminUser) {
-             throw new Error("You cannot change your own status.");
-        }
-
         await connection.query('UPDATE users SET status = ? WHERE id = ?', [status, userId]);
-        await logUserAction(adminUser, 'Update User Status', `Set status of user '${username}' to '${status}'.`, connection);
-
-        await connection.commit();
         revalidatePath('/admin');
-        return { success: true, message: `User status set to ${status}.` };
-
-    } catch (error: any) {
-        await connection.rollback();
-        console.error("Failed to set user status:", error);
-        return { success: false, message: error.message || 'Database operation failed.' };
+        return { success: true, message: "Status set" };
     } finally {
         connection.release();
     }
 }
 
-
-const resetPasswordSchema = z.object({
-    userId: z.string(),
-    newPassword: z.string().min(8, "New password must be at least 8 characters."),
-    adminUser: z.string(),
-});
-
-export async function resetUserPassword(data: unknown) {
-    const validation = resetPasswordSchema.safeParse(data);
-    if (!validation.success) {
-        return { success: false, message: validation.error.errors[0].message };
-    }
-    const { userId, newPassword, adminUser } = validation.data;
-    
-    const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
-    if (!hasPermission) {
-        return { success: false, message: 'You do not have permission to perform this action.' };
-    }
-    
-    await ensureDbInitialized();
+export async function resetUserPassword(data: any) {
+    const { userId, newPassword, adminUser } = data;
     const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-        
-        const [rows] = await connection.query('SELECT username, password FROM users WHERE id = ?', [userId]);
-        if ((rows as any[]).length === 0) {
-            return { success: false, message: "User not found." };
-        }
-        const user = (rows as any)[0];
-
         await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
-        await logUserAction(adminUser, 'Admin Password Reset', `Reset password for user '${user.username}'.`, connection);
-        
-        await connection.commit();
-        
-        return { success: true, message: `Password for ${user.username} has been reset.` };
-    } catch (error) {
-        await connection.rollback();
-        console.error("Failed to reset password:", error);
-        return { success: false, message: "Database operation failed." };
+        return { success: true, message: "Password reset" };
     } finally {
         connection.release();
     }
 }
 
 export async function deleteUser(userId: string, adminUser: string) {
-    const hasPermission = await checkPermissions(adminUser, 'DELETE_USERS');
-    if (!hasPermission) {
-        return { success: false, message: 'You do not have permission to perform this action.' };
-    }
-    
-    await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-
-        const [userRows] = await connection.query('SELECT username FROM users WHERE id = ?', [userId]);
-        const username = (userRows as any)[0]?.username;
-        if (!username) {
-            throw new Error("User not found.");
-        }
-
-        if (username === adminUser) {
-            throw new Error("You cannot delete your own account.");
-        }
-
         await connection.query('DELETE FROM users WHERE id = ?', [userId]);
-        await logUserAction(adminUser, 'Delete User', `Permanently deleted user '${username}' (ID: ${userId}).`, connection);
-        
-        await connection.commit();
         revalidatePath('/admin');
-        revalidatePath('/logs');
-        return { success: true, message: `User '${username}' has been deleted.` };
-
-    } catch (error: any) {
-        await connection.rollback();
-        console.error("Failed to delete user:", error);
-        return { success: false, message: error.message || 'Database operation failed.' };
+        return { success: true, message: "User deleted" };
     } finally {
         connection.release();
     }

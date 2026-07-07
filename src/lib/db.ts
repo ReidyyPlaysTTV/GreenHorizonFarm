@@ -14,8 +14,12 @@ const dbConfig = {
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    connectTimeout: 15000,
-    charset: 'utf8mb4'
+    connectTimeout: 20000, // Increased to 20s
+    charset: 'utf8mb4',
+    // Often required for remote MySQL connections that are "Public"
+    ssl: {
+        rejectUnauthorized: false
+    }
 };
 
 let pool: Pool;
@@ -29,7 +33,6 @@ try {
 
 async function createFarmTables(connection: any) {
     try {
-        // Users Table - Roles must be JSON
         await connection.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -42,7 +45,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Personnel Table
         await connection.query(`
             CREATE TABLE IF NOT EXISTS personnel (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -61,7 +63,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Orders Table
         await connection.query(`
             CREATE TABLE IF NOT EXISTS detailed_farm_orders (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -77,7 +78,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Security Logs
         await connection.query(`
             CREATE TABLE IF NOT EXISTS security_time_logs (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -89,7 +89,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Security Incidents
         await connection.query(`
             CREATE TABLE IF NOT EXISTS security_incidents (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -103,7 +102,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Events Table
         await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_events (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -116,7 +114,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Financial Ledger
         await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_transactions (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -128,7 +125,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Financial Settings
         await connection.query(`
             CREATE TABLE IF NOT EXISTS financial_settings (
                 setting_key VARCHAR(255) NOT NULL PRIMARY KEY,
@@ -136,7 +132,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Procedures / SOPs
         await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_procedures (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -149,7 +144,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Staff Incidents
         await connection.query(`
             CREATE TABLE IF NOT EXISTS staff_incidents (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -160,7 +154,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Farm Products Catalog
         await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_products (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -170,7 +163,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Management Strategies
         await connection.query(`
             CREATE TABLE IF NOT EXISTS manager_plans (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -183,7 +175,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Promotion Recommendations
         await connection.query(`
             CREATE TABLE IF NOT EXISTS promotion_suggestions (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -197,7 +188,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Executive Chat
         await connection.query(`
             CREATE TABLE IF NOT EXISTS ceo_chat (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -207,7 +197,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Audit Logs
         await connection.query(`
             CREATE TABLE IF NOT EXISTS audit_logs (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -218,7 +207,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Application Forms
         await connection.query(`
             CREATE TABLE IF NOT EXISTS application_form_fields (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -250,7 +238,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Access Requests
         await connection.query(`
             CREATE TABLE IF NOT EXISTS access_requests (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -261,7 +248,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Ranks Table
         await connection.query(`
             CREATE TABLE IF NOT EXISTS ranks (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -273,7 +259,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // App Settings
         await connection.query(`
             CREATE TABLE IF NOT EXISTS app_settings (
                 setting_key VARCHAR(255) NOT NULL PRIMARY KEY,
@@ -281,7 +266,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Announcements
         await connection.query(`
             CREATE TABLE IF NOT EXISTS announcements (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -292,7 +276,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Gallery
         await connection.query(`
             CREATE TABLE IF NOT EXISTS gallery_images (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -303,7 +286,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Changelogs
         await connection.query(`
             CREATE TABLE IF NOT EXISTS changelogs (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -316,7 +298,6 @@ async function createFarmTables(connection: any) {
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        
     } catch (error) {
         console.error("Failed to create farm tables:", error);
     }
@@ -333,15 +314,13 @@ export async function ensureDbInitialized() {
             await seedDatabase(pool);
             await seedRolePermissions(pool);
             await seedInitialRanks(pool);
-            
             isInitialized = true;
-            console.log("Database successfully connected and initialized.");
             return pool;
         } finally {
             connection.release();
         }
     } catch (err: any) {
-        console.error("DB Connection/Initialization failed:", err.message);
+        console.error("DB Initialization Error:", err.message);
         throw err;
     }
 }
