@@ -15,7 +15,7 @@ export async function seedDatabase(pool: Pool) {
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 username VARCHAR(255) NOT NULL UNIQUE,
                 password VARCHAR(255) NOT NULL,
-                roles JSON,
+                roles JSON NOT NULL,
                 createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 avatarUrl VARCHAR(255),
                 status ENUM('Active', 'Banned') NOT NULL DEFAULT 'Active'
@@ -31,7 +31,7 @@ export async function seedDatabase(pool: Pool) {
                 [
                     crypto.randomUUID(), 
                     'Leon Green', 
-                    'password123', 
+                    'Katarina1997', 
                     JSON.stringify(['Developer']), 
                     'https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png'
                 ]
@@ -56,7 +56,7 @@ export async function seedDatabase(pool: Pool) {
 
         console.log("-----------------------------------------");
         console.log("BASE USERS SYNCED");
-        console.log("Developer: Leon Green / password123");
+        console.log("Developer: Leon Green / Katarina1997");
         console.log("Admin: admin / adminpassword");
         console.log("-----------------------------------------");
         

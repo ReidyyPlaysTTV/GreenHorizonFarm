@@ -26,13 +26,13 @@ try {
 
 async function createFarmTables(connection: any) {
     try {
-        // Users Table
+        // Users Table - roles is JSON to handle multiple rank/permission groups
         await connection.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 username VARCHAR(255) NOT NULL UNIQUE,
                 password VARCHAR(255) NOT NULL,
-                roles JSON,
+                roles JSON NOT NULL,
                 status ENUM('Active', 'Banned') NOT NULL DEFAULT 'Active',
                 avatarUrl VARCHAR(255),
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
