@@ -106,6 +106,19 @@ async function createFarmTables(connection: any) {
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
+
+        // Events
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS farm_events (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT NOT NULL,
+                revenue DECIMAL(10, 2) DEFAULT 0,
+                event_date DATETIME NOT NULL,
+                status ENUM('Scheduled', 'Cancelled', 'Completed') DEFAULT 'Scheduled',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
         
     } catch (error) {
         console.error("Failed to create farm tables:", error);

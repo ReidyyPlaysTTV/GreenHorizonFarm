@@ -160,3 +160,13 @@ export interface SecurityIncident {
   injured_details?: string;
   created_at: Date;
 }
+
+export interface FarmEvent {
+    id: string;
+    title: string;
+    description: string;
+    revenue: number;
+    event_date: Date;
+    status: 'Scheduled' | 'Cancelled' | 'Completed';
+    created_at: Date;
+}
