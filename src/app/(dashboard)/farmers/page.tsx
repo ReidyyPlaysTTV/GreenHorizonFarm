@@ -1,15 +1,15 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Sprout, Wheat, Beef, Truck, DollarSign, Clock } from "lucide-react";
+import { Sprout, Wheat, Beef, Truck, DollarSign, Clock, TrendingUp } from "lucide-react";
 import { AddOrderForm } from "@/components/farmers/add-order-form";
 import { getDetailedOrders } from "@/lib/actions";
 import type { DetailedFarmOrder } from "@/lib/types";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, subDays, isAfter } from "date-fns";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -28,6 +28,33 @@ export default function FarmersPortal() {
     fetchOrders();
   }, []);
 
+  const stats = useMemo(() => {
+    const sevenDaysAgo = subDays(new Date(), 7);
+    
+    const recentOrders = orders.filter(o => isAfter(new Date(o.created_at), sevenDaysAgo));
+    
+    const totalHarvested = orders.reduce((acc, o) => acc + o.sugarcane + o.wheat + o.fruits + o.vegs, 0);
+    const totalMeat = orders.reduce((acc, o) => acc + o.normal_meat + o.premium_meat, 0);
+    
+    const farmProfit7d = recentOrders.reduce((acc, o) => {
+        const total = Number(o.total_price);
+        const cut = Number(o.employee_cut_value);
+        return acc + (total - cut);
+    }, 0);
+
+    const logisticsRate = orders.length > 0 
+        ? Math.round((orders.filter(o => o.logistics_used).length / orders.length) * 100) 
+        : 0;
+
+    return {
+        totalHarvested,
+        totalMeat,
+        farmProfit7d,
+        logisticsRate,
+        submissionCount: orders.length
+    };
+  }, [orders]);
+
   return (
     <div className="container mx-auto p-6 md:p-10 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -41,54 +68,59 @@ export default function FarmersPortal() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         <Card className="border-primary/10 shadow-lg bg-card/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Recent Submissions</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Total Orders</CardTitle>
             <Clock className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">{orders.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total orders logged</p>
+            <div className="text-3xl font-black">{stats.submissionCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total history</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-emerald-500/20 shadow-lg bg-emerald-500/5">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-emerald-400">Farm Income (7d)</CardTitle>
+            <DollarSign className="h-5 w-5 text-emerald-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-black text-emerald-500">${stats.farmProfit7d.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1">Business share after cuts</p>
           </CardContent>
         </Card>
         
         <Card className="border-primary/10 shadow-lg bg-card/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Produce Harvested</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Produce</CardTitle>
             <Wheat className="h-5 w-5 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">
-                {orders.reduce((acc, o) => acc + o.sugarcane + o.wheat + o.fruits + o.vegs, 0)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Items recorded</p>
+            <div className="text-3xl font-black">{stats.totalHarvested}</div>
+            <p className="text-xs text-muted-foreground mt-1">Items harvested</p>
           </CardContent>
         </Card>
 
         <Card className="border-primary/10 shadow-lg bg-card/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Meat Processed</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Meat</CardTitle>
             <Beef className="h-5 w-5 text-red-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">
-                {orders.reduce((acc, o) => acc + o.normal_meat + o.premium_meat, 0)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Units logged</p>
+            <div className="text-3xl font-black">{stats.totalMeat}</div>
+            <p className="text-xs text-muted-foreground mt-1">Units processed</p>
           </CardContent>
         </Card>
 
         <Card className="border-primary/10 shadow-lg bg-card/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Logistics Rate</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Logistics</CardTitle>
             <Truck className="h-5 w-5 text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black">
-                {orders.length > 0 ? Math.round((orders.filter(o => o.logistics_used).length / orders.length) * 100) : 0}%
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Orders with delivery</p>
+            <div className="text-3xl font-black">{stats.logisticsRate}%</div>
+            <p className="text-xs text-muted-foreground mt-1">Delivery usage</p>
           </CardContent>
         </Card>
       </div>
@@ -116,7 +148,7 @@ export default function FarmersPortal() {
                     <TableHead>Cut (%)</TableHead>
                     <TableHead>Logistics</TableHead>
                     <TableHead>Employee</TableHead>
-                    <TableHead className="text-right">Date</TableHead>
+                    <TableHead className="text-right">Date Completed</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -148,8 +180,8 @@ export default function FarmersPortal() {
                         )}
                       </TableCell>
                       <TableCell>{o.completed_by}</TableCell>
-                      <TableCell className="text-right text-xs text-muted-foreground">
-                        {formatDistanceToNow(o.created_at, { addSuffix: true })}
+                      <TableCell className="text-right text-xs text-muted-foreground font-medium">
+                        {formatDistanceToNow(new Date(o.created_at), { addSuffix: true })}
                       </TableCell>
                     </TableRow>
                   ))}
