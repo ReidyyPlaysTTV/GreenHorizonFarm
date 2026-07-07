@@ -14,7 +14,7 @@ const dbConfig = {
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    connectTimeout: 10000, // 10 seconds timeout for initial connection
+    connectTimeout: 15000, // 15 seconds timeout
     charset: 'utf8mb4'
 };
 
@@ -29,7 +29,7 @@ try {
 
 async function createFarmTables(connection: any) {
     try {
-        // Users Table - roles is JSON to handle multiple rank/permission groups
+        // Users Table
         await connection.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -206,6 +206,116 @@ async function createFarmTables(connection: any) {
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
         `);
+
+        // Audit Logs
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                user VARCHAR(255) NOT NULL,
+                actionType VARCHAR(255) NOT NULL,
+                description TEXT NOT NULL,
+                timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Application Forms
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS application_form_fields (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                type ENUM('text', 'textarea', 'select') NOT NULL,
+                label VARCHAR(255) NOT NULL,
+                field_order INT NOT NULL,
+                required BOOLEAN DEFAULT TRUE
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS application_field_options (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                field_id VARCHAR(36) NOT NULL,
+                value VARCHAR(255) NOT NULL,
+                FOREIGN KEY (field_id) REFERENCES application_form_fields(id) ON DELETE CASCADE
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS applications (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                responses JSON NOT NULL,
+                status ENUM('Pending', 'Approved', 'Rejected', 'Under Review') NOT NULL DEFAULT 'Pending',
+                submittedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                reviewer_comment TEXT,
+                reviewer_id VARCHAR(36),
+                reviewedAt DATETIME
+            );
+        `);
+
+        // Access Requests
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS access_requests (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                requested_username VARCHAR(255) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL,
+                status ENUM('Pending', 'Approved', 'Denied') NOT NULL DEFAULT 'Pending',
+                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Ranks Table
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS ranks (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL UNIQUE,
+                department VARCHAR(255) NOT NULL,
+                sort_order INT NOT NULL,
+                insignia_url VARCHAR(255),
+                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // App Settings
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS app_settings (
+                setting_key VARCHAR(255) NOT NULL PRIMARY KEY,
+                setting_value TEXT
+            );
+        `);
+
+        // Announcements
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS announcements (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                content TEXT NOT NULL,
+                is_urgent BOOLEAN DEFAULT FALSE,
+                user_id VARCHAR(36) NOT NULL,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Gallery
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS gallery_images (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                src TEXT NOT NULL,
+                alt VARCHAR(255),
+                hint VARCHAR(255),
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Changelogs
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS changelogs (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                version VARCHAR(20) NOT NULL,
+                added_features TEXT,
+                fixes TEXT,
+                removed_features TEXT,
+                other TEXT,
+                author_id VARCHAR(36) NOT NULL,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
         
     } catch (error) {
         console.error("Failed to create farm tables:", error);
@@ -214,21 +324,15 @@ async function createFarmTables(connection: any) {
 
 let isInitialized = false;
 
-/**
- * Ensures the database schema is up to date and base data is seeded.
- */
 export async function ensureDbInitialized() {
     if (isInitialized) return pool;
     try {
         const connection = await pool.getConnection();
         try {
-            // 1. Ensure all tables exist
             await createFarmTables(connection);
-            
-            // 2. Run Seeders
-            await seedDatabase(pool);         // Leon Green & admin
-            await seedRolePermissions(pool);  // Rank permissions
-            await seedInitialRanks(pool);     // Roster positions
+            await seedDatabase(pool);
+            await seedRolePermissions(pool);
+            await seedInitialRanks(pool);
             
             isInitialized = true;
             console.log("Database successfully connected and initialized.");
@@ -239,13 +343,10 @@ export async function ensureDbInitialized() {
     } catch (err: any) {
         console.error("DB Connection/Initialization failed:", err.message);
         if (err.code === 'ETIMEDOUT') {
-            console.error("CRITICAL: Connection Timed Out. Please check if your ZAP-Hosting database allows remote connections and whitelists '%'.");
+            console.error("CRITICAL: Connection Timed Out. Please ensure your ZAP-Hosting database whitelists external connections (add '%' to your remote access list).");
         }
         throw err;
     }
 }
-
-// Fire off initialization immediately
-ensureDbInitialized().catch(console.error);
 
 export default pool;

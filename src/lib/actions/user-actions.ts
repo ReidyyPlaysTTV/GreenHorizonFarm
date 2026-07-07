@@ -9,65 +9,6 @@ import { logUserAction } from './audit-log-actions';
 import { checkPermissions } from '../permissions';
 import { roles } from '../data';
 
-async function createUsersTableIfNeeded() {
-    try {
-        const connection = await db.getConnection();
-        try {
-            await connection.query(`
-                CREATE TABLE IF NOT EXISTS users (
-                    id VARCHAR(36) NOT NULL PRIMARY KEY,
-                    username VARCHAR(255) NOT NULL UNIQUE,
-                    password VARCHAR(255) NOT NULL,
-                    roles JSON NOT NULL,
-                    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    avatarUrl VARCHAR(255),
-                    status ENUM('Active', 'Banned') NOT NULL DEFAULT 'Active'
-                );
-            `);
-             const [columns] = await connection.query("SHOW COLUMNS FROM users LIKE 'avatarUrl'");
-            if (Array.isArray(columns) && columns.length === 0) {
-                await connection.query("ALTER TABLE users ADD COLUMN avatarUrl VARCHAR(255) NULL");
-            }
-             const [statusColumns] = await connection.query("SHOW COLUMNS FROM users LIKE 'status'");
-            if (Array.isArray(statusColumns) && statusColumns.length === 0) {
-                 await connection.query("ALTER TABLE users ADD COLUMN status ENUM('Active', 'Banned') NOT NULL DEFAULT 'Active'");
-            }
-             const [roleColumns] = await connection.query("SHOW COLUMNS FROM users LIKE 'role'");
-             if (Array.isArray(roleColumns) && roleColumns.length > 0) {
-                // Check if old role column exists, if so migrate data and drop it
-                 const [oldRoleUsers] = await connection.query('SELECT id, role FROM users WHERE role IS NOT NULL');
-                 if(Array.isArray(oldRoleUsers) && oldRoleUsers.length > 0) {
-                     await connection.query("ALTER TABLE users ADD COLUMN roles JSON;");
-                     for (const user of (oldRoleUsers as any[])) {
-                        await connection.query('UPDATE users SET roles = ? WHERE id = ?', [JSON.stringify([user.role]), user.id]);
-                     }
-                     await connection.query("ALTER TABLE users DROP COLUMN role;");
-                 }
-             }
-
-        } finally {
-            connection.release();
-        }
-    } catch (error) {
-        console.error("Failed to create or alter users table:", error);
-        throw new Error("Database schema setup for users failed.");
-    }
-}
-
-
-async function createAccessRequestsTableIfNeeded(connection: any) {
-    await connection.query(`
-        CREATE TABLE IF NOT EXISTS access_requests (
-            id VARCHAR(36) NOT NULL PRIMARY KEY,
-            requested_username VARCHAR(255) NOT NULL UNIQUE,
-            password VARCHAR(255) NOT NULL,
-            status ENUM('Pending', 'Approved', 'Denied') NOT NULL DEFAULT 'Pending',
-            createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-    `);
-}
-
-
 export async function getUsers(): Promise<AppUser[]> {
     try {
         await ensureDbInitialized();
@@ -85,7 +26,6 @@ export async function getUsers(): Promise<AppUser[]> {
                     if (p.userId) {
                         personnelMap.set(p.userId, p);
                     } else {
-                        // Also map by name as a fallback for users created manually without explicit linkage
                         personnelMap.set(p.name, p);
                     }
                 });
@@ -131,7 +71,6 @@ export async function loginUser(credentials: unknown) {
     const { username, password } = validation.data;
 
     try {
-        // Ensure DB is ready before querying
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
@@ -146,7 +85,7 @@ export async function loginUser(credentials: unknown) {
                 return { success: false, message: 'This account has been banned.' };
             }
 
-            // Using simple string comparison as requested for the simulation
+            // Using simple string comparison for this simulation
             const passwordMatch = user.password === password;
 
             if (!passwordMatch) {
@@ -172,7 +111,7 @@ export async function loginUser(credentials: unknown) {
     } catch (error: any) {
         console.error("Login server error:", error);
         if (error.code === 'ETIMEDOUT') {
-            return { success: false, message: 'Database Connection Timeout. Please ensure your ZAP-Hosting database whitelists external connections.' };
+            return { success: false, message: 'Database Connection Timeout. Please go to your ZAP-Hosting Webinterface and add "%" to your database Remote Access whitelist.' };
         }
         return { success: false, message: error.message || 'An unexpected database error occurred.' };
     }
@@ -193,9 +132,6 @@ export async function submitAccessRequest(data: unknown) {
   await ensureDbInitialized();
   const connection = await db.getConnection();
   try {
-    await createAccessRequestsTableIfNeeded(connection);
-    
-    // Check if username is already in users or requests
     const [[userExists], [requestExists]] = await Promise.all([
         connection.query('SELECT id FROM users WHERE username = ?', [username]),
         connection.query('SELECT id FROM access_requests WHERE requested_username = ?', [username])
@@ -224,7 +160,6 @@ export async function getAccessRequests(): Promise<AccessRequest[]> {
     await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
-        await createAccessRequestsTableIfNeeded(connection);
         const [rows] = await connection.query("SELECT id, requested_username, status, createdAt FROM access_requests WHERE status = 'Pending' ORDER BY createdAt ASC");
         return (rows as any[]).map(r => ({
             ...r,

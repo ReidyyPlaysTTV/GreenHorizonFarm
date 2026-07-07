@@ -5,24 +5,11 @@ import type { Pool } from 'mysql2/promise';
 
 /**
  * Seeds the initial users into the database.
- * This ensures the Leon Green developer account and a technical admin exist.
+ * Ensures Leon Green (Developer) and Admin accounts exist.
  */
 export async function seedDatabase(pool: Pool) {
     const connection = await pool.getConnection();
     try {
-        // Create users table if it doesn't exist
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS users (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                username VARCHAR(255) NOT NULL UNIQUE,
-                password VARCHAR(255) NOT NULL,
-                roles JSON NOT NULL,
-                createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                avatarUrl VARCHAR(255),
-                status ENUM('Active', 'Banned') NOT NULL DEFAULT 'Active'
-            );
-        `);
-        
         // Check for Leon Green
         const [leonRows] = await connection.query('SELECT id FROM users WHERE username = ?', ['Leon Green']);
         if (Array.isArray(leonRows) && leonRows.length === 0) {
