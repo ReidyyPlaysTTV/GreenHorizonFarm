@@ -36,20 +36,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Employees
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS employees (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                position VARCHAR(255) NOT NULL,
-                employee_id VARCHAR(10) NOT NULL UNIQUE,
-                division VARCHAR(255) NOT NULL,
-                status ENUM('Active', 'On Leave', 'Inactive', 'Probation') DEFAULT 'Active',
-                joinedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-                userId VARCHAR(36)
-            );
-        `);
-
         // Detailed Farm Orders
         await connection.query(`
             CREATE TABLE IF NOT EXISTS detailed_farm_orders (
@@ -96,17 +82,6 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // Announcements
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS farm_announcements (
-                id VARCHAR(36) NOT NULL PRIMARY KEY,
-                content TEXT NOT NULL,
-                is_urgent TINYINT(1) DEFAULT 0,
-                user_id VARCHAR(36) NOT NULL,
-                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
         // Events
         await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_events (
@@ -137,6 +112,19 @@ async function createFarmTables(connection: any) {
             CREATE TABLE IF NOT EXISTS financial_settings (
                 setting_key VARCHAR(255) NOT NULL PRIMARY KEY,
                 setting_value TEXT
+            );
+        `);
+
+        // Farm Procedures (Guidelines)
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS farm_procedures (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                content TEXT NOT NULL,
+                image_url VARCHAR(255),
+                author_name VARCHAR(255) NOT NULL,
+                author_rank VARCHAR(255) NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
         

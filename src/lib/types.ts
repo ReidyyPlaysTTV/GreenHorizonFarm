@@ -36,6 +36,7 @@ export const permissions = [
     'MANAGE_APP_SETTINGS',
     'MANAGE_ANNOUNCEMENTS',
     'MANAGE_GALLERY',
+    'MANAGE_PROCEDURES',
     'BYPASS_MAINTENANCE_MODE',
 ] as const;
 export type Permission = typeof permissions[number];
@@ -110,7 +111,7 @@ export interface AppUser {
   status: UserStatus;
   createdAt?: string;
   avatarUrl?: string;
-  employee?: Partial<Employee> | null;
+  personnel?: Partial<Personnel> | null;
 }
 
 export interface AuditLog {
@@ -178,4 +179,78 @@ export interface FarmTransaction {
     description: string;
     transaction_date: Date;
     created_at: Date;
+}
+
+export interface FarmProcedure {
+    id: string;
+    title: string;
+    content: string;
+    image_url?: string;
+    author_name: string;
+    author_rank: string;
+    created_at: Date;
+}
+
+export interface Personnel {
+    id: string;
+    name: string;
+    rank: string;
+    badgeNumber: string;
+    discordUsername?: string;
+    department: string;
+    status: PersonnelStatus;
+    loa_until?: string | null;
+    is_rehired: boolean;
+    userId?: string | null;
+}
+
+export type PersonnelStatus = 'Active' | 'LOA' | 'Inactive' | 'Low Activity' | 'Medical Leave' | 'Suspended';
+
+export interface Rank {
+    id: string;
+    name: string;
+    department: string;
+    sort_order: number;
+    insignia_url?: string;
+}
+
+export interface CallsignLog {
+    id: string;
+    callsign: string;
+    personnel_name: string;
+    action: 'Assigned' | 'Unassigned';
+    timestamp: Date;
+}
+
+export type ReportStatus = 'Pending' | 'In Progress' | 'Completed' | 'Rejected';
+
+export interface BugReport {
+  id: string;
+  title: string;
+  description: string;
+  status: ReportStatus;
+  submittedAt: Date;
+}
+
+export interface Suggestion {
+  id: string;
+  title: string;
+  description: string;
+  status: ReportStatus;
+  submittedAt: Date;
+}
+
+export interface FormFieldData {
+  id?: string;
+  label: string;
+  type: "text" | "textarea" | "select";
+  required: boolean;
+  options?: { id?: string; value: string }[];
+}
+
+export interface AccessRequest {
+  id: string;
+  requested_username: string;
+  status: 'Pending' | 'Approved' | 'Denied';
+  createdAt: Date;
 }
