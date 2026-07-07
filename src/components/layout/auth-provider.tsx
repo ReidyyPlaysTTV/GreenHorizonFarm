@@ -4,28 +4,24 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Loading from '@/app/(dashboard)/loading';
+import { useUser } from '@/firebase';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
-    const [isChecking, setIsChecking] = useState(true);
+    const { user, loading } = useUser();
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const loggedInUser = localStorage.getItem('loggedInUser');
-            
-            // Temporary Bypass: Auto-login as CEO if no one is logged in
-            if (!loggedInUser) {
-                console.log("Auth Bypassed: Auto-logging in as CEO for development.");
-                localStorage.setItem('loggedInUser', 'CEO_Guest');
-                // Optional: You could also mock a session in a real auth system here
+        if (!loading) {
+            if (!user && pathname !== '/login' && pathname !== '/' && pathname !== '/apply' && pathname !== '/check-status') {
+                router.replace('/login');
+            } else if (user && pathname === '/login') {
+                router.replace('/dashboard');
             }
-            
-            setIsChecking(false);
         }
-    }, [pathname, router]);
+    }, [user, loading, pathname, router]);
 
-    if (isChecking) {
+    if (loading) {
         return <Loading />;
     }
 

@@ -3,23 +3,60 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldCheck, LogIn } from "lucide-react";
+import { ShieldCheck, LogIn, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useAuth, useFirestore } from "@/firebase";
+import { signInWithPopup, OAuthProvider } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const router = useRouter();
+  const auth = useAuth();
+  const db = useFirestore();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleDiscordLogin = () => {
-    // In a real app, this would trigger Firebase OAuthProvider for Discord.
-    // For this MVP, we simulate a successful login.
-    localStorage.setItem('loggedInUser', 'CEO_User');
-    router.push('/dashboard');
+  const handleDiscordLogin = async () => {
+    setIsLoading(true);
+    const provider = new OAuthProvider('oidc.discord');
+    
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Sync user data to Firestore
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, {
+        id: user.uid,
+        username: user.displayName || 'Farmer',
+        avatarUrl: user.photoURL || '',
+        lastLogin: serverTimestamp(),
+        // Roles will be managed by administrators in the database
+      }, { merge: true });
+
+      toast({
+        title: "Welcome back!",
+        description: `Logged in as ${user.displayName}`,
+      });
+
+      router.push('/dashboard');
+    } catch (error: any) {
+      console.error("Discord Login Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: error.message || "An error occurred during Discord login.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-      {/* Decorative background */}
       <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px]" />
 
@@ -45,8 +82,9 @@ export default function LoginPage() {
           <Button 
             className="w-full h-14 text-lg font-bold rounded-xl gap-3 bg-[#5865F2] hover:bg-[#4752C4] text-white border-none transition-all hover:scale-[1.02] active:scale-[0.98]"
             onClick={handleDiscordLogin}
+            disabled={isLoading}
           >
-            <LogIn className="h-5 w-5" />
+            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
             Login with Discord
           </Button>
           
@@ -60,7 +98,7 @@ export default function LoginPage() {
              <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border border-white/5">
                 <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Your access is determined by your roles in the <span className="text-foreground font-bold">Green Horizon Community</span> Discord server.
+                  Access is restricted to authorized personnel. Logging in will synchronize your profile and roles with our farm management system.
                 </p>
              </div>
           </div>
