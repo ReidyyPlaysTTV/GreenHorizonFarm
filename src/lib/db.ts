@@ -3,10 +3,10 @@ import mysql from 'mysql2/promise';
 import type { Pool } from 'mysql2/promise';
 
 const dbConfig = {
-    host: 'mysql-mariadb16-lon-101.zap-srv.com',
-    user: 'zap1311701-2',
-    password: 'J2IAJKgRfnrCphFq',
-    database: 'zap1311701-2',
+    host: 'mysql-mariadb-20-104.zap-srv.com',
+    user: 'zap1311701-1',
+    password: 'gFtXgwwIs09GtYtx',
+    database: 'zap1311701-1',
     port: 3306,
     waitForConnections: true,
     connectionLimit: 10,
