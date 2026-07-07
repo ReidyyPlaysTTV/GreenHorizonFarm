@@ -6,7 +6,7 @@ import { UserManagement } from "@/components/admin/user-management";
 import { PermissionManagement } from "@/components/admin/permission-management";
 import { DeveloperPanel } from "@/components/admin/developer-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getUsers, getBugReports, getSuggestions, getAccessRequests, getSopLink, getApplicationStatus, getLoginBackgroundImage, getMaintenanceMode } from "@/lib/actions";
+import { getUsers, getBugReports, getSuggestions, getAccessRequests, getApplicationStatus, getMaintenanceMode } from "@/lib/actions";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { AccessRequestManagement } from "@/components/admin/access-request-management";
 import { SettingsManagement } from "@/components/admin/settings-management";
@@ -16,7 +16,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ShieldAlert, Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { AppUser, BugReport, Suggestion, AccessRequest } from '@/lib/types';
-import { RankManagement } from '@/components/admin/rank-management';
 
 export default function AdminPage() {
   const { hasPermission, userRoles } = usePermissions();
@@ -26,9 +25,7 @@ export default function AdminPage() {
     bugReports: BugReport[];
     suggestions: Suggestion[];
     accessRequests: AccessRequest[];
-    sopLink: string | null;
     applicationsOpen: boolean;
-    loginBgImage: string;
     isMaintenanceMode: boolean;
   } | null>(null);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
@@ -53,17 +50,15 @@ export default function AdminPage() {
 
     const fetchData = async () => {
       try {
-        const [users, bugReports, suggestions, accessRequests, sopLink, applicationsOpen, loginBgImage, isMaintenanceMode] = await Promise.all([
+        const [users, bugReports, suggestions, accessRequests, applicationsOpen, isMaintenanceMode] = await Promise.all([
           getUsers(),
           getBugReports(),
           getSuggestions(),
           getAccessRequests(),
-          getSopLink(),
           getApplicationStatus(),
-          getLoginBackgroundImage(),
           getMaintenanceMode(),
         ]);
-        setData({ users, bugReports, suggestions, accessRequests, sopLink, applicationsOpen, loginBgImage, isMaintenanceMode });
+        setData({ users, bugReports, suggestions, accessRequests, applicationsOpen, isMaintenanceMode });
       } catch (error) {
         console.error("Failed to load admin data:", error);
       } finally {
@@ -114,7 +109,7 @@ export default function AdminPage() {
     );
   }
 
-  const { users, bugReports, suggestions, accessRequests, sopLink, applicationsOpen, loginBgImage, isMaintenanceMode } = data;
+  const { users, bugReports, suggestions, accessRequests, applicationsOpen, isMaintenanceMode } = data;
 
   return (
     <div className="container mx-auto p-4 md:p-8 bg-destructive text-destructive-foreground rounded-lg my-8">
@@ -129,12 +124,11 @@ export default function AdminPage() {
       </div>
 
        <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-7 bg-destructive-foreground/20 text-destructive-foreground">
+        <TabsList className="grid w-full grid-cols-6 bg-destructive-foreground/20 text-destructive-foreground">
           <TabsTrigger value="users" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">Users & Roles</TabsTrigger>
           <TabsTrigger value="banned" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">Banned Users</TabsTrigger>
           <TabsTrigger value="access_requests" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">Access Requests</TabsTrigger>
           <TabsTrigger value="permissions" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">Permission Groups</TabsTrigger>
-          <TabsTrigger value="ranks" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">Ranks</TabsTrigger>
           <TabsTrigger value="settings" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">App Settings</TabsTrigger>
           <TabsTrigger value="developer" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">Developer</TabsTrigger>
         </TabsList>
@@ -150,14 +144,9 @@ export default function AdminPage() {
         <TabsContent value="permissions" className="mt-6">
             <PermissionManagement />
         </TabsContent>
-        <TabsContent value="ranks" className="mt-6">
-            <RankManagement />
-        </TabsContent>
         <TabsContent value="settings" className="mt-6">
             <SettingsManagement 
-                currentSopLink={sopLink} 
                 applicationsOpen={applicationsOpen}
-                currentLoginBgImage={loginBgImage}
                 isMaintenanceMode={isMaintenanceMode}
             />
         </TabsContent>
