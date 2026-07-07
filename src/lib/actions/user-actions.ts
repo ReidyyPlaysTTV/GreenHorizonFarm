@@ -10,12 +10,13 @@ import { logUserAction } from './audit-log-actions';
 import { checkPermissions } from '../permissions';
 
 /**
- * Tests the connection to the MariaDB database.
+ * Tests the connection to the MariaDB database with specific error handling for timeouts.
  */
 export async function testDatabaseConnection() {
     const startTime = Date.now();
     try {
         await ensureDbInitialized();
+        // Set a manual short timeout for the diagnostic test
         const connection = await pool.getConnection();
         try {
             const [rows] = await connection.query('SELECT 1 as ping');
@@ -28,10 +29,22 @@ export async function testDatabaseConnection() {
             connection.release();
         }
     } catch (error: any) {
-        console.error("Test Connection Error:", error);
+        console.error("Diagnostic Connection Error:", error);
+        
+        let customMessage = `Connection Error: ${error.message || 'Unknown issue'}.`;
+        
+        if (error.code === 'ETIMEDOUT') {
+            customMessage = "Network Timeout: The ZAP-Hosting server did not respond. Check if 'Remote Access' is enabled and whitelisted for IP '%' in your ZAP dashboard.";
+        } else if (error.code === 'ECONNREFUSED') {
+            customMessage = "Connection Refused: The database server is online but rejected the connection on port 3306.";
+        } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+            customMessage = "Access Denied: Invalid username or password for this database instance.";
+        }
+
         return { 
             success: false, 
-            message: `Connection Error: ${error.message || 'Unknown issue'}. ZAP-Hosting may be blocking the connection. Code: ${error.code || 'N/A'}` 
+            message: customMessage,
+            code: error.code
         };
     }
 }

@@ -5,25 +5,24 @@ import { seedDatabase } from './db-seed';
 import { seedRolePermissions } from './actions/permission-actions';
 import { seedInitialRanks } from './actions/rank-actions';
 
-// Standard object config for better compatibility with ZAP-Hosting
-const dbConfig = {
-    host: 'mysql-mariadb-20-104.zap-srv.com',
-    user: 'zap1311701-1',
-    password: 'gFtXgwwIs09GtYtx',
-    database: 'zap1311701-1',
-    port: 3306,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    connectTimeout: 15000, // 15 seconds
-};
+// Use the exact URI provided by the user
+const dbUri = 'mysql://zap1311701-1:gFtXgwwIs09GtYtx@mysql-mariadb-20-104.zap-srv.com:3306/zap1311701-1';
 
 let pool: Pool;
 
 try {
-    pool = mysql.createPool(dbConfig);
+    pool = mysql.createPool({
+        uri: dbUri,
+        waitForConnections: true,
+        connectionLimit: 5,
+        queueLimit: 0,
+        // Short timeout (5s) to fail fast and prevent app hanging
+        connectTimeout: 5000,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 0,
+    });
 } catch (err) {
-    console.error("Failed to create MySQL pool:", err);
+    console.error("Critical: Failed to create MySQL pool instance:", err);
     throw err;
 }
 
@@ -294,6 +293,29 @@ async function createFarmTables(connection: any) {
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS blacklisted_personnel (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                discord_username VARCHAR(255),
+                reason TEXT,
+                dateAdded DATETIME NOT NULL
+            );
+        `);
+        
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS archived_personnel (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                rank VARCHAR(255) NOT NULL,
+                discord_username VARCHAR(255),
+                status ENUM('Fired', 'Resigned') NOT NULL,
+                date DATETIME NOT NULL,
+                reason TEXT
+            );
+        `);
+
     } catch (error) {
         console.error("Failed to create farm tables:", error);
     }
@@ -301,6 +323,10 @@ async function createFarmTables(connection: any) {
 
 let isInitialized = false;
 
+/**
+ * Ensures the database is initialized and tables are seeded.
+ * Non-blocking: will return the pool even if initialization fails, allowing UI to render.
+ */
 export async function ensureDbInitialized() {
     if (isInitialized) return pool;
     try {
