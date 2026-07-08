@@ -154,6 +154,9 @@ export async function loginUser(credentials: any) {
         const user = rows[0];
         if (user.password !== password) return { success: false, message: 'Incorrect credentials.' };
         
+        // Log the successful login
+        await logUserAction(username, 'Login', 'User accessed the management system.');
+        
         return { success: true, user: { username: user.username } };
     } catch (e: any) { 
         return { success: false, message: "Authentication failure (Database Timeout)." }; 

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -5,7 +6,7 @@ import { notFound, useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, Shield, Briefcase, Star, Mail, Activity, KeySquare, Image as ImageIcon, FileCheck2, Phone, Calendar, ClipboardCheck, CreditCard } from "lucide-react";
+import { User, Shield, Briefcase, Star, Mail, Activity, KeySquare, Image as ImageIcon, FileCheck2, Phone, Calendar, ClipboardCheck, CreditCard, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getAuditLogs, getUserByUsername, getReviewedApplicationsCount, getOrdersByStaff } from "@/lib/actions";
 import type { AppUser, Personnel, AuditLog, DetailedFarmOrder } from "@/lib/types";
@@ -158,17 +159,24 @@ export default function UserProfilePage() {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Shield className="h-5 w-5 text-primary" />
-                        <span>Security & Settings</span>
+                        <span>Security & Access</span>
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                     <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">User Since</span>
+                <CardContent className="space-y-4">
+                    <div className="flex justify-between items-center text-sm pb-2 border-b border-white/5">
+                        <span className="text-muted-foreground flex items-center gap-2">
+                            <Calendar className="h-3.5 w-3.5" /> Profile Created
+                        </span>
                         <span className="font-medium">{user.createdAt ? format(new Date(user.createdAt), 'MMM dd, yyyy') : 'N/A'}</span>
                     </div>
-                     <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Last Access</span>
-                        <span className="font-medium text-primary">{lastLogin ? formatDistanceToNow(new Date(lastLogin.timestamp), {addSuffix: true}) : 'Never'}</span>
+                     <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-black uppercase text-primary tracking-widest">Last Roster Access</span>
+                        <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/10">
+                            <Clock className="h-4 w-4 text-primary" />
+                            <span className="font-black text-sm text-foreground">
+                                {lastLogin ? format(new Date(lastLogin.timestamp), 'MMM dd, yyyy • HH:mm:ss') : 'NO ACCESS LOGS'}
+                            </span>
+                        </div>
                     </div>
                 </CardContent>
                 {isOwnProfile && (

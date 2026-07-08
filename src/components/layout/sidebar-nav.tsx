@@ -1,3 +1,4 @@
+
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
@@ -91,16 +92,16 @@ export function SidebarNav() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-white/5 bg-black/80 backdrop-blur-3xl">
-      <SidebarHeader className="p-6">
-        <div className="flex items-center gap-4 transition-all duration-500 group-data-[collapsible=icon]:gap-0">
+      <SidebarHeader className="p-6 group-data-[collapsible=icon]:p-2">
+        <div className="flex items-center gap-4 transition-all duration-500 group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:justify-center">
             <div className="relative shrink-0">
-                <div className="absolute inset-0 bg-primary/40 blur-2xl rounded-full animate-pulse" />
+                <div className="absolute inset-0 bg-primary/40 blur-2xl rounded-full animate-pulse group-data-[collapsible=icon]:blur-lg" />
                 <Image 
                     src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png" 
                     alt="Logo" 
                     width={44} 
                     height={44} 
-                    className="relative h-11 w-11 rounded-2xl border border-white/10 object-cover shadow-2xl"
+                    className="relative h-11 w-11 group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8 transition-all duration-300 rounded-2xl group-data-[collapsible=icon]:rounded-lg border border-white/10 object-cover shadow-2xl"
                 />
             </div>
             <div className="flex flex-col group-data-[collapsible=icon]:hidden overflow-hidden">
@@ -133,7 +134,7 @@ export function SidebarNav() {
         </div>
       </SidebarContent>
        
-      <SidebarFooter className="p-6 mt-auto space-y-4">
+      <SidebarFooter className="p-6 mt-auto space-y-4 group-data-[collapsible=icon]:p-2">
         <Button 
             variant="ghost" 
             className="w-full justify-start gap-4 h-12 rounded-2xl text-white/40 hover:text-destructive hover:bg-destructive/10 border border-white/5 hover:border-destructive/20 transition-all group overflow-hidden" 
