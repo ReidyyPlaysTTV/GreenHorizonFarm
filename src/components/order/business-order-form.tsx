@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, ShoppingBasket, Plus, Trash2, CheckCircle2, Building2, Phone } from "lucide-react";
+import { Loader2, ShoppingBasket, Plus, Trash2, CheckCircle2, Building2, Receipt, Clock, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getManagerData } from "@/lib/actions/manager-actions";
 import { submitBusinessOrder } from "@/lib/actions/order-actions";
@@ -19,7 +19,6 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 const formSchema = z.object({
   business_name: z.string().min(1, "Company name is required."),
-  contact_info: z.string().min(1, "Discord or Phone number is required."),
   items: z.array(z.object({
       product_id: z.string().min(1, "Select product"),
       product_name: z.string(),
@@ -40,10 +39,15 @@ export function BusinessOrderForm() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { business_name: "", contact_info: "", items: [] }
+    defaultValues: { business_name: "", items: [] }
   });
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "items" });
+
+  const watchedItems = form.watch("items");
+  const estimatedTotal = useMemo(() => {
+    return watchedItems.reduce((acc, item) => acc + (item.quantity * (item.price_at_sale || 0)), 0);
+  }, [watchedItems]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
@@ -73,7 +77,7 @@ export function BusinessOrderForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="max-w-md mx-auto">
             <FormField
             control={form.control}
             name="business_name"
@@ -81,17 +85,6 @@ export function BusinessOrderForm() {
                 <FormItem>
                 <FormLabel className="flex items-center gap-2"><Building2 className="h-4 w-4" /> Company Name</FormLabel>
                 <FormControl><Input placeholder="e.g. Galaxy Nightclub" {...field} /></FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-            <FormField
-            control={form.control}
-            name="contact_info"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel className="flex items-center gap-2"><Phone className="h-4 w-4" /> Contact Detail (Phone/Discord)</FormLabel>
-                <FormControl><Input placeholder="How can we reach you?" {...field} /></FormControl>
                 <FormMessage />
                 </FormItem>
             )}
@@ -138,13 +131,36 @@ export function BusinessOrderForm() {
             </div>
         </div>
 
-        <Alert className="bg-primary/5 border-primary/20">
-            <ShoppingBasket className="h-4 w-4 text-primary" />
-            <AlertTitle className="text-xs font-black uppercase tracking-widest">Supply Notice</AlertTitle>
-            <AlertDescription className="text-[10px] text-muted-foreground">
-                Prices shown are reference rates. High volume orders may be eligible for management discounts. Logistics delivery fees will be calculated upon contact.
-            </AlertDescription>
-        </Alert>
+        <div className="p-6 bg-primary/10 rounded-2xl border border-primary/20 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <Receipt className="h-6 w-6 text-primary" />
+                <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Estimated Requisition Total</p>
+                    <p className="text-2xl font-black text-primary">${estimatedTotal.toLocaleString()}</p>
+                </div>
+            </div>
+            <div className="text-right text-[10px] font-bold text-muted-foreground max-w-[200px]">
+                You will be billed on delivery by a Green Horizon Employee or Logistics officer.
+            </div>
+        </div>
+
+        <div className="space-y-4">
+            <Alert className="bg-primary/5 border-primary/20">
+                <ShoppingBasket className="h-4 w-4 text-primary" />
+                <AlertTitle className="text-xs font-black uppercase tracking-widest">Pricing Notice</AlertTitle>
+                <AlertDescription className="text-[10px] text-muted-foreground leading-relaxed">
+                    Prices shown are reference rates. High volume orders may be eligible for management discounts. Logistics delivery fees will be calculated upon arrival.
+                </AlertDescription>
+            </Alert>
+
+            <Alert variant="warning" className="border-orange-500/20 bg-orange-500/5">
+                <Clock className="h-4 w-4 text-orange-500" />
+                <AlertTitle className="text-xs font-black uppercase tracking-widest text-orange-500">Fulfillment Policy</AlertTitle>
+                <AlertDescription className="text-[10px] text-orange-200/60 leading-relaxed">
+                    If an order has not been claimed or fulfilled within **3 hours** of submission, it indicates our staff are currently unable to meet the request. We sincerely apologize for any inconvenience caused.
+                </AlertDescription>
+            </Alert>
+        </div>
 
         <Button type="submit" disabled={isSubmitting || fields.length === 0} className="w-full h-16 rounded-2xl text-lg font-black uppercase tracking-widest shadow-2xl shadow-primary/20 transition-all active:scale-95">
             {isSubmitting ? <Loader2 className="animate-spin" /> : "Transmit Supply Request"}

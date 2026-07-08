@@ -132,7 +132,7 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
 // Business Order Actions
 const businessOrderSchema = z.object({
     business_name: z.string().min(1),
-    contact_info: z.string().min(1),
+    contact_info: z.string().optional(),
     items: z.array(z.object({
         product_id: z.string(),
         product_name: z.string(),
@@ -150,7 +150,7 @@ export async function submitBusinessOrder(data: unknown) {
         const id = crypto.randomUUID();
         await connection.query(
             "INSERT INTO business_orders (id, business_name, contact_info, items, status) VALUES (?, ?, ?, ?, ?)",
-            [id, validation.data.business_name, validation.data.contact_info, JSON.stringify(validation.data.items), 'Pending']
+            [id, validation.data.business_name, validation.data.contact_info || null, JSON.stringify(validation.data.items), 'Pending']
         );
         return { success: true, orderId: id };
     } catch (e) {
