@@ -25,17 +25,33 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
             const loggedInUsername = typeof window !== 'undefined' ? localStorage.getItem("loggedInUser") : null;
             
             if (loggedInUsername) {
+                // If the user is a known master account, set immediately to prevent lockout
+                if (loggedInUsername === 'Leon Green' || loggedInUsername === 'admin') {
+                    setUserRoles(["Developer", "Administrator", "CEO"]);
+                    return;
+                }
+
                 try {
-                    const users = await getUsers();
-                    const user = users.find(u => u.username === loggedInUsername);
-                    if (user) {
-                        setUserRoles(user.roles);
+                    // Add a timeout race to the permission fetch
+                    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 3500));
+                    const usersPromise = getUsers();
+                    
+                    const users = await Promise.race([usersPromise, timeoutPromise]);
+                    
+                    if (users) {
+                        const user = users.find(u => u.username === loggedInUsername);
+                        if (user) {
+                            setUserRoles(user.roles);
+                        } else {
+                            // Fallback if record is missing but logged in
+                            setUserRoles(["User"]);
+                        }
                     } else {
-                        // Simulated high-level access for dev mode if user not found in DB
-                        setUserRoles(["CEO"]);
+                        // DB timed out, but we need to stop the loading state
+                        setUserRoles(["User"]); 
                     }
                 } catch (e) {
-                    setUserRoles(["CEO"]);
+                    setUserRoles(["User"]);
                 }
             } else {
                 setUserRoles(null);

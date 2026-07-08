@@ -8,15 +8,16 @@ const dbUri = 'mysql://zap1311701-1:gFtXgwwIs09GtYtx@mysql-mariadb-20-104.zap-sr
 
 let pool: Pool;
 let isInitialized = false;
+let initPromise: Promise<Pool> | null = null;
 
 try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 20,
+        connectionLimit: 15,
         queueLimit: 0,
-        connectTimeout: 6000, // 6 seconds for more stability with ZAP
-        acquireTimeout: 6000,
+        connectTimeout: 5000, 
+        acquireTimeout: 5000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });
@@ -270,21 +271,27 @@ async function createFarmTables(connection: any) {
 
 export async function ensureDbInitialized(force: boolean = false) {
     if (isInitialized && !force) return pool;
+    if (initPromise && !force) return initPromise;
 
-    try {
-        const connection = await pool.getConnection();
+    initPromise = (async () => {
         try {
-            await createFarmTables(connection);
-            await seedDatabase(pool);
-            isInitialized = true;
-            return pool;
-        } finally {
-            connection.release();
+            const connection = await pool.getConnection();
+            try {
+                await createFarmTables(connection);
+                await seedDatabase(pool);
+                isInitialized = true;
+                return pool;
+            } finally {
+                connection.release();
+            }
+        } catch (err: any) {
+            initPromise = null; 
+            console.error("DB Initialization Failure:", err.message);
+            throw err;
         }
-    } catch (err: any) {
-        console.error("DB Initialization Failure (Timeout or Auth):", err.message);
-        throw err;
-    }
+    })();
+
+    return initPromise;
 }
 
 export default pool;

@@ -13,13 +13,14 @@ import { SettingsManagement } from "@/components/admin/settings-management";
 import { BannedUsersManagement } from "@/components/admin/banned-users-management";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ShieldAlert, Loader2 } from "lucide-react";
+import { ShieldAlert, Loader2, Clock } from "lucide-react";
 import Link from "next/link";
 import type { AppUser, BugReport, Suggestion, AccessRequest } from '@/lib/types';
 
 export default function AdminPage() {
   const { hasPermission, userRoles } = usePermissions();
   const [isLoading, setIsLoading] = useState(true);
+  const [isTimedOut, setIsTimedOut] = useState(false);
   const [data, setData] = useState<{
     users: AppUser[];
     bugReports: BugReport[];
@@ -37,6 +38,14 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
+    // Safety timeout to prevent neverending load if DB hangs
+    const timeoutTimer = setTimeout(() => {
+        if (isLoading) {
+            setIsLoading(false);
+            setIsTimedOut(true);
+        }
+    }, 7000);
+
     // Wait until the user's roles have been determined.
     if (userRoles === null) {
       return;
@@ -45,12 +54,13 @@ export default function AdminPage() {
     const canAccess = hasPermission('ACCESS_ADMIN_PANEL');
     if (!canAccess) {
       setIsLoading(false);
+      clearTimeout(timeoutTimer);
       return;
     }
 
     const fetchData = async () => {
       try {
-        const [users, bugReports, suggestions, accessRequests, applicationsOpen, isMaintenanceMode] = await Promise.all([
+        const fetchPromise = Promise.all([
           getUsers(),
           getBugReports(),
           getSuggestions(),
@@ -58,7 +68,11 @@ export default function AdminPage() {
           getApplicationStatus(),
           getMaintenanceMode(),
         ]);
+
+        const [users, bugReports, suggestions, accessRequests, applicationsOpen, isMaintenanceMode] = await fetchPromise;
+        
         setData({ users, bugReports, suggestions, accessRequests, applicationsOpen, isMaintenanceMode });
+        clearTimeout(timeoutTimer);
       } catch (error) {
         console.error("Failed to load admin data:", error);
       } finally {
@@ -67,12 +81,34 @@ export default function AdminPage() {
     };
 
     fetchData();
+    return () => clearTimeout(timeoutTimer);
   }, [userRoles, hasPermission]);
   
   if (isLoading) {
     return (
-        <div className="flex h-full w-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="flex h-full w-full items-center justify-center p-20">
+            <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="text-sm font-bold uppercase tracking-widest animate-pulse opacity-50">Authorized Access Required...</p>
+            </div>
+        </div>
+    );
+  }
+
+  if (isTimedOut && !data) {
+    return (
+        <div className="container mx-auto p-4 md:p-8">
+            <Alert variant="destructive" className="bg-black/60 border-destructive/20 backdrop-blur-md">
+                <Clock className="h-4 w-4" />
+                <AlertTitle>Connection Refused</AlertTitle>
+                <AlertDescription>
+                   The database is taking too long to respond. This usually happens during high network lag or server maintenance.
+                   <br />
+                   <Button variant="outline" className="mt-4 border-destructive/20" onClick={() => window.location.reload()}>
+                        Retry Connection
+                   </Button>
+                </AlertDescription>
+            </Alert>
         </div>
     );
   }
