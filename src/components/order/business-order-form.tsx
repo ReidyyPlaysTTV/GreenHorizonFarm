@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, ShoppingBasket, Plus, Trash2, CheckCircle2, Building2, Receipt, Clock, AlertTriangle } from "lucide-react";
@@ -48,9 +48,14 @@ export function BusinessOrderForm() {
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "items" });
 
-  const watchedItems = form.watch("items");
+  const watchedItems = useWatch({ control: form.control, name: "items" });
+  
   const estimatedTotal = useMemo(() => {
-    return watchedItems.reduce((acc, item) => acc + (item.quantity * (item.price_at_sale || 0)), 0);
+    return (watchedItems || []).reduce((acc, item) => {
+        const q = Number(item.quantity) || 0;
+        const p = Number(item.price_at_sale) || 0;
+        return acc + (q * p);
+    }, 0);
   }, [watchedItems]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -196,7 +201,7 @@ export function BusinessOrderForm() {
             </Alert>
         </div>
 
-        <Button type="submit" disabled={isSubmitting || fields.length === 0} className="w-full h-16 rounded-2xl text-lg font-black uppercase tracking-widest shadow-2xl shadow-primary/20 transition-all active:scale-95">
+        <Button type="submit" disabled={isSubmitting || (watchedItems || []).length === 0} className="w-full h-16 rounded-2xl text-lg font-black uppercase tracking-widest shadow-2xl shadow-primary/20 transition-all active:scale-95">
             {isSubmitting ? <Loader2 className="animate-spin" /> : "Transmit Supply Request"}
         </Button>
       </form>

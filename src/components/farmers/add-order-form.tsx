@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, PlusCircle, ShoppingCart, Trash2, Tag, Percent, Users, UserPlus, Building2 } from "lucide-react";
@@ -94,34 +94,41 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
     name: "items"
   });
 
-  const watchedItems = form.watch("items");
-  const watchedDiscount = form.watch("discount_amount");
-  const watchedCutPercentage = form.watch("employee_cut_percentage");
-  const watchedCollaborators = form.watch("collaborators");
-  const watchedBusiness = form.watch("business_name");
+  // Use deep watching for real-time calculations
+  const watchedItems = useWatch({ control: form.control, name: "items" });
+  const watchedDiscount = useWatch({ control: form.control, name: "discount_amount" });
+  const watchedCutPercentage = useWatch({ control: form.control, name: "employee_cut_percentage" });
+  const watchedCollaborators = useWatch({ control: form.control, name: "collaborators" });
+  const watchedBusiness = useWatch({ control: form.control, name: "business_name" });
+  const watchedTotalPrice = useWatch({ control: form.control, name: "total_price" });
 
   const selectedBusinessData = useMemo(() => 
     businesses.find(b => b.name === watchedBusiness)
   , [businesses, watchedBusiness]);
 
   const subtotal = useMemo(() => {
-    return (watchedItems || []).reduce((acc, item) => acc + (item.quantity * item.price_at_sale), 0);
+    return (watchedItems || []).reduce((acc, item) => {
+        const q = Number(item.quantity) || 0;
+        const p = Number(item.price_at_sale) || 0;
+        return acc + (q * p);
+    }, 0);
   }, [watchedItems]);
 
-  const suggestedTotal = Math.max(0, subtotal - (watchedDiscount || 0));
+  const suggestedTotal = useMemo(() => {
+      return Math.max(0, subtotal - (Number(watchedDiscount) || 0));
+  }, [subtotal, watchedDiscount]);
 
   useEffect(() => {
     form.setValue("total_price", suggestedTotal);
   }, [suggestedTotal, form]);
 
   useEffect(() => {
-    const total = form.getValues("total_price");
-    const cut = (total * (watchedCutPercentage || 0)) / 100;
+    const cut = (Number(watchedTotalPrice) * (Number(watchedCutPercentage) || 0)) / 100;
     form.setValue("employee_cut_value", Number(cut.toFixed(2)));
-  }, [watchedCutPercentage, form.watch("total_price"), form]);
+  }, [watchedCutPercentage, watchedTotalPrice, form]);
 
-  const totalWorkers = watchedCollaborators.length + 1;
-  const cutPerPerson = form.watch("employee_cut_value") / totalWorkers;
+  const totalWorkers = (watchedCollaborators || []).length + 1;
+  const cutPerPerson = (Number(form.getValues("employee_cut_value")) || 0) / totalWorkers;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -260,7 +267,7 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
                                 <Badge variant="outline" className="text-[9px]">OWNER</Badge>
                             </div>
                             
-                            {watchedCollaborators.map((name, i) => (
+                            {(watchedCollaborators || []).map((name, i) => (
                                 <div key={i} className="p-3 rounded-lg bg-muted/30 border border-white/5 flex items-center justify-between">
                                     <span className="text-xs">{name}</span>
                                     <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => {
@@ -272,8 +279,8 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
 
                             <div className="pt-2">
                                 <Select onValueChange={(val) => {
-                                    if (val && !watchedCollaborators.includes(val) && val !== currentUser) {
-                                        form.setValue('collaborators', [...watchedCollaborators, val]);
+                                    if (val && !watchedCollaborators?.includes(val) && val !== currentUser) {
+                                        form.setValue('collaborators', [...(watchedCollaborators || []), val]);
                                     }
                                 }}>
                                     <SelectTrigger className="h-9 text-xs border-dashed">
@@ -295,7 +302,7 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="text-center p-3 bg-black/20 rounded-xl">
                                 <p className="text-[10px] text-muted-foreground uppercase font-black">Staff Pool</p>
-                                <p className="text-lg font-black text-emerald-500">${form.watch('employee_cut_value').toLocaleString()}</p>
+                                <p className="text-lg font-black text-emerald-500">${(Number(form.watch('employee_cut_value')) || 0).toLocaleString()}</p>
                             </div>
                             <div className="text-center p-3 bg-black/20 rounded-xl">
                                 <p className="text-[10px] text-muted-foreground uppercase font-black">Per Person</p>
