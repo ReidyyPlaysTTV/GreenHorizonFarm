@@ -174,27 +174,46 @@ export async function submitAccessRequest(data: any) {
 
 export async function approveAccessRequest(data: any) {
     try {
-        const { requestId, username, roles: requestedRoles, adminUser } = data;
+        const { requestId, username, roles: requestedRoles, adminUser, rank, callsign } = data;
         const pool = await ensureDbInitialized();
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
+            
             const [reqRows]: any = await connection.query('SELECT password FROM access_requests WHERE id = ?', [requestId]);
             if (reqRows.length === 0) throw new Error('Request not found.');
             const password = reqRows[0].password;
             
-            const [rosterRows]: any = await connection.query('SELECT rank FROM personnel WHERE UPPER(name) = UPPER(?)', [username.trim()]);
-            let finalRoles = requestedRoles || ['User'];
-            if (rosterRows.length > 0) finalRoles = [...new Set([...finalRoles, rosterRows[0].rank])];
-            
             const userId = crypto.randomUUID();
-            await connection.query('INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)', [userId, username, password, JSON.stringify(finalRoles), 'Active']);
+            let finalRoles = requestedRoles || ['User'];
+            if (rank) finalRoles = [...new Set([...finalRoles, rank])];
+            
+            // Create User Account
+            await connection.query(
+                'INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)', 
+                [userId, username, password, JSON.stringify(finalRoles), 'Active']
+            );
+            
+            // Mark Request as Approved
             await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Approved', requestId]);
-            await connection.query('UPDATE personnel SET userId = ? WHERE UPPER(name) = UPPER(?)', [userId, username.trim()]);
-            await logUserAction(adminUser, 'Approve Access Request', `Created account for: ${username}`, connection);
+            
+            // Onboard to Roster
+            const [rosterRows]: any = await connection.query('SELECT id FROM personnel WHERE UPPER(name) = UPPER(?)', [username.trim()]);
+            if (rosterRows.length > 0) {
+                await connection.query('UPDATE personnel SET userId = ?, rank = ?, status = "Active" WHERE id = ?', [userId, rank, rosterRows[0].id]);
+            } else {
+                await connection.query(
+                    'INSERT INTO personnel (id, name, rank, badgeNumber, status, hire_date, userId) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    [crypto.randomUUID(), username, rank, callsign, 'Active', new Date(), userId]
+                );
+            }
+
+            await logUserAction(adminUser, 'Approve Access Request', `Onboarded user: ${username} with rank ${rank}.`, connection);
             await connection.commit();
+            
             revalidatePath('/admin');
             revalidatePath('/users');
+            revalidatePath('/roster');
             return { success: true, message: 'Approved' };
         } catch (e: any) { await connection.rollback(); return { success: false, message: e.message }; }
         finally { connection.release(); }

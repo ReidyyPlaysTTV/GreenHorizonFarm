@@ -17,11 +17,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { submitAccessRequest } from "@/lib/actions";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { AlertCircle } from "lucide-react";
+import Link from "next/link";
 
 const formSchema = z.object({
   username: z.string()
@@ -34,6 +34,7 @@ export function RequestAccessForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -47,11 +48,11 @@ export function RequestAccessForm() {
     setIsLoading(true);
     const result = await submitAccessRequest(values);
     if (result.success) {
+        setIsSuccess(true);
         toast({
-            title: "Request Submitted",
-            description: "Your access request has been sent for review.",
+            title: "Request Transmitted",
+            description: "Your portal access request is now awaiting review.",
         });
-        router.push("/login");
     } else {
         toast({
             variant: "destructive",
@@ -62,25 +63,43 @@ export function RequestAccessForm() {
     setIsLoading(false);
   }
 
+  if (isSuccess) {
+      return (
+          <div className="text-center space-y-6 py-8">
+              <div className="mx-auto w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center border-4 border-emerald-500/20">
+                  <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+              </div>
+              <div className="space-y-2">
+                  <h2 className="text-2xl font-black tracking-tight">Request Logged</h2>
+                  <p className="text-muted-foreground font-medium">Your account request has been sent to Green Horizon Management. Please wait for an administrator to approve your credentials.</p>
+              </div>
+              <Button asChild className="w-full h-12 rounded-xl font-bold">
+                  <Link href="/">Return to Main Entrance</Link>
+              </Button>
+          </div>
+      )
+  }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Alert variant="destructive" className="border-red-500/50 bg-red-950 text-red-400 [&>svg]:text-red-400">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle className="font-bold">Identity Verification</AlertTitle>
-          <AlertDescription className="text-red-400/80 text-xs">
-            Your username must be your In-Character (IC) Name in "First Last" format. 
-            Do not use your OOC name or a random nickname.
+          <ShieldAlert className="h-5 w-5" />
+          <AlertTitle className="font-black uppercase tracking-widest text-xs">Security Protocol</AlertTitle>
+          <AlertDescription className="text-red-400/90 text-[10px] font-bold leading-relaxed uppercase mt-1">
+            DO NOT USE YOUR EVERYDAY PASSWORDS. THE MANAGEMENT SYSTEM DATABASE IS ACCESSIBLE TO DEVELOPERS. 
+            PLEASE USE A UNIQUE IN-CHARACTER PASSWORD.
           </AlertDescription>
         </Alert>
+
         <FormField
           control={form.control}
           name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>IC Full Name</FormLabel>
+              <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground">IC Full Name (First Last)</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Leon Green" {...field} />
+                <Input placeholder="e.g. Leon Green" {...field} className="h-12 bg-background/50 border-white/10" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -91,29 +110,20 @@ export function RequestAccessForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Secure Password</FormLabel>
+              <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground">System Password</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
+                <Input type="password" placeholder="••••••••" {...field} className="h-12 bg-background/50 border-white/10" />
               </FormControl>
-              <div className="bg-red-950/40 p-4 rounded-lg border border-red-500/20 mt-2">
-                 <p className="text-red-500 font-black text-sm uppercase flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    Security Protocol
-                 </p>
-                 <p className="text-red-400/90 text-xs font-bold leading-relaxed mt-1">
-                    DO NOT USE YOUR EVERYDAY PASSWORDS. The management system database is accessible to developers. 
-                    Please use a unique IN-CHARACTER PASSWORD that you do not use for any other real-world accounts.
-                 </p>
-              </div>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isLoading}>
+
+        <Button type="submit" className="w-full h-16 rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/20" disabled={isLoading}>
           {isLoading ? (
             <Loader2 className="animate-spin" />
           ) : (
-            "Request Account Access"
+            "Request System Entry"
           )}
         </Button>
       </form>

@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Loading from '@/app/(dashboard)/loading';
 
+const PUBLIC_ROUTES = ['/', '/login', '/request-access', '/apply', '/order', '/check-status', '/maintenance', '/banned'];
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
@@ -13,9 +15,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const checkAuth = () => {
             if (typeof window !== 'undefined') {
-                // TEMPORARY DEBUG BYPASS: 
-                // Force auth to Leon Green to allow database testing without a working DB connection.
-                localStorage.setItem('loggedInUser', 'Leon Green');
+                const loggedInUser = localStorage.getItem('loggedInUser');
+                
+                // If not logged in and trying to access a protected route, redirect to login
+                if (!loggedInUser && !PUBLIC_ROUTES.includes(pathname)) {
+                    router.replace('/login');
+                }
             }
             setIsLoading(false);
         };
