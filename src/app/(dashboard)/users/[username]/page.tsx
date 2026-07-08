@@ -128,11 +128,6 @@ export default function UserProfilePage() {
                 <h1 className="text-5xl font-black tracking-tighter text-primary">{user.username}</h1>
                 <div className="flex items-center gap-3 mt-2">
                     <p className="text-xl text-muted-foreground font-medium">{personnelRecord?.rank || 'Civilian'}</p>
-                    {personnelRecord?.department && (
-                        <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                            {personnelRecord.department}
-                        </Badge>
-                    )}
                 </div>
             </div>
           </div>
@@ -321,7 +316,7 @@ export default function UserProfilePage() {
                     <CardDescription>Recent actions performed within the application.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ScrollArea className="h-64">
+                    <scrollArea className="h-64">
                         {activityLogs.length > 0 ? (
                             <ul className="space-y-4 pr-4">
                                 {activityLogs.map(log => (
@@ -346,7 +341,7 @@ export default function UserProfilePage() {
                                 <p className="italic">No digital footprint found for this user.</p>
                             </div>
                         )}
-                    </ScrollArea>
+                    </scrollArea>
                 </CardContent>
             </Card>
 

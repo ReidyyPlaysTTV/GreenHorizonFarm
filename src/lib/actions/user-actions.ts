@@ -289,7 +289,119 @@ export async function getReviewedApplicationsCount(userId: string): Promise<numb
     }
 }
 
-export async function changeUserPassword(data: any) { return { success: false, message: 'Not implemented' }; }
-export async function updateProfilePicture(data: any) { return { success: false, message: 'Not implemented' }; }
-export async function updateUser(data: any) { return { success: false, message: 'Not implemented' }; }
-export async function resetUserPassword(data: any) { return { success: false, message: 'Not implemented' }; }
+const createUserSchema = z.object({
+  username: z.string().min(3),
+  password: z.string().min(8),
+  roles: z.array(z.string()),
+  adminUser: z.string(),
+});
+
+export async function createUser(data: unknown) {
+  const validation = createUserSchema.safeParse(data);
+  if (!validation.success) {
+    return { success: false, message: validation.error.errors[0].message };
+  }
+  const { username, password, roles, adminUser } = validation.data;
+
+  const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
+  if (!hasPermission) {
+    return { success: false, message: 'Unauthorized.' };
+  }
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [existing] = await connection.query('SELECT id FROM users WHERE username = ?', [username]);
+    if (Array.isArray(existing) && existing.length > 0) {
+      return { success: false, message: 'Username already exists.' };
+    }
+
+    const userId = crypto.randomUUID();
+    await connection.query(
+      'INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)',
+      [userId, username, password, JSON.stringify(roles), 'Active']
+    );
+
+    // Sync with roster if name matches
+    await connection.query('UPDATE personnel SET userId = ? WHERE name = ?', [userId, username]);
+
+    await logUserAction(adminUser, 'Create User', `Manually created user account for: ${username}`, connection);
+    
+    await connection.commit();
+    revalidatePath('/admin');
+    revalidatePath('/users');
+    return { success: true, message: 'User created successfully.' };
+  } catch (error) {
+    await connection.rollback();
+    return { success: false, message: 'Database failure.' };
+  } finally {
+    connection.release();
+  }
+}
+
+export async function updateUser(data: any) {
+    const { userId, username, roles, adminUser } = data;
+    const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
+    if (!hasPermission) return { success: false, message: 'Unauthorized' };
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        await connection.query('UPDATE users SET username = ?, roles = ? WHERE id = ?', [username, JSON.stringify(roles), userId]);
+        await logUserAction(adminUser, 'Update User', `Updated account for: ${username}`, connection);
+        await connection.commit();
+        revalidatePath('/admin');
+        revalidatePath('/users');
+        return { success: true };
+    } catch (e) {
+        await connection.rollback();
+        return { success: false, message: 'Update failed' };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function resetUserPassword(data: any) {
+    const { userId, newPassword, adminUser } = data;
+    const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
+    if (!hasPermission) return { success: false, message: 'Unauthorized' };
+
+    const connection = await db.getConnection();
+    try {
+        await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
+        await logUserAction(adminUser, 'Reset Password', `Reset password for user ${userId}`, connection);
+        return { success: true, message: "Password updated successfully." };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function changeUserPassword(data: any) {
+    const { userId, currentPassword, newPassword } = data;
+    const connection = await db.getConnection();
+    try {
+        const [rows]: any = await connection.query('SELECT password, username FROM users WHERE id = ?', [userId]);
+        if (rows.length === 0 || rows[0].password !== currentPassword) {
+            return { success: false, message: 'Incorrect current password.' };
+        }
+        await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
+        await logUserAction(rows[0].username, 'Change Password', 'Changed their own password.');
+        return { success: true, message: 'Password changed successfully.' };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function updateProfilePicture(data: any) {
+    const { userId, url, user } = data;
+    const connection = await db.getConnection();
+    try {
+        await connection.query('UPDATE users SET avatarUrl = ? WHERE id = ?', [url, userId]);
+        await logUserAction(user, 'Update Avatar', 'Updated profile picture.');
+        revalidatePath('/users');
+        return { success: true, message: 'Profile picture updated.' };
+    } finally {
+        connection.release();
+    }
+}

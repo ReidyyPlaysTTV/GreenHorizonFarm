@@ -62,10 +62,6 @@ const UserCard = ({ user, primaryRole }: { user: AppUser, primaryRole: string })
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
-                    <span>Department</span>
-                    <span className="text-foreground">{user.personnel?.department || "Unassigned"}</span>
-                </div>
                 <div className="flex flex-col items-start text-sm gap-2">
                     <span className="text-[10px] font-black uppercase text-muted-foreground/40 tracking-widest flex items-center gap-1.5">
                         <Shield className="h-3 w-3" />
