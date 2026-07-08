@@ -49,7 +49,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "../ui/form";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/use-permissions";
-import { staffRoles, divisions } from "@/lib/data";
+import { staffRoles } from "@/lib/data";
 
 
 interface PersonnelActionsProps {
@@ -64,7 +64,6 @@ const fireFormSchema = z.object({
 const editFormSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters.").regex(/^[A-Z][a-z]+ [A-Z][a-z]+$/, "Must be IC Name format"),
   rank: z.string(),
-  department: z.string(),
   discordUsername: z.string().optional(),
   phoneNumber: z.string().optional(),
   bankAccount: z.string().optional(),
@@ -112,7 +111,6 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
     defaultValues: {
       name: personnel.name,
       rank: personnel.rank,
-      department: personnel.department || "",
       discordUsername: personnel.discordUsername || "",
       phoneNumber: personnel.phoneNumber || "",
       bankAccount: personnel.bankAccount || "",
@@ -165,7 +163,8 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
 
   const handleEditSubmit = async (values: z.infer<typeof editFormSchema>) => {
     setIsEditing(true);
-    const result = await updatePersonnel(personnel.id, { ...values, user: currentUser });
+    // Maintain the existing department or default to Management
+    const result = await updatePersonnel(personnel.id, { ...values, department: personnel.department || 'Management', user: currentUser });
      if (result.success) {
       toast({ title: "Success", description: result.message });
       setEditDialogOpen(false);
@@ -208,9 +207,9 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
   return (
     <>
       <Dialog open={isStatusDialogOpen} onOpenChange={setStatusDialogOpen}>
-        <DialogContent>
+        <DialogContent className="glass-card">
             <DialogHeader>
-                <DialogTitle>Update Status for {personnel.name}</DialogTitle>
+                <DialogTitle className="text-xl font-black">Update Status: {personnel.name}</DialogTitle>
             </DialogHeader>
             <Form {...statusForm}>
                 <form onSubmit={statusForm.handleSubmit(handleStatusSubmit)} className="space-y-4">
@@ -218,7 +217,7 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
                         <FormItem>
                             <Label>Status</Label>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                <FormControl><SelectTrigger className="bg-white/5 border-white/10"><SelectValue/></SelectTrigger></FormControl>
                                 <SelectContent>
                                     {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                                 </SelectContent>
@@ -239,7 +238,7 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
                                             <Button
                                             variant={"outline"}
                                             className={cn(
-                                                "w-full pl-3 text-left font-normal",
+                                                "w-full pl-3 text-left font-normal bg-white/5 border-white/10",
                                                 !field.value && "text-muted-foreground"
                                             )}
                                             >
@@ -281,41 +280,17 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
       </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] glass-card">
             <DialogHeader>
-                <DialogTitle>Edit Personnel: {personnel.name}</DialogTitle>
+                <DialogTitle className="text-xl font-black">Edit Record: {personnel.name}</DialogTitle>
             </DialogHeader>
             <Form {...editForm}>
                 <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                         <FormField control={editForm.control} name="name" render={({field}) => (
                             <FormItem>
-                                <Label>Full Name</Label>
-                                <FormControl><Input {...field} /></FormControl>
-                                <FormMessage/>
-                            </FormItem>
-                        )}/>
-                        <FormField control={editForm.control} name="discordUsername" render={({field}) => (
-                            <FormItem>
-                                <Label>Discord</Label>
-                                <FormControl><Input {...field} /></FormControl>
-                                <FormMessage/>
-                            </FormItem>
-                        )}/>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField control={editForm.control} name="phoneNumber" render={({field}) => (
-                            <FormItem>
-                                <Label>Phone</Label>
-                                <FormControl><Input {...field} /></FormControl>
-                                <FormMessage/>
-                            </FormItem>
-                        )}/>
-                        <FormField control={editForm.control} name="bankAccount" render={({field}) => (
-                            <FormItem>
-                                <Label>Bank Account</Label>
-                                <FormControl><Input {...field} /></FormControl>
+                                <Label>Full IC Name</Label>
+                                <FormControl><Input {...field} className="bg-white/5 border-white/10" /></FormControl>
                                 <FormMessage/>
                             </FormItem>
                         )}/>
@@ -326,7 +301,7 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
                             <FormItem>
                                 <Label>Position</Label>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                    <FormControl><SelectTrigger className="bg-white/5 border-white/10"><SelectValue/></SelectTrigger></FormControl>
                                     <SelectContent>
                                         {staffRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                                     </SelectContent>
@@ -334,15 +309,27 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
                                 <FormMessage/>
                             </FormItem>
                         )}/>
-                        <FormField control={editForm.control} name="department" render={({field}) => (
+                        <FormField control={editForm.control} name="discordUsername" render={({field}) => (
                             <FormItem>
-                                <Label>Division</Label>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        {divisions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                <Label>Discord</Label>
+                                <FormControl><Input {...field} className="bg-white/5 border-white/10" /></FormControl>
+                                <FormMessage/>
+                            </FormItem>
+                        )}/>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField control={editForm.control} name="phoneNumber" render={({field}) => (
+                            <FormItem>
+                                <Label>Phone</Label>
+                                <FormControl><Input {...field} className="bg-white/5 border-white/10" /></FormControl>
+                                <FormMessage/>
+                            </FormItem>
+                        )}/>
+                        <FormField control={editForm.control} name="bankAccount" render={({field}) => (
+                            <FormItem>
+                                <Label>Bank Account</Label>
+                                <FormControl><Input {...field} className="bg-white/5 border-white/10" /></FormControl>
                                 <FormMessage/>
                             </FormItem>
                         )}/>
@@ -360,7 +347,7 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
                                 <Button
                                     variant={"outline"}
                                     className={cn(
-                                    "w-full pl-3 text-left font-normal",
+                                    "w-full pl-3 text-left font-normal bg-white/5 border-white/10",
                                     !field.value && "text-muted-foreground"
                                     )}
                                 >
@@ -399,24 +386,24 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
       </Dialog>
       
       <Dialog open={isFireDialogOpen} onOpenChange={setFireDialogOpen}>
-        <DialogContent>
+        <DialogContent className="glass-card border-destructive/20">
           <DialogHeader>
-            <DialogTitle>Fire {personnel.name}?</DialogTitle>
+            <DialogTitle className="text-xl font-black text-destructive">Terminate Contract: {personnel.name}?</DialogTitle>
           </DialogHeader>
           <Form {...fireForm}>
             <form onSubmit={fireForm.handleSubmit(handleFireSubmit)} className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="discordUsername">Discord</Label>
-                    <Input id="discordUsername" value={personnel.discordUsername || 'N/A'} disabled />
+                    <Label htmlFor="discordUsername">Discord Reference</Label>
+                    <Input id="discordUsername" value={personnel.discordUsername || 'N/A'} disabled className="bg-black/20" />
                 </div>
                 <FormField
                     control={fireForm.control}
                     name="reason"
                     render={({ field }) => (
                         <FormItem>
-                            <Label>Reason for Firing</Label>
+                            <Label>Reason for Termination</Label>
                             <FormControl>
-                                <Textarea placeholder="Provide a detailed reason..." {...field} />
+                                <Textarea placeholder="Provide a detailed reason for the personnel archive..." {...field} className="bg-white/5 border-white/10 min-h-[100px]" />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -424,8 +411,8 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
                 />
                 <DialogFooter>
                     <Button type="button" variant="ghost" onClick={() => setFireDialogOpen(false)}>Cancel</Button>
-                    <Button type="submit" variant="destructive" disabled={isFiring}>
-                    {isFiring ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Fire"}
+                    <Button type="submit" variant="destructive" disabled={isFiring} className="font-black">
+                    {isFiring ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Termination"}
                     </Button>
                 </DialogFooter>
             </form>
@@ -435,34 +422,34 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
+          <Button variant="ghost" className="h-8 w-8 p-0 rounded-full hover:bg-white/5">
             <span className="sr-only">Open menu</span>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={handlePromote} disabled={!canPromote || isPromoting}>
+        <DropdownMenuContent align="end" className="glass-card min-w-[200px]">
+          <DropdownMenuLabel className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60">Personnel Actions</DropdownMenuLabel>
+          <DropdownMenuItem onClick={handlePromote} disabled={!canPromote || isPromoting} className="gap-2">
             {isPromoting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowUp className="mr-2 h-4 w-4 text-green-500" />}
-            <span>Promote</span>
+            <span className="font-bold">Promote</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleDemote} disabled={!canDemote || isDemoting}>
+          <DropdownMenuItem onClick={handleDemote} disabled={!canDemote || isDemoting} className="gap-2">
             {isDemoting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowDown className="mr-2 h-4 w-4 text-orange-500" />}
-            <span>Demote</span>
+            <span className="font-bold">Demote</span>
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setStatusDialogOpen(true)}>
-            <ShieldHalf className="mr-2 h-4 w-4" />
+          <DropdownMenuSeparator className="bg-white/5" />
+          <DropdownMenuItem onSelect={() => setStatusDialogOpen(true)} className="gap-2">
+            <ShieldHalf className="mr-2 h-4 w-4 text-primary opacity-70" />
             <span>Update Status</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setEditDialogOpen(true)}>
-            <Edit className="mr-2 h-4 w-4" />
+          <DropdownMenuItem onSelect={() => setEditDialogOpen(true)} className="gap-2">
+            <Edit className="mr-2 h-4 w-4 text-primary opacity-70" />
             <span>Edit Details</span>
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setFireDialogOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+          <DropdownMenuSeparator className="bg-white/5" />
+          <DropdownMenuItem onSelect={() => setFireDialogOpen(true)} className="text-destructive focus:bg-destructive/10 focus:text-destructive gap-2 font-black">
             <UserX className="mr-2 h-4 w-4" />
-            <span>Fire</span>
+            <span>Fire Personnel</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
