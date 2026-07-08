@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -6,7 +5,7 @@ import { notFound, useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, Shield, Briefcase, Star, Activity, KeySquare, Image as ImageIcon, FileCheck2, Phone, Calendar, ClipboardCheck, CreditCard, Clock } from "lucide-react";
+import { User, Shield, Briefcase, Star, Activity, KeySquare, Image as ImageIcon, FileCheck2, Phone, Calendar, ClipboardCheck, CreditCard, Clock, ShieldHalf } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getAuditLogs, getUserByUsername, getReviewedApplicationsCount, getOrdersByStaff } from "@/lib/actions";
 import type { AppUser, Personnel, AuditLog, DetailedFarmOrder } from "@/lib/types";
@@ -19,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RefreshButton } from "@/components/layout/refresh-button";
+import { UpdateStatusDialog } from "@/components/roster/update-status-dialog";
+import { usePermissions } from "@/hooks/use-permissions";
 
 
 const getRoleClass = (role: string) => {
@@ -29,6 +30,7 @@ export default function UserProfilePage() {
   const params = useParams();
   const username = params.username as string;
   const decodedUsername = decodeURIComponent(username);
+  const { hasPermission } = usePermissions();
 
   const [user, setUser] = useState<AppUser | null>(null);
   const [personnelRecord, setPersonnelRecord] = useState<Personnel | null>(null);
@@ -103,6 +105,7 @@ export default function UserProfilePage() {
   }
   
   const isOwnProfile = loggedInUser === user.username;
+  const canUpdateStatus = isOwnProfile || hasPermission('MANAGE_EMPLOYEES');
   const userRoles = Array.isArray(user.roles) ? user.roles : [];
 
   return (
@@ -120,7 +123,16 @@ export default function UserProfilePage() {
                 </div>
             </div>
           </div>
-          <RefreshButton onRefresh={fetchData} />
+          <div className="flex items-center gap-2">
+              {personnelRecord && canUpdateStatus && (
+                  <UpdateStatusDialog 
+                    personnel={personnelRecord as Personnel} 
+                    currentUser={loggedInUser || "System"} 
+                    onSuccess={fetchData} 
+                  />
+              )}
+              <RefreshButton onRefresh={fetchData} />
+          </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -247,6 +259,24 @@ export default function UserProfilePage() {
                         </div>
                     </div>
                     
+                    {/* Status Display in Profile */}
+                    <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 col-span-full">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <ShieldHalf className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Operational Status</p>
+                            <div className="flex items-center justify-between">
+                                <span className="font-black text-xl text-foreground uppercase">{personnelRecord.status}</span>
+                                {personnelRecord.status === 'LOA' && personnelRecord.loa_until && (
+                                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                                        UNTIL {format(new Date(personnelRecord.loa_until), 'MMM dd, yyyy')}
+                                    </Badge>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Financial Identity Section */}
                     <div className="flex items-center gap-4 p-4 bg-primary/5 rounded-2xl border border-primary/10 col-span-full">
                         <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">

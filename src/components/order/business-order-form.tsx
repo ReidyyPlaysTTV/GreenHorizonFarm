@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, ShoppingBasket, Plus, Trash2, CheckCircle2, Building2, Receipt, Clock, AlertCircle } from "lucide-react";
+import { Loader2, ShoppingBasket, Plus, Trash2, CheckCircle2, Building2, Receipt, Clock, AlertCircle, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getManagerData } from "@/lib/actions/manager-actions";
 import { submitBusinessOrder } from "@/lib/actions/order-actions";
@@ -100,6 +100,18 @@ export function BusinessOrderForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
+        
+        {/* ROLEPLAY COMMITMENT WARNING */}
+        <Alert variant="warning" className="border-orange-500 border-2 bg-orange-950/40 p-6 animate-pulse">
+            <ShieldAlert className="h-8 w-8 text-orange-500" />
+            <AlertTitle className="text-xl font-black uppercase tracking-tighter text-orange-400 mb-2">Roleplay Protocol Required</AlertTitle>
+            <AlertDescription className="text-orange-200 font-black text-lg leading-tight">
+                JUST BECAUSE YOUR USING THIS FORM DOESN'T MEAN WE WILL RECEIVE THE ORDER. PLEASE MAKE SURE TO ORDER THIS IN CHARACTER. 
+                WE DO NOT WANT TO PROMOTE NOT ROLEPLAYING BECAUSE OF AN EXTERNAL APP. PLEASE MAKE SURE TO ROLEPLAY OUT IC THAT YOUR SUBMITTING THE ORDER. 
+                MANY THANKS!
+            </AlertDescription>
+        </Alert>
+
         <div className="grid gap-6 p-6 bg-white/5 rounded-3xl border border-white/5">
             <div className="flex flex-col gap-6">
                 <FormField

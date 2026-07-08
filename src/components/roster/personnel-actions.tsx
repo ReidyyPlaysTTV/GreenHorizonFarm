@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -8,9 +7,8 @@ import {
   demotePersonnel,
   firePersonnel,
   updatePersonnel,
-  updatePersonnelStatus,
 } from "@/lib/actions";
-import type { Personnel, PersonnelStatus, Rank } from "@/lib/types";
+import type { Personnel, Rank } from "@/lib/types";
 import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -50,6 +48,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "../ui/form"
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/use-permissions";
 import { staffRoles } from "@/lib/data";
+import { UpdateStatusDialog } from "./update-status-dialog";
 
 
 interface PersonnelActionsProps {
@@ -70,17 +69,6 @@ const editFormSchema = z.object({
   hireDate: z.date().optional(),
 });
 
-const statusFormSchema = z.object({
-    status: z.enum(['Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended']),
-    loaUntil: z.date().optional().nullable(),
-}).refine(data => data.status !== 'LOA' || !!data.loaUntil, {
-    message: "An end date is required for LOA.",
-    path: ["loaUntil"],
-});
-
-
-const statusOptions: PersonnelStatus[] = ['Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended'];
-
 export function PersonnelActions({ personnel }: PersonnelActionsProps) {
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
@@ -88,12 +76,10 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
   const [isDemoting, setIsDemoting] = useState(false);
   const [isFiring, setIsFiring] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [currentUser, setCurrentUser] = useState("System");
   
   const [isFireDialogOpen, setFireDialogOpen] = useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
-  const [isStatusDialogOpen, setStatusDialogOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -115,14 +101,6 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
       phoneNumber: personnel.phoneNumber || "",
       bankAccount: personnel.bankAccount || "",
       hireDate: personnel.hireDate ? new Date(personnel.hireDate) : undefined,
-    },
-  });
-
-  const statusForm = useForm<z.infer<typeof statusFormSchema>>({
-    resolver: zodResolver(statusFormSchema),
-    defaultValues: {
-      status: personnel.status,
-      loaUntil: personnel.loa_until ? new Date(personnel.loa_until) : null,
     },
   });
 
@@ -173,31 +151,11 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
     setIsEditing(false);
   };
   
-  const handleStatusSubmit = async (values: z.infer<typeof statusFormSchema>) => {
-    setIsUpdatingStatus(true);
-    const result = await updatePersonnelStatus({
-        personnelId: personnel.id,
-        status: values.status,
-        loaUntil: values.status === 'LOA' ? values.loaUntil : null,
-        user: currentUser,
-    });
-    if (result.success) {
-      toast({ title: "Success", description: result.message });
-      setStatusDialogOpen(false);
-    } else {
-      toast({ variant: "destructive", title: "Error", description: result.message });
-    }
-    setIsUpdatingStatus(false);
-  }
-
-
   const currentRankIndex = staffRoles.indexOf(personnel.rank as any);
   const canPromote = currentRankIndex > 0;
   const canDemote = currentRankIndex !== -1 && currentRankIndex < staffRoles.length - 1;
 
   const canManagePersonnel = hasPermission('MANAGE_EMPLOYEES');
-
-  const watchedStatus = statusForm.watch('status');
 
   if (!canManagePersonnel) {
     return null;
@@ -205,79 +163,6 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
 
   return (
     <>
-      <Dialog open={isStatusDialogOpen} onOpenChange={setStatusDialogOpen}>
-        <DialogContent className="glass-card">
-            <DialogHeader>
-                <DialogTitle className="text-xl font-black">Update Status: {personnel.name}</DialogTitle>
-            </DialogHeader>
-            <Form {...statusForm}>
-                <form onSubmit={statusForm.handleSubmit(handleStatusSubmit)} className="space-y-4">
-                    <FormField control={statusForm.control} name="status" render={({field}) => (
-                        <FormItem>
-                            <Label>Status</Label>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger className="bg-white/5 border-white/10"><SelectValue/></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage/>
-                        </FormItem>
-                    )}/>
-                    {watchedStatus === 'LOA' && (
-                        <FormField
-                            control={statusForm.control}
-                            name="loaUntil"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <Label>LOA End Date</Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button
-                                            variant={"outline"}
-                                            className={cn(
-                                                "w-full pl-3 text-left font-normal bg-white/5 border-white/10",
-                                                !field.value && "text-muted-foreground"
-                                            )}
-                                            >
-                                            {field.value ? (
-                                                format(field.value, "PPP")
-                                            ) : (
-                                                <span>Pick a date</span>
-                                            )}
-                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value ?? undefined}
-                                                onSelect={field.onChange}
-                                                disabled={(date) =>
-                                                    date < new Date()
-                                                }
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    )}
-                    <DialogFooter>
-                      <Button type="button" variant="ghost" onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
-                      <Button type="submit" disabled={isUpdatingStatus}>
-                            {isUpdatingStatus ? <Loader2 className="h-4 w-4 animate-spin"/> : "Update Status"}
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </Form>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[500px] glass-card">
             <DialogHeader>
@@ -437,10 +322,14 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
             <span className="font-bold">Demote</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-white/5" />
-          <DropdownMenuItem onSelect={() => setStatusDialogOpen(true)} className="gap-2">
-            <ShieldHalf className="mr-2 h-4 w-4 text-primary opacity-70" />
-            <span>Update Status</span>
-          </DropdownMenuItem>
+          
+          <UpdateStatusDialog personnel={personnel} currentUser={currentUser}>
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="gap-2">
+                <ShieldHalf className="mr-2 h-4 w-4 text-primary opacity-70" />
+                <span>Update Status</span>
+              </DropdownMenuItem>
+          </UpdateStatusDialog>
+
           <DropdownMenuItem onSelect={() => setEditDialogOpen(true)} className="gap-2">
             <Edit className="mr-2 h-4 w-4 text-primary opacity-70" />
             <span>Edit Details</span>
