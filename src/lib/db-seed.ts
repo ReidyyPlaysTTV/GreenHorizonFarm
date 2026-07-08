@@ -31,7 +31,7 @@ export async function seedDatabase(pool: Pool) {
                 [
                     leonId, 
                     'Leon Green', 
-                    'Katarina1997', 
+                    'Katarina97', 
                     JSON.stringify([...new Set(initialRoles)]), 
                     'https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png',
                     'Active'

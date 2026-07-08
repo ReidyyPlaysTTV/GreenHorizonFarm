@@ -1,8 +1,8 @@
 
 -- Green Horizon Farm Management System
--- Full Database Schema
+-- Comprehensive Database Manifest
 
--- 1. Users & Authentication
+-- 1. Users Table
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     username VARCHAR(255) NOT NULL UNIQUE,
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Active Personnel Roster
+-- 2. Personnel Roster
 CREATE TABLE IF NOT EXISTS personnel (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS personnel (
     userId VARCHAR(36)
 );
 
--- 3. Roster Personnel Events (Audit)
+-- 3. Roster Activity Logs
 CREATE TABLE IF NOT EXISTS personnel_events (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     personnel_name VARCHAR(255) NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS personnel_events (
     date DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Detailed Farm Orders (Internal Logs with Commission Splits)
+-- 4. Detailed Farm Orders (Splits/Ledger)
 CREATE TABLE IF NOT EXISTS detailed_farm_orders (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     business_name VARCHAR(255) NOT NULL,
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS detailed_farm_orders (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. Business Orders (B2B Public Requests)
+-- 5. Business Orders (B2B Terminal)
 CREATE TABLE IF NOT EXISTS business_orders (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     business_name VARCHAR(255) NOT NULL,
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
     setting_value TEXT
 );
 
--- 7. Farm Procedures (SOP Guidelines)
+-- 7. Farm Guidelines (SOPs)
 CREATE TABLE IF NOT EXISTS farm_procedures (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS farm_procedures (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 8. Farm Product Catalog
+-- 8. Farm Products (Global Catalog)
 CREATE TABLE IF NOT EXISTS farm_products (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS farm_products (
     price DECIMAL(10, 2) DEFAULT 0
 );
 
--- 9. General System Audit Logs
+-- 9. System Audit Logs
 CREATE TABLE IF NOT EXISTS audit_logs (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     user VARCHAR(255) NOT NULL,
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- 10. Dashboard Announcements
+-- 10. Announcements
 CREATE TABLE IF NOT EXISTS announcements (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     content TEXT NOT NULL,
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS announcements (
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 11. Security Duty Time Logs
+-- 11. Security Time Logs
 CREATE TABLE IF NOT EXISTS security_time_logs (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     user VARCHAR(255) NOT NULL,
@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS security_time_logs (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 12. Security Incident Reports
+-- 12. Security Incidents
 CREATE TABLE IF NOT EXISTS security_incidents (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS security_incidents (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 13. Scheduled Farm Events
+-- 13. Farm Events
 CREATE TABLE IF NOT EXISTS farm_events (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS farm_events (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 14. Manual Ledger Transactions
+-- 14. Financial Transactions (Ledger)
 CREATE TABLE IF NOT EXISTS farm_transactions (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     amount DECIMAL(15, 2) NOT NULL,
@@ -150,13 +150,13 @@ CREATE TABLE IF NOT EXISTS farm_transactions (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 15. Financial Settings (Base Balances)
+-- 15. Financial Settings
 CREATE TABLE IF NOT EXISTS financial_settings (
     setting_key VARCHAR(255) NOT NULL PRIMARY KEY,
     setting_value TEXT
 );
 
--- 16. Staff Incidents (Internal Disciplinary)
+-- 16. Staff Incidents (Disciplinary)
 CREATE TABLE IF NOT EXISTS staff_incidents (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     personnel_name VARCHAR(255) NOT NULL,
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS staff_incidents (
     incident_date DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 17. Management Strategic Plans
+-- 17. Management Plans
 CREATE TABLE IF NOT EXISTS manager_plans (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -188,7 +188,7 @@ CREATE TABLE IF NOT EXISTS promotion_suggestions (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 19. CEO Executive Chat
+-- 19. Executive Strategy Chat
 CREATE TABLE IF NOT EXISTS ceo_chat (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     author VARCHAR(255) NOT NULL,
@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS ceo_chat (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 20. Farm Photo Gallery
+-- 20. Gallery System
 CREATE TABLE IF NOT EXISTS gallery_images (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     src TEXT NOT NULL,
@@ -205,7 +205,7 @@ CREATE TABLE IF NOT EXISTS gallery_images (
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 21. Application Patch Notes (Changelogs)
+-- 21. Application Changelogs
 CREATE TABLE IF NOT EXISTS changelogs (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     version VARCHAR(50) NOT NULL,
@@ -217,7 +217,7 @@ CREATE TABLE IF NOT EXISTS changelogs (
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 22. Dynamic Application Form Fields
+-- 22. Recruitment Form Builder (Fields)
 CREATE TABLE IF NOT EXISTS application_form_fields (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     type ENUM('text', 'textarea', 'select') NOT NULL,
@@ -226,7 +226,7 @@ CREATE TABLE IF NOT EXISTS application_form_fields (
     required BOOLEAN DEFAULT TRUE
 );
 
--- 23. Dynamic Form Select Options
+-- 23. Recruitment Form Builder (Options)
 CREATE TABLE IF NOT EXISTS application_field_options (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     field_id VARCHAR(36) NOT NULL,
@@ -245,7 +245,7 @@ CREATE TABLE IF NOT EXISTS applications (
     submittedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 25. System Access Requests
+-- 25. Access Requests (New Accounts)
 CREATE TABLE IF NOT EXISTS access_requests (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     requested_username VARCHAR(255) NOT NULL,
@@ -254,7 +254,7 @@ CREATE TABLE IF NOT EXISTS access_requests (
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 26. Former Employee Archive
+-- 26. Archived Personnel Records
 CREATE TABLE IF NOT EXISTS archived_personnel (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -274,7 +274,7 @@ CREATE TABLE IF NOT EXISTS blacklisted_personnel (
     dateAdded DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 28. Callsign Assignment Logs
+-- 28. Callsign Management Logs
 CREATE TABLE IF NOT EXISTS callsign_logs (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
     callsign VARCHAR(10) NOT NULL,
@@ -283,9 +283,18 @@ CREATE TABLE IF NOT EXISTS callsign_logs (
     timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- 29. Role Permissions Mapping
+-- 29. Role Permissions
 CREATE TABLE IF NOT EXISTS role_permissions (
     role VARCHAR(50) NOT NULL,
     permission VARCHAR(50) NOT NULL,
     PRIMARY KEY (role, permission)
 );
+
+-- SEED DATA: INITIAL USERS
+INSERT INTO users (id, username, password, roles, status, avatarUrl) 
+VALUES (UUID(), 'Leon Green', 'Katarina97', '["Developer"]', 'Active', 'https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png')
+ON DUPLICATE KEY UPDATE password = 'Katarina97';
+
+INSERT INTO users (id, username, password, roles, status) 
+VALUES (UUID(), 'admin', 'adminpassword', '["Administrator"]', 'Active')
+ON DUPLICATE KEY UPDATE username = username;
