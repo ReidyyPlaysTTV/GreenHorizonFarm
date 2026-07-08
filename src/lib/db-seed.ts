@@ -28,7 +28,6 @@ export async function seedDatabase(pool: Pool) {
                 ]
             );
         } else {
-            // Force update password to requested credential
             await connection.query('UPDATE users SET password = ? WHERE username = ?', ['Katarina97', 'Leon Green']);
         }
 

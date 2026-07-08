@@ -25,20 +25,17 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
             const loggedInUsername = typeof window !== 'undefined' ? localStorage.getItem("loggedInUser") : null;
             
             if (loggedInUsername) {
-                // If the user is a known master account, set immediately to prevent lockout
                 if (loggedInUsername === 'Leon Green' || loggedInUsername === 'admin') {
                     setUserRoles(["Developer", "Administrator", "CEO"]);
                     return;
                 }
 
                 try {
-                    // Optimized: Fetch ONLY the current user data rather than the entire user list
                     const user = await getUserByUsername(loggedInUsername);
                     
                     if (user) {
                         setUserRoles(user.roles);
                     } else {
-                        // Fallback if record is missing but logged in
                         setUserRoles(["User"]);
                     }
                 } catch (e) {
@@ -54,12 +51,10 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
     const hasPermission = (permission: Permission) => {
         if (!userRoles || !permissionsMap) return false;
         
-        // Universal Admin/Dev Check
         if (userRoles.includes("CEO") || userRoles.includes("Administrator") || userRoles.includes("Developer")) {
             return true;
         }
 
-        // Check if any of the user's roles have the required permission
         return userRoles.some(role => {
             const rolePermissions = permissionsMap[role as Role];
             return rolePermissions?.includes(permission);

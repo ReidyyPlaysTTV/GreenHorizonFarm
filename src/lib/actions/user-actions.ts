@@ -54,7 +54,6 @@ export async function getUsers(): Promise<AppUser[]> {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
-            // Optimized query using LEFT JOIN to eliminate N+1 fetches
             const [rows]: any = await connection.query(`
                 SELECT 
                     u.id, u.username, u.roles, u.createdAt, u.avatarUrl, u.status,

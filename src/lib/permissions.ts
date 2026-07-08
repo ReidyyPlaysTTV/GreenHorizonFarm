@@ -4,14 +4,10 @@ import type { Role, Permission } from "./types";
 import db from "./db";
 import { initialPermissionsMap } from './data';
 
-// Simple in-memory cache for permissions to avoid repeated DB hits within a short timeframe
 let permissionsCache: Record<Role, Permission[]> | null = null;
 let lastCacheUpdate = 0;
-const CACHE_TTL = 30000; // 30 seconds
+const CACHE_TTL = 30000;
 
-/**
- * Internal helper to fetch permissions with resilience for lookups.
- */
 async function getInternalPermissionsMap(): Promise<Record<Role, Permission[]>> {
     const now = Date.now();
     if (permissionsCache && (now - lastCacheUpdate < CACHE_TTL)) {
@@ -42,7 +38,6 @@ async function getInternalPermissionsMap(): Promise<Record<Role, Permission[]>> 
 
         const map = await Promise.race([fetchPromise, timeoutPromise]);
         
-        // Safety: Ensure high-level roles always have full permissions
         const allPerms = Object.keys(initialPermissionsMap).flatMap(r => initialPermissionsMap[r as Role]);
         const uniquePerms = [...new Set(allPerms)] as Permission[];
         
@@ -65,7 +60,6 @@ export async function checkPermissions(username: string, permission: Permission)
 
     const decodedUsername = decodeURIComponent(username);
 
-    // Bypasses for master accounts to prevent lockout during DB instability
     if (decodedUsername === 'Leon Green' || decodedUsername === 'admin') {
         return true;
     }

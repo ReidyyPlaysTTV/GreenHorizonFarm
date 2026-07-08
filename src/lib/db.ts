@@ -3,7 +3,6 @@ import mysql from 'mysql2/promise';
 import type { Pool } from 'mysql2/promise';
 import { seedDatabase } from './db-seed';
 
-// Connection URI for ZAP-Hosting MariaDB
 const dbUri = 'mysql://zap1311701-1:gFtXgwwIs09GtYtx@mysql-mariadb-20-104.zap-srv.com:3306/zap1311701-1';
 
 let pool: Pool;
@@ -14,11 +13,11 @@ try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 5, 
-        maxIdle: 5,
+        connectionLimit: 10, 
+        maxIdle: 10,
         idleTimeout: 30000,
         queueLimit: 0,
-        connectTimeout: 5000, // 5 second connection timeout for stability
+        connectTimeout: 5000,
         acquireTimeout: 5000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
@@ -75,7 +74,7 @@ async function createFarmTables(connection: any) {
                 collaborators JSON,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )`,
-             `CREATE TABLE IF NOT EXISTS business_orders (
+            `CREATE TABLE IF NOT EXISTS business_orders (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 business_name VARCHAR(255) NOT NULL,
                 contact_info VARCHAR(255),
@@ -279,14 +278,11 @@ export async function ensureDbInitialized(force: boolean = false) {
         let connection;
         try {
             connection = await pool.getConnection();
-            
-            // Heartbeat/Ready Check: Fast existence check
             const [tables]: any = await connection.query("SHOW TABLES LIKE 'users'");
             if (!tables || tables.length === 0) {
                 await createFarmTables(connection);
                 await seedDatabase(pool);
             }
-            
             isInitialized = true;
             return pool;
         } catch (err: any) {

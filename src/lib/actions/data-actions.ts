@@ -9,7 +9,6 @@ export async function getPersonnel(): Promise<Personnel[]> {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
-            // Optimized query: Single pass with subquery for order count
             const [rows] = await connection.query(`
                 SELECT 
                     p.*,

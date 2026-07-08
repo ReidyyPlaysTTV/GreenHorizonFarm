@@ -39,7 +39,6 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    // Safety timeout to prevent neverending load if DB hangs
     const timeoutTimer = setTimeout(() => {
         if (isLoading) {
             setIsLoading(false);
@@ -47,10 +46,7 @@ export default function AdminPage() {
         }
     }, 7000);
 
-    // Wait until the user's roles have been determined.
-    if (userRoles === null) {
-      return;
-    }
+    if (userRoles === null) return;
 
     const canAccess = hasPermission('ACCESS_ADMIN_PANEL');
     if (!canAccess) {
