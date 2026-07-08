@@ -30,6 +30,9 @@ async function sendAccessRequestWebhook(username: string) {
     } catch (e) { console.error("Access Request Webhook Failed", e); }
 }
 
+/**
+ * Diagnostic tool for testing database connectivity.
+ */
 export async function testDatabaseConnection() {
     const startTime = Date.now();
     try {
@@ -42,9 +45,13 @@ export async function testDatabaseConnection() {
             if (Array.isArray(rows) && (rows[0] as any).ping === 1) {
                 return { success: true, message: `Database Connected Successfully. Latency: ${latency}ms` };
             }
-            return { success: false, message: 'Ping failed.' };
-        } finally { connection.release(); }
-    } catch (error: any) { return { success: false, message: `Connection Error: ${error.message}` }; }
+            return { success: false, message: 'Ping failed: Database returned unexpected results.' };
+        } finally { 
+            connection.release(); 
+        }
+    } catch (error: any) { 
+        return { success: false, message: `Connection Error: ${error.message}. Please check ZAP-Hosting firewall or status.` }; 
+    }
 }
 
 export async function getUsers(): Promise<AppUser[]> {

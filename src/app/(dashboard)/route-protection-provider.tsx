@@ -5,17 +5,22 @@ import { getMaintenanceMode } from "@/lib/actions/settings-actions";
 
 /**
  * RouteProtectionProvider handles high-level system states like Maintenance Mode.
- * Improved resilience for unstable database connectivity.
+ * Improved resilience for unstable database connectivity with internal timeouts.
  */
 export async function RouteProtectionProvider({ children }: { children: React.ReactNode }) {
     let isMaintenanceMode = false;
     
     try {
-        // Fetch maintenance status with a safe fallback
-        isMaintenanceMode = await getMaintenanceMode();
+        // We race the maintenance check against a 3-second timeout to prevent layout hangs.
+        const maintenancePromise = getMaintenanceMode();
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('TIMEOUT')), 3000)
+        );
+        
+        isMaintenanceMode = await Promise.race([maintenancePromise, timeoutPromise]) as boolean;
     } catch (error) {
-        // If DB fails, we assume maintenance is OFF to allow the app to attempt loading
-        console.warn("RouteProtectionProvider: Maintenance check failed, bypassing protection.");
+        // If DB fails or times out, we assume maintenance is OFF to allow the app to attempt loading UI
+        console.warn("RouteProtectionProvider: Maintenance check timed out or failed, bypassing protection.");
     }
 
     if (isMaintenanceMode) {
@@ -25,7 +30,6 @@ export async function RouteProtectionProvider({ children }: { children: React.Re
             ? cookieHeader.split('; ').find(row => row.startsWith('loggedInUser='))?.split('=')[1]
             : undefined;
             
-        // Decode user with safety check
         let decodedUser = '';
         if (loggedInUserCookie) {
             try {

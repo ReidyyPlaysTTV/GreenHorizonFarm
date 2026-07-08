@@ -15,7 +15,7 @@ try {
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
-        connectTimeout: 10000, // Increased to 10s for more stability
+        connectTimeout: 10000, 
         acquireTimeout: 10000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
@@ -27,6 +27,7 @@ try {
 
 async function createFarmTables(connection: any) {
     try {
+        // 1. Users
         await connection.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -39,6 +40,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 2. Personnel (Division removed from requirements)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS personnel (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -49,7 +51,7 @@ async function createFarmTables(connection: any) {
                 phone_number VARCHAR(20),
                 bank_account VARCHAR(50),
                 hire_date DATE DEFAULT (CURRENT_DATE),
-                department VARCHAR(255),
+                department VARCHAR(255) DEFAULT 'General',
                 status ENUM('Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended') NOT NULL DEFAULT 'Active',
                 loa_until DATE,
                 is_rehired BOOLEAN NOT NULL DEFAULT FALSE,
@@ -57,6 +59,18 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 3. Roster Audit Logs
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS personnel_events (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                personnel_name VARCHAR(255) NOT NULL,
+                event_type ENUM('Hired', 'Fired', 'Promoted', 'Demoted', 'Rehired') NOT NULL,
+                description TEXT,
+                date DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // 4. Detailed Farm Orders (Splits)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS detailed_farm_orders (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -73,6 +87,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 5. Business Orders (B2B)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS business_orders (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -84,6 +99,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 6. App Settings
         await connection.query(`
             CREATE TABLE IF NOT EXISTS app_settings (
                 setting_key VARCHAR(255) NOT NULL PRIMARY KEY,
@@ -91,6 +107,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 7. Farm Guidelines (SOPs)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_procedures (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -103,6 +120,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 8. Farm Products (Catalog)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_products (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -112,6 +130,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 9. Audit Logs
         await connection.query(`
             CREATE TABLE IF NOT EXISTS audit_logs (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -122,6 +141,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 10. Announcements
         await connection.query(`
             CREATE TABLE IF NOT EXISTS announcements (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -132,6 +152,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 11. Security Logs
         await connection.query(`
             CREATE TABLE IF NOT EXISTS security_time_logs (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -143,6 +164,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 12. Security Incidents
         await connection.query(`
             CREATE TABLE IF NOT EXISTS security_incidents (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -156,6 +178,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 13. Farm Events
         await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_events (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -168,6 +191,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 14. Ledger Transactions
         await connection.query(`
             CREATE TABLE IF NOT EXISTS farm_transactions (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -179,6 +203,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 15. Financial Base Settings
         await connection.query(`
             CREATE TABLE IF NOT EXISTS financial_settings (
                 setting_key VARCHAR(255) NOT NULL PRIMARY KEY,
@@ -186,6 +211,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 16. Staff Incidents (Disciplinary)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS staff_incidents (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -196,6 +222,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 17. Management Plans
         await connection.query(`
             CREATE TABLE IF NOT EXISTS manager_plans (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -208,6 +235,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 18. Promotion Suggestions
         await connection.query(`
             CREATE TABLE IF NOT EXISTS promotion_suggestions (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -221,6 +249,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 19. CEO Chat
         await connection.query(`
             CREATE TABLE IF NOT EXISTS ceo_chat (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -230,6 +259,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 20. Photo Gallery
         await connection.query(`
             CREATE TABLE IF NOT EXISTS gallery_images (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -240,6 +270,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 21. App Changelogs
         await connection.query(`
             CREATE TABLE IF NOT EXISTS changelogs (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -253,6 +284,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 22. Dynamic Form Fields
         await connection.query(`
             CREATE TABLE IF NOT EXISTS application_form_fields (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -263,6 +295,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 23. Dynamic Form Options
         await connection.query(`
             CREATE TABLE IF NOT EXISTS application_field_options (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -272,6 +305,20 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 24. Recruitment Applications
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS applications (
+                id VARCHAR(50) NOT NULL PRIMARY KEY,
+                responses JSON NOT NULL,
+                status ENUM('Pending', 'Under Review', 'Approved', 'Rejected') DEFAULT 'Pending',
+                reviewer_comment TEXT,
+                reviewer_id VARCHAR(36),
+                reviewedAt DATETIME,
+                submittedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // 25. Access Requests
         await connection.query(`
             CREATE TABLE IF NOT EXISTS access_requests (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -282,6 +329,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 26. Archived Personnel
         await connection.query(`
             CREATE TABLE IF NOT EXISTS archived_personnel (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -294,6 +342,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 27. Blacklist
         await connection.query(`
             CREATE TABLE IF NOT EXISTS blacklisted_personnel (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -304,8 +353,28 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        // 28. Callsign Logs
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS callsign_logs (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                callsign VARCHAR(10) NOT NULL,
+                personnel_name VARCHAR(255) NOT NULL,
+                action ENUM('Assigned', 'Unassigned') NOT NULL,
+                timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // 29. Permissions Persistence
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS role_permissions (
+                role VARCHAR(50) NOT NULL,
+                permission VARCHAR(50) NOT NULL,
+                PRIMARY KEY (role, permission)
+            );
+        `);
+
     } catch (error) {
-        console.error("Failed to create farm tables:", error);
+        console.error("Failed to execute SQL schema setup:", error);
     }
 }
 
@@ -323,7 +392,7 @@ export async function ensureDbInitialized(force: boolean = false) {
             connection.release();
         }
     } catch (err: any) {
-        console.error("DB Connection Attempt Failed:", err.message);
+        console.error("DB Initialization Failure:", err.message);
         throw err;
     }
 }
