@@ -11,10 +11,10 @@ export async function RouteProtectionProvider({ children }: { children: React.Re
     let isMaintenanceMode = false;
     
     try {
-        // Race the DB check against a tight timeout
+        // Race the DB check against a tight timeout to keep app snappy
         const maintenancePromise = getMaintenanceMode();
         const timeoutPromise = new Promise<boolean>((resolve) => 
-            setTimeout(() => resolve(false), 800) // 800ms fail-fast for navigation snappiness
+            setTimeout(() => resolve(false), 400) // 400ms fail-fast for buttery smooth navigation
         );
         
         isMaintenanceMode = await Promise.race([maintenancePromise, timeoutPromise]);

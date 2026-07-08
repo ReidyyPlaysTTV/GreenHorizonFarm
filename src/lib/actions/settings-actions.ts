@@ -11,6 +11,9 @@ const APPLICATIONS_OPEN_KEY = 'applications_open';
 const LOGIN_BACKGROUND_IMAGE_KEY = 'login_background_image';
 const MAINTENANCE_MODE_KEY = 'maintenance_mode';
 
+// Memory cache for maintenance mode to prevent blocking navigation
+let maintenanceCache: { value: boolean, timestamp: number } | null = null;
+const MAINTENANCE_CACHE_TTL = 30000; // 30 seconds
 
 async function createSettingsTableIfNeeded(connection: any) {
     await connection.query(`
@@ -226,16 +229,21 @@ export async function updateLoginBackgroundImage(newUrl: string, user: string) {
 }
 
 export async function getMaintenanceMode(): Promise<boolean> {
+    const now = Date.now();
+    if (maintenanceCache && (now - maintenanceCache.timestamp < MAINTENANCE_CACHE_TTL)) {
+        return maintenanceCache.value;
+    }
+
     try {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
             await createSettingsTableIfNeeded(connection);
             const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [MAINTENANCE_MODE_KEY]);
-            if (Array.isArray(rows) && rows.length > 0) {
-                return (rows[0] as any).setting_value === 'true';
-            }
-            return false;
+            const isMaintenance = Array.isArray(rows) && rows.length > 0 ? (rows[0] as any).setting_value === 'true' : false;
+            
+            maintenanceCache = { value: isMaintenance, timestamp: now };
+            return isMaintenance;
         } finally {
             connection.release();
         }
@@ -267,6 +275,7 @@ export async function updateMaintenanceMode(isMaintenance: boolean, user: string
             await logUserAction(user, 'Update Settings', logMessage, connection);
             await connection.commit();
             
+            maintenanceCache = { value: isMaintenance, timestamp: Date.now() };
             revalidatePath('/admin');
             return { success: true };
         } catch (error) {

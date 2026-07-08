@@ -13,11 +13,11 @@ try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 10, // Reduced to prevent overwhelming slow DB
-        maxIdle: 10,
-        idleTimeout: 60000, 
+        connectionLimit: 15, // Balanced limit for ZAP resources
+        maxIdle: 15,
+        idleTimeout: 30000, // Faster recycle of idle connections
         queueLimit: 0,
-        connectTimeout: 5000, // Fail fast on initial connection
+        connectTimeout: 5000, 
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });
@@ -284,7 +284,7 @@ export async function ensureDbInitialized(force: boolean = false) {
     initPromise = (async () => {
         let connection;
         try {
-            // High-resilience handshake
+            // High-resilience handshake with timeout
             connection = await pool.getConnection();
             
             // Check for existence of core table with short timeout
