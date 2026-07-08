@@ -116,7 +116,10 @@ export {
     submitBusinessOrder,
     getPendingBusinessOrders,
     getExpiredBusinessOrders,
-    cancelBusinessOrder
+    cancelBusinessOrder,
+    getActiveOrders,
+    completeDetailedOrder,
+    cancelDetailedOrder
 } from './actions/order-actions';
 
 export {

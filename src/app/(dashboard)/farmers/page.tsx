@@ -5,9 +5,9 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Sprout, Truck, DollarSign, Clock, Tag, Users, AlertTriangle } from "lucide-react";
+import { Sprout, Truck, DollarSign, Clock, Tag, Users, AlertTriangle, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { AddOrderForm } from "@/components/farmers/add-order-form";
-import { getDetailedOrders, getExpiredBusinessOrders } from "@/lib/actions";
+import { getDetailedOrders, getExpiredBusinessOrders, getActiveOrders, completeDetailedOrder, cancelDetailedOrder } from "@/lib/actions";
 import type { DetailedFarmOrder, BusinessOrder } from "@/lib/types";
 import { formatDistanceToNow, subDays, isAfter, format } from "date-fns";
 import { RefreshButton } from "@/components/layout/refresh-button";
@@ -15,26 +15,51 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PendingOrders } from "@/components/farmers/pending-orders";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 export default function FarmersPortal() {
   const [orders, setOrders] = useState<DetailedFarmOrder[]>([]);
+  const [activeOrders, setActiveOrders] = useState<DetailedFarmOrder[]>([]);
   const [expiredOrders, setExpiredOrders] = useState<BusinessOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
 
   const fetchData = async () => {
     setLoading(true);
-    const [ordersData, expiredData] = await Promise.all([
+    const [ordersData, expiredData, activeData] = await Promise.all([
         getDetailedOrders(),
-        getExpiredBusinessOrders()
+        getExpiredBusinessOrders(),
+        getActiveOrders()
     ]);
     setOrders(ordersData);
     setExpiredOrders(expiredData);
+    setActiveOrders(activeData);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleFinalize = async (id: string) => {
+      setIsProcessing(prev => ({ ...prev, [id]: true }));
+      const user = localStorage.getItem('loggedInUser') || "System";
+      const res = await completeDetailedOrder(id, user);
+      if (res.success) {
+          toast({ title: "Operation Completed", description: "Billed and recorded in ledger." });
+          fetchData();
+      }
+      setIsProcessing(prev => ({ ...prev, [id]: false }));
+  };
+
+  const handleAbort = async (id: string) => {
+      if (!confirm("Are you sure you want to abort this operation?")) return;
+      const user = localStorage.getItem('loggedInUser') || "System";
+      await cancelDetailedOrder(id, user);
+      fetchData();
+  };
 
   const stats = useMemo(() => {
     const sevenDaysAgo = subDays(new Date(), 7);
@@ -62,9 +87,63 @@ export default function FarmersPortal() {
           <p className="text-muted-foreground mt-2 text-xl font-medium">Logistics control and production yield center.</p>
         </div>
         <div className="flex items-center gap-3">
-            <AddOrderForm />
+            <AddOrderForm onOrderStarted={fetchData} />
             <RefreshButton onRefresh={fetchData} />
         </div>
+      </div>
+
+      {/* Active Operations Section */}
+      <div className="space-y-6">
+          <h2 className="text-xl font-black uppercase tracking-widest text-orange-500 flex items-center gap-3">
+              <Truck className="h-5 w-5 animate-bounce" />
+              Ongoing Operations
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {activeOrders.map(ao => (
+                  <Card key={ao.id} className="border-orange-500/20 bg-orange-500/5 shadow-xl relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-2">
+                          <Badge variant="outline" className="text-[8px] border-orange-500/30 text-orange-500 animate-pulse">SECURITY ALERT ACTIVE</Badge>
+                      </div>
+                      <CardHeader className="pb-3">
+                          <CardTitle className="text-lg font-black text-white">{ao.business_name}</CardTitle>
+                          <CardDescription className="text-[10px] uppercase font-bold text-orange-200/60">Started by {ao.completed_by}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                          <div className="space-y-1.5">
+                              {ao.items_sold.map((item, i) => (
+                                  <div key={i} className="flex justify-between items-center text-xs p-2 bg-black/20 rounded-lg">
+                                      <span className="font-bold">{item.product_name}</span>
+                                      <span className="font-black text-orange-400">x{item.quantity}</span>
+                                  </div>
+                              ))}
+                          </div>
+                          <div className="flex gap-2">
+                              <Button 
+                                onClick={() => handleFinalize(ao.id)} 
+                                disabled={isProcessing[ao.id]}
+                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 font-bold h-10 gap-2"
+                              >
+                                  {isProcessing[ao.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                                  Finalize & Bill
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                onClick={() => handleAbort(ao.id)}
+                                className="h-10 w-10 border-destructive/20 text-destructive/60 hover:bg-destructive/10"
+                              >
+                                  <XCircle className="h-4 w-4" />
+                              </Button>
+                          </div>
+                      </CardContent>
+                  </Card>
+              ))}
+              {activeOrders.length === 0 && (
+                  <div className="col-span-full py-10 text-center border-2 border-dashed border-white/5 rounded-3xl opacity-20">
+                      <p className="text-xs font-black uppercase tracking-[0.3em]">No Active Field Operations</p>
+                  </div>
+              )}
+          </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -106,7 +185,7 @@ export default function FarmersPortal() {
           </TabsList>
           
           <TabsContent value="pending">
-              <PendingOrders />
+              <PendingOrders onAccept={fetchData} />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-8">

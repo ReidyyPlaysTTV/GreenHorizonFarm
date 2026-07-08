@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, PlusCircle, ShoppingCart, Trash2, Tag, Percent, Users, UserPlus, Building2 } from "lucide-react";
+import { Loader2, PlusCircle, ShoppingCart, Trash2, Tag, Percent, Users, UserPlus, Building2, PlayCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -53,10 +53,11 @@ const formSchema = z.object({
 
 interface AddOrderFormProps {
     businessOrder?: BusinessOrder;
+    onOrderStarted?: () => void;
     children?: React.ReactNode;
 }
 
-export function AddOrderForm({ businessOrder, children }: AddOrderFormProps) {
+export function AddOrderForm({ businessOrder, onOrderStarted, children }: AddOrderFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState<FarmProduct[]>([]);
@@ -85,7 +86,7 @@ export function AddOrderForm({ businessOrder, children }: AddOrderFormProps) {
       total_price: 0,
       logistics_used: false,
       employee_cut_value: 0,
-      employee_cut_percentage: 60, // Business 40, Employee 60
+      employee_cut_percentage: 60,
       collaborators: [],
     },
   });
@@ -141,9 +142,10 @@ export function AddOrderForm({ businessOrder, children }: AddOrderFormProps) {
         businessOrderId: businessOrder?.id
     });
     if (result.success) {
-      toast({ title: "Order Submitted", description: "Ledger updated with worker splits." });
+      toast({ title: "Operation Initialized", description: "Security alert broadcasted. Complete the order when finished." });
       setIsOpen(false);
       form.reset();
+      onOrderStarted?.();
     } else {
        toast({ variant: "destructive", title: "Error", description: result.message });
     }
@@ -156,18 +158,18 @@ export function AddOrderForm({ businessOrder, children }: AddOrderFormProps) {
         {children || (
             <Button size="lg" className="gap-2 h-16 text-lg font-bold rounded-2xl">
                 <PlusCircle className="h-6 w-6" />
-                Record Personal Sale
+                Initialize Field Operation
             </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-black flex items-center gap-2">
-            <ShoppingCart className="h-6 w-6 text-primary" />
-            {businessOrder ? `Fulfilling Order: ${businessOrder.business_name}` : 'Submit New Order'}
+            <PlayCircle className="h-6 w-6 text-orange-500" />
+            {businessOrder ? `Starting Order: ${businessOrder.business_name}` : 'Start New Operation'}
           </DialogTitle>
           <DialogDescription>
-            {businessOrder ? 'Process this pending business request.' : 'Record a farm sale and split commission with partners.'}
+            {businessOrder ? 'Process this requisition and alert security staff.' : 'Begin a supply operation. This will notify security of your current activity.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -204,15 +206,6 @@ export function AddOrderForm({ businessOrder, children }: AddOrderFormProps) {
                                     </FormItem>
                                 )}
                             />
-                        )}
-                        {selectedBusinessData && (
-                            <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-between">
-                                <div>
-                                    <p className="text-[10px] font-black uppercase text-muted-foreground">Partner Billing Info</p>
-                                    <p className="text-sm font-bold text-primary">Account: {selectedBusinessData.bank_account || 'NONE ON FILE'}</p>
-                                </div>
-                                <Badge variant="outline" className="text-[9px]">REGISTERED</Badge>
-                            </div>
                         )}
                     </div>
 
@@ -259,7 +252,6 @@ export function AddOrderForm({ businessOrder, children }: AddOrderFormProps) {
                             <FormLabel className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
                                 <Users className="h-4 w-4" /> Personnel Involved
                             </FormLabel>
-                            <Badge variant="secondary" className="bg-primary/20 text-primary">{totalWorkers} Staff</Badge>
                         </div>
                         <div className="space-y-2">
                             <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-between">
@@ -293,24 +285,6 @@ export function AddOrderForm({ businessOrder, children }: AddOrderFormProps) {
                             </div>
                         </div>
                     </div>
-
-                    <div className="bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/10 space-y-4">
-                        <div className="flex justify-between items-center text-xs">
-                            <span className="font-bold text-muted-foreground uppercase">Commission Structure</span>
-                            <span className="font-black text-emerald-500">60% STAFF SPLIT</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="text-center p-3 bg-black/20 rounded-xl">
-                                <p className="text-[10px] text-muted-foreground uppercase font-black">Staff Pool</p>
-                                <p className="text-lg font-black text-emerald-500">${(Number(form.watch('employee_cut_value')) || 0).toLocaleString()}</p>
-                            </div>
-                            <div className="text-center p-3 bg-black/20 rounded-xl">
-                                <p className="text-[10px] text-muted-foreground uppercase font-black">Per Person</p>
-                                <p className="text-lg font-black text-emerald-500">${cutPerPerson.toFixed(2)}</p>
-                            </div>
-                        </div>
-                        <p className="text-[9px] text-center text-muted-foreground italic">Business receives 40% (${(suggestedTotal * 0.4).toLocaleString()}) automatically.</p>
-                    </div>
                 </div>
             </div>
 
@@ -338,7 +312,6 @@ export function AddOrderForm({ businessOrder, children }: AddOrderFormProps) {
                         <FormItem>
                             <FormLabel className="font-black text-primary">Final Customer Total ($)</FormLabel>
                             <FormControl><Input className="text-2xl h-12 font-black border-primary/30" type="number" step="0.01" {...field} /></FormControl>
-                            <FormDescription className="text-[10px]">Reference Subtotal: ${subtotal.toLocaleString()}</FormDescription>
                             <FormMessage />
                         </FormItem>
                         )}
@@ -347,11 +320,9 @@ export function AddOrderForm({ businessOrder, children }: AddOrderFormProps) {
             </div>
 
             <DialogFooter className="pt-4 gap-4">
-              <Button type="button" variant="outline" onClick={() => {
-                  setIsOpen(false);
-              }}>Cancel</Button>
-              <Button type="submit" disabled={isLoading || fields.length === 0} className="bg-primary hover:bg-primary/90 font-black h-12 px-12 rounded-xl text-lg">
-                {isLoading ? <Loader2 className="animate-spin" /> : "Complete Transaction"}
+              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={isLoading || fields.length === 0} className="bg-orange-600 hover:bg-orange-700 font-black h-12 px-12 rounded-xl text-lg">
+                {isLoading ? <Loader2 className="animate-spin" /> : "Start Operation"}
               </Button>
             </DialogFooter>
           </form>

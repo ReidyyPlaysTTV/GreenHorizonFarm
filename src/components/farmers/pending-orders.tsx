@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, Clock, CheckCircle2, ChevronRight, Loader2, XCircle } from "lucide-react";
+import { Package, Clock, CheckCircle2, ChevronRight, Loader2, XCircle, Truck } from "lucide-react";
 import { getPendingBusinessOrders, cancelBusinessOrder } from "@/lib/actions/order-actions";
 import type { BusinessOrder } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
@@ -23,7 +23,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-export function PendingOrders() {
+interface PendingOrdersProps {
+    onAccept?: () => void;
+}
+
+export function PendingOrders({ onAccept }: PendingOrdersProps) {
     const [orders, setOrders] = useState<BusinessOrder[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState("System");
@@ -88,9 +92,13 @@ export function PendingOrders() {
                                 </div>
                                 
                                 <div className="grid grid-cols-2 gap-3">
-                                    <AddOrderForm businessOrder={order}>
+                                    <AddOrderForm businessOrder={order} onOrderStarted={() => {
+                                        fetchOrders();
+                                        onAccept?.();
+                                    }}>
                                         <Button className="w-full h-10 font-bold gap-2 bg-emerald-600 hover:bg-emerald-700">
-                                            Claim & Process
+                                            <Truck className="h-4 w-4" />
+                                            Process Job
                                         </Button>
                                     </AddOrderForm>
 

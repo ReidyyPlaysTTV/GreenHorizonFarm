@@ -110,22 +110,21 @@ export async function submitDetailedOrder(data: unknown) {
             await connection.query(
                 `INSERT INTO detailed_farm_orders (
                     id, business_name, items_sold, discount_amount, total_price, logistics_used, 
-                    employee_cut_value, employee_cut_percentage, completed_by, collaborators
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [id, business_name, JSON.stringify(items_sold), discount_amount, total_price, logistics_used, employee_cut_value, employee_cut_percentage, user, JSON.stringify(collaborators)]
+                    employee_cut_value, employee_cut_percentage, completed_by, collaborators, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [id, business_name, JSON.stringify(items_sold), discount_amount, total_price, logistics_used, employee_cut_value, employee_cut_percentage, user, JSON.stringify(collaborators), 'Active']
             );
 
             if (businessOrderId) {
-                await connection.query("UPDATE business_orders SET status = 'Completed' WHERE id = ?", [businessOrderId]);
+                await connection.query("UPDATE business_orders SET status = 'Accepted' WHERE id = ?", [businessOrderId]);
             }
 
-            await logUserAction(user, "Submit Order", `Submitted order for ${business_name}. Shared by ${collaborators.length + 1} staff.`, connection);
+            await logUserAction(user, "Start Operation", `Started supply operation for ${business_name}. Security alert issued.`, connection);
             await connection.commit();
-            await sendOrderWebhook(validation.data);
 
             revalidatePath('/farmers');
-            revalidatePath('/finances');
-            return { success: true, message: 'Order submitted successfully.' };
+            revalidatePath('/security');
+            return { success: true, message: 'Operation started. Security has been notified.' };
         } catch (error) {
             await connection.rollback();
             throw error;
@@ -137,12 +136,85 @@ export async function submitDetailedOrder(data: unknown) {
     }
 }
 
+export async function completeDetailedOrder(orderId: string, user: string) {
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        
+        const [rows]: any = await connection.query("SELECT * FROM detailed_farm_orders WHERE id = ?", [orderId]);
+        if (rows.length === 0) throw new Error("Order not found.");
+        const order = rows[0];
+
+        await connection.query("UPDATE detailed_farm_orders SET status = 'Completed' WHERE id = ?", [orderId]);
+        
+        await logUserAction(user, "Complete Operation", `Finalized supply run for ${order.business_name}. Billing recorded.`, connection);
+        
+        await connection.commit();
+        
+        // Notify Discord only on completion
+        const formattedOrder = {
+            ...order,
+            items_sold: JSON.parse(order.items_sold),
+            collaborators: JSON.parse(order.collaborators),
+            user: order.completed_by
+        };
+        await sendOrderWebhook(formattedOrder);
+
+        revalidatePath('/farmers');
+        revalidatePath('/security');
+        revalidatePath('/finances');
+        return { success: true, message: 'Operation completed and billed.' };
+    } catch (e) {
+        await connection.rollback();
+        return { success: false, message: 'Update failed.' };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function cancelDetailedOrder(orderId: string, user: string) {
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        await connection.query("UPDATE detailed_farm_orders SET status = 'Cancelled' WHERE id = ?", [orderId]);
+        await logUserAction(user, "Cancel Operation", `Aborted farm operation ID: ${orderId}`, connection);
+        await connection.commit();
+        revalidatePath('/farmers');
+        revalidatePath('/security');
+        return { success: true, message: 'Operation cancelled.' };
+    } finally {
+        connection.release();
+    }
+}
+
 export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
     try {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
-            const [rows] = await connection.query('SELECT * FROM detailed_farm_orders ORDER BY created_at DESC LIMIT 50');
+            const [rows] = await connection.query('SELECT * FROM detailed_farm_orders WHERE status = "Completed" ORDER BY created_at DESC LIMIT 50');
+            if (!Array.isArray(rows)) return [];
+            return (rows as any[]).map(row => ({
+                ...row,
+                items_sold: typeof row.items_sold === 'string' ? JSON.parse(row.items_sold) : (row.items_sold || []),
+                collaborators: typeof row.collaborators === 'string' ? JSON.parse(row.collaborators) : (row.collaborators || []),
+                logistics_used: !!row.logistics_used,
+                created_at: new Date(row.created_at)
+            }));
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        return [];
+    }
+}
+
+export async function getActiveOrders(): Promise<DetailedFarmOrder[]> {
+    try {
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            const [rows] = await connection.query('SELECT * FROM detailed_farm_orders WHERE status = "Active" ORDER BY created_at DESC');
             if (!Array.isArray(rows)) return [];
             return (rows as any[]).map(row => ({
                 ...row,
@@ -189,7 +261,6 @@ export async function submitBusinessOrder(data: unknown) {
                         [id, validation.data.business_name, JSON.stringify(validation.data.items), 'Pending']
                     );
                     
-                    // Alert logistics via Discord
                     await sendBusinessOrderWebhook(validation.data);
                     
                     return { success: true, orderId: id };
@@ -277,7 +348,7 @@ export async function getOrdersByStaff(name: string): Promise<DetailedFarmOrder[
         const connection = await db.getConnection();
         try {
             const [rows] = await connection.query(
-                "SELECT * FROM detailed_farm_orders WHERE completed_by = ? OR JSON_CONTAINS(collaborators, JSON_QUOTE(?)) ORDER BY created_at DESC LIMIT 20",
+                "SELECT * FROM detailed_farm_orders WHERE (completed_by = ? OR JSON_CONTAINS(collaborators, JSON_QUOTE(?))) AND status = 'Completed' ORDER BY created_at DESC LIMIT 20",
                 [name, name]
             );
             if (!Array.isArray(rows)) return [];

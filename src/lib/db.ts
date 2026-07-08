@@ -77,6 +77,7 @@ async function createFarmTables(connection: any) {
                 employee_cut_percentage INT DEFAULT 0,
                 completed_by VARCHAR(255) NOT NULL,
                 collaborators JSON,
+                status ENUM('Active', 'Completed', 'Cancelled') DEFAULT 'Completed',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )`,
             `CREATE TABLE IF NOT EXISTS business_orders (
@@ -270,6 +271,12 @@ async function createFarmTables(connection: any) {
         for (const query of tableQueries) {
             await connection.query(query);
         }
+        
+        // Dynamic column checks (for status in detailed orders)
+        try {
+            await connection.query("ALTER TABLE detailed_farm_orders ADD COLUMN IF NOT EXISTS status ENUM('Active', 'Completed', 'Cancelled') DEFAULT 'Completed'");
+        } catch (e) {}
+
     } catch (error) {
         console.error("SQL Schema execution failed:", error);
     }
@@ -296,7 +303,6 @@ export async function ensureDbInitialized(force: boolean = false) {
         } catch (err: any) {
             initPromise = null; 
             console.error("DB Readiness Check Failed (Will Retry):", err.message);
-            // Allow the server to proceed without crashing; the next call will retry init
             return pool;
         } finally {
             if (connection) connection.release();

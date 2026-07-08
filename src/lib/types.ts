@@ -83,7 +83,8 @@ export interface DetailedFarmOrder {
     employee_cut_value: number;
     employee_cut_percentage: number;
     completed_by: string;
-    collaborators: string[]; // Additional workers
+    collaborators: string[]; 
+    status: 'Active' | 'Completed' | 'Cancelled';
     created_at: Date;
 }
 

@@ -5,11 +5,11 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Clock, ShieldAlert, History, MapPin, User, Siren, Activity } from "lucide-react";
+import { Shield, Clock, ShieldAlert, History, MapPin, User, Siren, Activity, Truck, AlertTriangle } from "lucide-react";
 import { ClockHoursForm } from "@/components/security/clock-hours-form";
 import { ReportIncidentForm } from "@/components/security/report-incident-form";
-import { getSecurityIncidents, getSecurityTimeLogs } from "@/lib/actions";
-import type { SecurityIncident, SecurityTimeLog } from "@/lib/types";
+import { getSecurityIncidents, getSecurityTimeLogs, getActiveOrders } from "@/lib/actions";
+import type { SecurityIncident, SecurityTimeLog, DetailedFarmOrder } from "@/lib/types";
 import { formatDistanceToNow, format } from "date-fns";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,17 +19,20 @@ import { cn } from "@/lib/utils";
 export default function SecurityPortal() {
   const [incidents, setIncidents] = useState<SecurityIncident[]>([]);
   const [timeLogs, setTimeLogs] = useState<SecurityTimeLog[]>([]);
+  const [activeOps, setActiveOps] = useState<DetailedFarmOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-        const [incData, logsData] = await Promise.all([
+        const [incData, logsData, opsData] = await Promise.all([
             getSecurityIncidents(),
-            getSecurityTimeLogs()
+            getSecurityTimeLogs(),
+            getActiveOrders()
         ]);
         setIncidents(incData);
         setTimeLogs(logsData);
+        setActiveOps(opsData);
     } catch (error) {
         console.error("Failed to fetch security data:", error);
     } finally {
@@ -64,7 +67,7 @@ export default function SecurityPortal() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-3">
         <Card className="border-primary/10 shadow-lg bg-card/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Total Duty Hours</CardTitle>
@@ -86,7 +89,64 @@ export default function SecurityPortal() {
             <p className="text-xs text-muted-foreground mt-1">Security breaches reported today</p>
           </CardContent>
         </Card>
+
+        <Card className="border-orange-500/20 shadow-lg bg-orange-500/5">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-bold uppercase tracking-wider text-orange-400">Field Operations</CardTitle>
+                <Truck className="h-5 w-5 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-3xl font-black text-orange-400">{activeOps.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Staff currently in delivery phase</p>
+            </CardContent>
+        </Card>
       </div>
+
+      {/* Live Operations Alert for Security */}
+      <Card className="border-orange-500/30 bg-orange-500/10 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-500">
+          <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-orange-400 flex items-center gap-2 font-black uppercase tracking-tighter">
+                    <AlertTriangle className="h-5 w-5 animate-pulse" />
+                    Live Activity Monitoring
+                </CardTitle>
+                <CardDescription className="text-orange-200/60">Real-time alerts for ongoing supply operations across the territory.</CardDescription>
+              </div>
+          </CardHeader>
+          <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {activeOps.map(op => (
+                      <div key={op.id} className="p-4 bg-black/40 rounded-2xl border border-orange-500/20 space-y-3">
+                          <div className="flex justify-between items-start">
+                              <h4 className="font-black text-white uppercase tracking-tight">{op.business_name}</h4>
+                              <Badge className="bg-orange-500 text-black font-black text-[8px]">IN FIELD</Badge>
+                          </div>
+                          <div className="space-y-1">
+                              <div className="flex items-center gap-2 text-[10px] font-bold text-orange-200/80">
+                                  <User className="h-3 w-3" />
+                                  Lead: {op.completed_by}
+                              </div>
+                              {op.collaborators.length > 0 && (
+                                  <div className="flex items-center gap-2 text-[10px] font-bold text-orange-200/60">
+                                      <Users className="h-3 w-3" />
+                                      Team: {op.collaborators.join(", ")}
+                                  </div>
+                              )}
+                          </div>
+                          <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                              <span className="text-[9px] font-bold text-muted-foreground uppercase">Started {formatDistanceToNow(op.created_at, { addSuffix: true })}</span>
+                              <Badge variant="outline" className="text-[8px] border-orange-500/40 text-orange-400">PRIORITY 2</Badge>
+                          </div>
+                      </div>
+                  ))}
+                  {activeOps.length === 0 && (
+                      <div className="col-span-full py-8 text-center text-orange-200/20 font-black uppercase tracking-[0.4em] text-xs">
+                          No active farm operations detected
+                      </div>
+                  )}
+              </div>
+          </CardContent>
+      </Card>
 
       <div className="grid gap-8 lg:grid-cols-3">
         <Card className="lg:col-span-2 border-primary/10">
