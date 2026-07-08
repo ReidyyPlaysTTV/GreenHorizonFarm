@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, ShoppingBasket, Plus, Trash2, CheckCircle2, Building2, Receipt, Clock, AlertTriangle } from "lucide-react";
+import { Loader2, ShoppingBasket, Plus, Trash2, CheckCircle2, Building2, Receipt, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getManagerData } from "@/lib/actions/manager-actions";
 import { submitBusinessOrder } from "@/lib/actions/order-actions";
@@ -20,7 +20,6 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 const formSchema = z.object({
   business_name: z.string().min(1, "Company name is required."),
-  contact_info: z.string().optional(),
   items: z.array(z.object({
       product_id: z.string().min(1, "Select product"),
       product_name: z.string(),
@@ -34,6 +33,7 @@ export function BusinessOrderForm() {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export function BusinessOrderForm() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { business_name: "", contact_info: "", items: [] }
+    defaultValues: { business_name: "", items: [] }
   });
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "items" });
@@ -60,14 +60,19 @@ export function BusinessOrderForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
-    const res = await submitBusinessOrder(values);
-    if (res.success) {
-        setIsSuccess(true);
-        toast({ title: "Order Sent!", description: "Green Horizon staff will contact you shortly." });
-    } else {
-        toast({ variant: "destructive", title: "Error", description: res.message });
+    try {
+        const res = await submitBusinessOrder(values);
+        if (res.success) {
+            setIsSuccess(true);
+            toast({ title: "Order Sent!", description: "Green Horizon staff will contact you shortly." });
+        } else {
+            toast({ variant: "destructive", title: "Error", description: res.message });
+        }
+    } catch (e) {
+        toast({ variant: "destructive", title: "Error", description: "Failed to transmit order." });
+    } finally {
+        setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   }
 
   if (isSuccess) {
@@ -86,48 +91,39 @@ export function BusinessOrderForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="grid md:grid-cols-2 gap-6">
-            <FormField
-            control={form.control}
-            name="business_name"
-            render={({ field }) => (
-                <FormItem>
+        <div className="grid gap-6">
+            <FormItem>
                 <FormLabel className="flex items-center gap-2"><Building2 className="h-4 w-4" /> Company Selection</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={(val) => {
+                    if (val === 'Other/Manual') {
+                        setManualMode(true);
+                        form.setValue('business_name', '');
+                    } else {
+                        setManualMode(false);
+                        form.setValue('business_name', val);
+                    }
+                }}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select your business" /></SelectTrigger></FormControl>
                     <SelectContent>
                         <SelectItem value="Other/Manual">New/Other Client</SelectItem>
                         {businesses.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
                     </SelectContent>
                 </Select>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-            {form.watch('business_name') === 'Other/Manual' && (
+            </FormItem>
+
+            {manualMode && (
                 <FormField
                     control={form.control}
                     name="business_name"
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Manual Company Name</FormLabel>
-                            <FormControl><Input placeholder="Enter your business name" onChange={(e) => field.onChange(e.target.value)} /></FormControl>
+                            <FormControl><Input placeholder="Enter your business name" {...field} /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
                 />
             )}
-            <FormField
-            control={form.control}
-            name="contact_info"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Contact Details (Phone/Discord)</FormLabel>
-                <FormControl><Input placeholder="How can we reach you?" {...field} /></FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
         </div>
 
         <div className="space-y-4">
@@ -179,7 +175,7 @@ export function BusinessOrderForm() {
                 </div>
             </div>
             <div className="text-right text-[10px] font-bold text-muted-foreground max-w-[200px]">
-                You will be billed on delivery by a Green Horizon Employee or Logistics officer.
+                You will be billed on delivery by a Green Horizon Employee.
             </div>
         </div>
 

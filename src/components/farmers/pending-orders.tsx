@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, Clock, Phone, CheckCircle2, ChevronRight, Loader2 } from "lucide-react";
+import { Package, Clock, CheckCircle2, ChevronRight, Loader2 } from "lucide-react";
 import { getPendingBusinessOrders } from "@/lib/actions/order-actions";
 import type { BusinessOrder } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
@@ -51,9 +51,6 @@ export function PendingOrders() {
                                     <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[9px]">PENDING</Badge>
                                 </div>
                                 <CardTitle className="text-xl font-black tracking-tight">{order.business_name}</CardTitle>
-                                <CardDescription className="flex items-center gap-1.5 text-[10px] font-bold">
-                                    <Phone className="h-3 w-3" /> {order.contact_info}
-                                </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-1.5">
