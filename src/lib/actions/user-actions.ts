@@ -57,73 +57,114 @@ export async function testDatabaseConnection() {
 export async function getUsers(): Promise<AppUser[]> {
     try {
         await ensureDbInitialized();
-        const connection = await db.getConnection();
-        try {
-            const [users] = await connection.query('SELECT id, username, roles, createdAt, avatarUrl, status FROM users ORDER BY username ASC');
-            if (!Array.isArray(users)) return [];
-            const [personnel] = await connection.query('SELECT name, rank, userId FROM personnel');
-            const personnelMap = new Map();
-            if (Array.isArray(personnel)) { personnel.forEach((p: any) => personnelMap.set(p.userId || p.name, p)); }
+        // Use the pool directly to avoid manual release boilerplate for simple queries
+        const [users]: any = await db.query('SELECT `id`, `username`, `roles`, `createdAt`, `avatarUrl`, `status` FROM users ORDER BY username ASC');
+        
+        if (!Array.isArray(users)) return [];
 
-            return (users as any[]).map((u: any) => {
-                const pRecord = personnelMap.get(u.id) || personnelMap.get(u.username);
-                let userRoles = [];
-                try { userRoles = typeof u.roles === 'string' ? JSON.parse(u.roles) : (Array.isArray(u.roles) ? u.roles : []); } catch(e) {}
-                return { ...u, roles: userRoles, createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined, personnel: pRecord || null };
-            });
-        } finally { connection.release(); }
-    } catch (error) { return []; }
+        const [personnel]: any = await db.query('SELECT `name`, `rank`, `userId` FROM personnel');
+        const personnelMap = new Map();
+        if (Array.isArray(personnel)) { 
+            personnel.forEach((p: any) => {
+                const key = (p.userId || p.name || "").toString().toLowerCase();
+                personnelMap.set(key, p);
+            }); 
+        }
+
+        return users.map((u: any) => {
+            const userIdKey = (u.id || "").toString().toLowerCase();
+            const usernameKey = (u.username || "").toString().toLowerCase();
+            const pRecord = personnelMap.get(userIdKey) || personnelMap.get(usernameKey);
+            
+            let userRoles = [];
+            try { 
+                userRoles = typeof u.roles === 'string' ? JSON.parse(u.roles) : (Array.isArray(u.roles) ? u.roles : []); 
+            } catch(e) {
+                userRoles = [];
+            }
+
+            return { 
+                ...u, 
+                roles: Array.isArray(userRoles) ? userRoles : [], 
+                createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined, 
+                personnel: pRecord || null 
+            };
+        });
+    } catch (error) { 
+        console.error("Server Action: getUsers failed:", error);
+        return []; 
+    }
 }
 
 export async function getUserByUsername(username: string): Promise<AppUser | null> {
     try {
         await ensureDbInitialized();
-        const connection = await db.getConnection();
-        try {
-            const [users] = await connection.query('SELECT id, username, roles, createdAt, avatarUrl, status FROM users WHERE username = ?', [username]);
-            if (!Array.isArray(users) || users.length === 0) return null;
-            const u = (users as any)[0];
-            const [personnel] = await connection.query('SELECT name, rank, userId, phone_number, bank_account, discord_username, hire_date FROM personnel WHERE userId = ? OR name = ?', [u.id, u.username]);
-            let pRecord = null;
-            if (Array.isArray(personnel) && personnel.length > 0) {
-                const p = (personnel as any)[0];
-                pRecord = { ...p, phoneNumber: p.phone_number, bankAccount: p.bank_account, discordUsername: p.discord_username, hireDate: p.hire_date ? new Date(p.hire_date).toISOString() : null };
-            }
-            let userRoles = [];
-            try { userRoles = typeof u.roles === 'string' ? JSON.parse(u.roles) : (Array.isArray(u.roles) ? u.roles : []); } catch(e) {}
-            return { ...u, roles: userRoles, createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined, personnel: pRecord };
-        } finally { connection.release(); }
-    } catch (error) { return null; }
+        const [users]: any = await db.query('SELECT `id`, `username`, `roles`, `createdAt`, `avatarUrl`, `status` FROM users WHERE username = ?', [username]);
+        
+        if (!Array.isArray(users) || users.length === 0) return null;
+        const u = users[0];
+
+        const [personnel]: any = await db.query('SELECT `name`, `rank`, `userId`, `phone_number`, `bank_account`, `discord_username`, `hire_date` FROM personnel WHERE userId = ? OR UPPER(name) = UPPER(?)', [u.id, u.username]);
+        
+        let pRecord = null;
+        if (Array.isArray(personnel) && personnel.length > 0) {
+            const p = personnel[0];
+            pRecord = { 
+                ...p, 
+                phoneNumber: p.phone_number, 
+                bankAccount: p.bank_account, 
+                discordUsername: p.discord_username, 
+                hireDate: p.hire_date ? new Date(p.hire_date).toISOString() : null 
+            };
+        }
+
+        let userRoles = [];
+        try { 
+            userRoles = typeof u.roles === 'string' ? JSON.parse(u.roles) : (Array.isArray(u.roles) ? u.roles : []); 
+        } catch(e) {
+            userRoles = [];
+        }
+
+        return { 
+            ...u, 
+            roles: Array.isArray(userRoles) ? userRoles : [], 
+            createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined, 
+            personnel: pRecord 
+        };
+    } catch (error) { 
+        console.error("Server Action: getUserByUsername failed:", error);
+        return null; 
+    }
 }
 
 export async function loginUser(credentials: any) {
     try {
         const { username, password } = credentials;
-        const pool = await ensureDbInitialized();
-        const connection = await pool.getConnection();
-        try {
-            const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', [username]);
-            if (!Array.isArray(rows) || rows.length === 0) return { success: false, message: 'Incorrect credentials.' };
-            const user = (rows as any[])[0];
-            if (user.password !== password) return { success: false, message: 'Incorrect credentials.' };
-            return { success: true, user: { username: user.username } };
-        } finally { connection.release(); }
-    } catch (e) { return { success: false, message: "Could not connect to authentication server." }; }
+        await ensureDbInitialized();
+        const [rows]: any = await db.query('SELECT * FROM users WHERE username = ?', [username]);
+        
+        if (!Array.isArray(rows) || rows.length === 0) return { success: false, message: 'Incorrect credentials.' };
+        const user = rows[0];
+        
+        if (user.password !== password) return { success: false, message: 'Incorrect credentials.' };
+        
+        return { success: true, user: { username: user.username } };
+    } catch (e: any) { 
+        return { success: false, message: "Authentication failure: " + e.message }; 
+    }
 }
 
 export async function submitAccessRequest(data: any) {
     const { username, password } = data;
-    const pool = await ensureDbInitialized();
-    const connection = await pool.getConnection();
     try {
-        await connection.query(
+        await ensureDbInitialized();
+        await db.query(
             'INSERT INTO access_requests (id, requested_username, password, status) VALUES (?, ?, ?, ?)',
             [crypto.randomUUID(), username, password, 'Pending']
         );
         await sendAccessRequestWebhook(username);
         return { success: true };
     } catch (e) { return { success: false, message: 'Failed to submit request.' }; }
-    finally { connection.release(); }
 }
 
 export async function approveAccessRequest(data: any) {
@@ -148,43 +189,39 @@ export async function approveAccessRequest(data: any) {
         await logUserAction(adminUser, 'Approve Access Request', `Created account for: ${username}`, connection);
         await connection.commit();
         revalidatePath('/admin');
+        revalidatePath('/users');
         return { success: true, message: 'Approved' };
     } catch (e: any) { await connection.rollback(); return { success: false, message: e.message }; }
     finally { connection.release(); }
 }
 
 export async function denyAccessRequest(requestId: string, requestedUsername: string, adminUser: string) {
-    const pool = await ensureDbInitialized();
-    const connection = await pool.getConnection();
     try {
-        await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Denied', requestId]);
-        await logUserAction(adminUser, 'Deny Access Request', `Denied access for: ${requestedUsername}`, connection);
+        await ensureDbInitialized();
+        await db.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Denied', requestId]);
+        await logUserAction(adminUser, 'Deny Access Request', `Denied access for: ${requestedUsername}`);
         revalidatePath('/admin');
         return { success: true, message: 'Denied' };
     } catch (e) { return { success: false, message: 'Failed to process request.' }; }
-    finally { connection.release(); }
 }
 
 export async function getAccessRequests(): Promise<AccessRequest[]> {
     try {
         await ensureDbInitialized();
-        const connection = await db.getConnection();
-        try {
-            const [rows] = await connection.query("SELECT id, requested_username, status, createdAt FROM access_requests WHERE status = 'Pending' ORDER BY createdAt ASC");
-            return (rows as any[]).map(r => ({ ...r, createdAt: new Date(r.createdAt) }));
-        } finally { connection.release(); }
+        const [rows]: any = await db.query("SELECT id, requested_username, status, createdAt FROM access_requests WHERE status = 'Pending' ORDER BY createdAt ASC");
+        return Array.isArray(rows) ? rows.map((r: any) => ({ ...r, createdAt: new Date(r.createdAt) })) : [];
     } catch (error) { return []; }
 }
 
 export async function setUserStatus(data: { userId: string, status: 'Active' | 'Banned', adminUser: string }) {
-    const pool = await ensureDbInitialized();
-    const connection = await pool.getConnection();
     try {
-        await connection.query('UPDATE users SET status = ? WHERE id = ?', [data.status, data.userId]);
-        await logUserAction(data.adminUser, 'Update User Status', `Set user ${data.userId} to ${data.status}`, connection);
+        await ensureDbInitialized();
+        await db.query('UPDATE users SET status = ? WHERE id = ?', [data.status, data.userId]);
+        await logUserAction(data.adminUser, 'Update User Status', `Set user ${data.userId} to ${data.status}`);
         revalidatePath('/admin');
+        revalidatePath('/users');
         return { success: true };
-    } finally { connection.release(); }
+    } catch (e) { return { success: false, message: 'Status update failed.' }; }
 }
 
 export async function deleteUser(userId: string, adminUser: string) {
@@ -199,6 +236,7 @@ export async function deleteUser(userId: string, adminUser: string) {
         await logUserAction(adminUser, 'Delete User', `Deleted account: ${username}`, connection);
         await connection.commit();
         revalidatePath('/admin');
+        revalidatePath('/users');
         return { success: true, message: 'Deleted' };
     } catch (e) { await connection.rollback(); return { success: false, message: 'Failed to delete user.' }; }
     finally { connection.release(); }
@@ -207,8 +245,8 @@ export async function deleteUser(userId: string, adminUser: string) {
 export async function getReviewedApplicationsCount(userId: string): Promise<number> {
     try {
         await ensureDbInitialized();
-        const [rows] = await db.query('SELECT COUNT(*) as count FROM applications WHERE reviewer_id = ?', [userId]);
-        return (rows as any)[0]?.count || 0;
+        const [rows]: any = await db.query('SELECT COUNT(*) as count FROM applications WHERE reviewer_id = ?', [userId]);
+        return rows[0]?.count || 0;
     } catch (e) { return 0; }
 }
 
@@ -227,6 +265,7 @@ export async function createUser(data: any) {
     await logUserAction(adminUser, 'Create User', `Manually created user: ${username}`, connection);
     await connection.commit();
     revalidatePath('/admin');
+    revalidatePath('/users');
     return { success: true, message: 'Created' };
   } catch (error) { await connection.rollback(); return { success: false, message: 'Failed to create user.' }; }
   finally { connection.release(); }
@@ -243,43 +282,40 @@ export async function updateUser(data: any) {
         await logUserAction(adminUser, 'Update User', `Updated account: ${username}`, connection);
         await connection.commit();
         revalidatePath('/admin');
+        revalidatePath('/users');
         return { success: true };
     } catch (e) { await connection.rollback(); return { success: false, message: 'Failed to update user.' }; }
     finally { connection.release(); }
 }
 
 export async function resetUserPassword(data: any) {
-    const { userId, newPassword, adminUser } = data;
-    const pool = await ensureDbInitialized();
-    const connection = await pool.getConnection();
     try {
-        await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
-        await logUserAction(adminUser, 'Reset Password', `Reset password for user ${userId}`, connection);
+        await ensureDbInitialized();
+        await db.query('UPDATE users SET password = ? WHERE id = ?', [data.newPassword, data.userId]);
+        await logUserAction(data.adminUser, 'Reset Password', `Reset password for user ${data.userId}`);
         return { success: true, message: "Success" };
-    } finally { connection.release(); }
+    } catch (e) { return { success: false, message: "Password reset failed." }; }
 }
 
 export async function changeUserPassword(data: any) {
     const { userId, currentPassword, newPassword } = data;
-    const pool = await ensureDbInitialized();
-    const connection = await pool.getConnection();
     try {
-        const [rows]: any = await connection.query('SELECT password, username FROM users WHERE id = ?', [userId]);
-        if (rows.length === 0 || rows[0].password !== currentPassword) return { success: false, message: 'Incorrect current password.' };
-        await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
+        await ensureDbInitialized();
+        const [rows]: any = await db.query('SELECT password, username FROM users WHERE id = ?', [userId]);
+        if (!Array.isArray(rows) || rows.length === 0 || rows[0].password !== currentPassword) return { success: false, message: 'Incorrect current password.' };
+        await db.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
         await logUserAction(rows[0].username, 'Change Password', 'Changed password via profile settings.');
         return { success: true, message: 'Changed' };
-    } finally { connection.release(); }
+    } catch (e) { return { success: false, message: "Password update failed." }; }
 }
 
 export async function updateProfilePicture(data: any) {
     const { userId, url, user } = data;
-    const pool = await ensureDbInitialized();
-    const connection = await pool.getConnection();
     try {
-        await connection.query('UPDATE users SET avatarUrl = ? WHERE id = ?', [url, userId]);
+        await ensureDbInitialized();
+        await db.query('UPDATE users SET avatarUrl = ? WHERE id = ?', [url, userId]);
         await logUserAction(user, 'Update Avatar', 'Updated profile picture.');
         revalidatePath('/users');
         return { success: true, message: 'Updated' };
-    } finally { connection.release(); }
+    } catch (e) { return { success: false, message: "Profile picture update failed." }; }
 }

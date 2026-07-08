@@ -5,34 +5,29 @@ import db from "./db";
 import { initialPermissionsMap } from './data';
 
 /**
- * Internal helper to fetch permissions with resilience for timeouts.
+ * Internal helper to fetch permissions with resilience for lookups.
  */
 async function getInternalPermissionsMap(): Promise<Record<Role, Permission[]>> {
     try {
         const fetchPromise = (async () => {
-            const connection = await db.getConnection();
-            try {
-                const [rows] = await connection.query('SELECT role, permission FROM role_permissions');
-                const map: Record<Role, Permission[]> = (Object.keys(initialPermissionsMap) as Role[]).reduce((acc, role) => {
-                    acc[role] = [];
-                    return acc;
-                }, {} as Record<Role, Permission[]>);
+            const [rows] = await db.query('SELECT role, permission FROM role_permissions');
+            const map: Record<Role, Permission[]> = (Object.keys(initialPermissionsMap) as Role[]).reduce((acc, role) => {
+                acc[role] = [];
+                return acc;
+            }, {} as Record<Role, Permission[]>);
 
-                if (Array.isArray(rows)) {
-                    for (const row of (rows as any[])) {
-                        if (map[row.role as Role]) {
-                            map[row.role as Role].push(row.permission as Permission);
-                        }
+            if (Array.isArray(rows)) {
+                for (const row of (rows as any[])) {
+                    if (map[row.role as Role]) {
+                        map[row.role as Role].push(row.permission as Permission);
                     }
                 }
-                return map;
-            } finally {
-                connection.release();
             }
+            return map;
         })();
 
         const timeoutPromise = new Promise<Record<Role, Permission[]>>((resolve) => 
-            setTimeout(() => resolve(initialPermissionsMap), 2000)
+            setTimeout(() => resolve(initialPermissionsMap), 2500)
         );
 
         const map = await Promise.race([fetchPromise, timeoutPromise]);
@@ -40,11 +35,14 @@ async function getInternalPermissionsMap(): Promise<Record<Role, Permission[]>> 
         // Safety: Ensure high-level roles always have full permissions
         const allPerms = Object.keys(initialPermissionsMap).flatMap(r => initialPermissionsMap[r as Role]);
         const uniquePerms = [...new Set(allPerms)] as Permission[];
-        map.Developer = uniquePerms;
-        map.Administrator = uniquePerms;
-        map.CEO = uniquePerms;
+        
+        // Use a generic casting to fix TS mapping issues during timeout resolution
+        const finalMap = map as Record<Role, Permission[]>;
+        finalMap.Developer = uniquePerms;
+        finalMap.Administrator = uniquePerms;
+        finalMap.CEO = uniquePerms;
 
-        return map;
+        return finalMap;
     } catch (e) {
         return initialPermissionsMap;
     }
@@ -62,24 +60,19 @@ export async function checkPermissions(username: string, permission: Permission)
 
     try {
         const checkPromise = (async () => {
-            const connection = await db.getConnection();
+            const [rows] = await db.query('SELECT roles FROM users WHERE username = ?', [decodedUsername]);
+            if (!Array.isArray(rows) || rows.length === 0) return false;
+            
+            const user = (rows as any)[0];
+            let userRoles: Role[] = [];
             try {
-                const [rows] = await connection.query('SELECT roles FROM users WHERE username = ?', [decodedUsername]);
-                if (!Array.isArray(rows) || rows.length === 0) return false;
-                
-                const user = (rows as any)[0];
-                let userRoles: Role[] = [];
-                try {
-                    userRoles = typeof user.roles === 'string' ? JSON.parse(user.roles) : (user.roles || []);
-                } catch (e) { return false; }
-                
-                if (userRoles.includes('Administrator') || userRoles.includes('Developer')) return true;
+                userRoles = typeof user.roles === 'string' ? JSON.parse(user.roles) : (user.roles || []);
+            } catch (e) { return false; }
+            
+            if (userRoles.includes('Administrator') || userRoles.includes('Developer')) return true;
 
-                const permissionsMap = await getInternalPermissionsMap();
-                return userRoles.some(role => permissionsMap[role]?.includes(permission));
-            } finally {
-                connection.release();
-            }
+            const permissionsMap = await getInternalPermissionsMap();
+            return userRoles.some(role => permissionsMap[role]?.includes(permission));
         })();
 
         const timeoutPromise = new Promise<boolean>((resolve) => 

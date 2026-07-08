@@ -13,10 +13,10 @@ try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 15,
+        connectionLimit: 20,
         queueLimit: 0,
-        connectTimeout: 3000, // Fail fast in 3s if no connection
-        acquireTimeout: 3000,
+        connectTimeout: 6000, // 6 seconds for more stability with ZAP
+        acquireTimeout: 6000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });
