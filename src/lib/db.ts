@@ -13,12 +13,11 @@ try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 10, 
+        connectionLimit: 15, 
         maxIdle: 10,
-        idleTimeout: 30000,
+        idleTimeout: 60000, 
         queueLimit: 0,
-        connectTimeout: 5000,
-        acquireTimeout: 5000,
+        connectTimeout: 10000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });
@@ -284,7 +283,10 @@ export async function ensureDbInitialized(force: boolean = false) {
         let connection;
         try {
             connection = await pool.getConnection();
-            const [tables]: any = await connection.query("SHOW TABLES LIKE 'users'");
+            const [tables]: any = await connection.query({
+                sql: "SHOW TABLES LIKE 'users'",
+                timeout: 5000 
+            });
             if (!tables || tables.length === 0) {
                 await createFarmTables(connection);
                 await seedDatabase(pool);
@@ -293,8 +295,9 @@ export async function ensureDbInitialized(force: boolean = false) {
             return pool;
         } catch (err: any) {
             initPromise = null; 
-            console.error("DB Readiness Check Failed:", err.message);
-            throw err;
+            console.error("DB Readiness Check Failed (Will Retry):", err.message);
+            // Allow the server to proceed without crashing; the next call will retry init
+            return pool;
         } finally {
             if (connection) connection.release();
         }
