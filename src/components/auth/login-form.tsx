@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,7 +17,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { loginUser } from "@/lib/actions";
 import { Checkbox } from "../ui/checkbox";
 
@@ -96,17 +95,6 @@ export function LoginForm() {
     setIsLoading(false);
   }
 
-  const handleBypass = () => {
-      if (typeof window !== 'undefined') {
-          localStorage.setItem('loggedInUser', 'Leon Green');
-          toast({
-              title: "Developer Access",
-              description: "Bypassing authentication as Leon Green...",
-          });
-          router.push("/dashboard");
-      }
-  };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -162,16 +150,6 @@ export function LoginForm() {
             ) : (
                 "Sign In"
             )}
-            </Button>
-            
-            <Button 
-                type="button" 
-                variant="secondary" 
-                className="w-full h-12 font-black uppercase tracking-widest border border-primary/20" 
-                onClick={handleBypass}
-            >
-                <ShieldCheck className="mr-2 h-4 w-4 text-primary" />
-                Enter Management System
             </Button>
         </div>
       </form>
