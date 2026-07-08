@@ -17,7 +17,7 @@ try {
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
-        connectTimeout: 2000, // Strict timeout
+        connectTimeout: 2000, // Strict timeout for connection
         acquireTimeout: 2000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
@@ -134,6 +134,178 @@ async function createFarmTables(connection: any) {
             );
         `);
 
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS security_time_logs (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                user VARCHAR(255) NOT NULL,
+                hours DECIMAL(5, 2) NOT NULL,
+                description TEXT,
+                date DATE NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS security_incidents (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT NOT NULL,
+                location VARCHAR(255) NOT NULL,
+                pd_called BOOLEAN DEFAULT FALSE,
+                injured_details TEXT,
+                reported_by VARCHAR(255) NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS farm_events (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT NOT NULL,
+                revenue DECIMAL(15, 2) DEFAULT 0,
+                event_date DATETIME NOT NULL,
+                status ENUM('Scheduled', 'Cancelled', 'Completed') DEFAULT 'Scheduled',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS farm_transactions (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                amount DECIMAL(15, 2) NOT NULL,
+                category ENUM('Income', 'Expense', 'Expenditure', 'Employee Cut') NOT NULL,
+                description TEXT,
+                transaction_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS financial_settings (
+                setting_key VARCHAR(255) NOT NULL PRIMARY KEY,
+                setting_value TEXT
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS staff_incidents (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                personnel_name VARCHAR(255) NOT NULL,
+                reason TEXT NOT NULL,
+                issued_by VARCHAR(255) NOT NULL,
+                incident_date DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS manager_plans (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                content TEXT NOT NULL,
+                author VARCHAR(255) NOT NULL,
+                status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+                feedback TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS promotion_suggestions (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                personnel_name VARCHAR(255) NOT NULL,
+                suggested_rank VARCHAR(255) NOT NULL,
+                reason TEXT NOT NULL,
+                suggested_by VARCHAR(255) NOT NULL,
+                status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+                feedback TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS ceo_chat (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                author VARCHAR(255) NOT NULL,
+                message TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS gallery_images (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                src TEXT NOT NULL,
+                alt VARCHAR(255),
+                hint VARCHAR(100),
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS changelogs (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                version VARCHAR(50) NOT NULL,
+                added_features TEXT,
+                fixes TEXT,
+                removed_features TEXT,
+                other TEXT,
+                author_id VARCHAR(36) NOT NULL,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS application_form_fields (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                type ENUM('text', 'textarea', 'select') NOT NULL,
+                label VARCHAR(255) NOT NULL,
+                field_order INT NOT NULL,
+                required BOOLEAN DEFAULT TRUE
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS application_field_options (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                field_id VARCHAR(36) NOT NULL,
+                value VARCHAR(255) NOT NULL,
+                FOREIGN KEY (field_id) REFERENCES application_form_fields(id) ON DELETE CASCADE
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS access_requests (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                requested_username VARCHAR(255) NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                status ENUM('Pending', 'Approved', 'Denied') DEFAULT 'Pending',
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS archived_personnel (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                rank VARCHAR(255) NOT NULL,
+                discord_username VARCHAR(255),
+                status ENUM('Fired', 'Resigned') NOT NULL,
+                date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                reason TEXT
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS blacklisted_personnel (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                discord_username VARCHAR(255),
+                reason TEXT,
+                dateAdded DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
     } catch (error) {
         console.error("Failed to create farm tables:", error);
     }
@@ -142,7 +314,9 @@ async function createFarmTables(connection: any) {
 export async function ensureDbInitialized(force: boolean = false) {
     if (isInitialized && !force) return pool;
     
+    // Check circuit breaker
     if (!force && Date.now() < dbOfflineUntil) {
+        console.warn("DB offline (circuit breaker active). Skipping connection attempt.");
         throw new Error("DATABASE_OFFLINE_COOLDOWN");
     }
 
@@ -157,8 +331,9 @@ export async function ensureDbInitialized(force: boolean = false) {
             connection.release();
         }
     } catch (err: any) {
+        // Activate circuit breaker if connection fails
         dbOfflineUntil = Date.now() + OFFLINE_COOLDOWN;
-        console.warn("DB Connection Failed (Circuit Breaker Engaged):", err.message);
+        console.error("DB Connection Failed (Circuit Breaker Engaged):", err.message);
         throw err;
     }
 }
