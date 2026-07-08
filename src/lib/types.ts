@@ -116,10 +116,12 @@ export interface AuditLog {
     timestamp: Date;
 }
 
+export type AnnouncementPriority = 'high' | 'medium' | 'low';
+
 export interface Announcement {
     id: string;
     content: string;
-    is_urgent: boolean;
+    priority: AnnouncementPriority;
     createdAt: Date;
     author: {
         id: string;

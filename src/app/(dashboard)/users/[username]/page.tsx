@@ -17,6 +17,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { RefreshButton } from "@/components/layout/refresh-button";
 
 
 const getRoleClass = (role: string) => {
@@ -47,8 +48,7 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [loggedInUser, setLoggedInUser] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
       setLoading(true);
       const loggedInUserFromStorage = localStorage.getItem('loggedInUser');
       setLoggedInUser(loggedInUserFromStorage);
@@ -87,8 +87,9 @@ export default function UserProfilePage() {
       } finally {
         setLoading(false);
       }
-    };
+  };
 
+  useEffect(() => {
     fetchData();
   }, [decodedUsername]);
   
@@ -125,22 +126,25 @@ export default function UserProfilePage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-8 p-6 bg-card/40 rounded-3xl border border-primary/10 shadow-2xl backdrop-blur-md">
-          <Avatar className="h-32 w-32 text-2xl border-4 border-primary/20 shadow-xl">
-            <AvatarImage src={user.avatarUrl} alt={user.username} className="object-cover" />
-            <AvatarFallback className="bg-primary/10 text-primary"><User className="h-14 w-14"/></AvatarFallback>
-          </Avatar>
-          <div>
-            <h1 className="text-5xl font-black tracking-tighter text-primary">{user.username}</h1>
-            <div className="flex items-center gap-3 mt-2">
-                <p className="text-xl text-muted-foreground font-medium">{personnelRecord?.rank || 'Civilian'}</p>
-                {personnelRecord?.department && (
-                    <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                        {personnelRecord.department}
-                    </Badge>
-                )}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 p-8 bg-card/40 rounded-3xl border border-primary/10 shadow-2xl backdrop-blur-md">
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            <Avatar className="h-32 w-32 text-2xl border-4 border-primary/20 shadow-xl">
+                <AvatarImage src={user.avatarUrl} alt={user.username} className="object-cover" />
+                <AvatarFallback className="bg-primary/10 text-primary"><User className="h-14 w-14"/></AvatarFallback>
+            </Avatar>
+            <div>
+                <h1 className="text-5xl font-black tracking-tighter text-primary">{user.username}</h1>
+                <div className="flex items-center gap-3 mt-2">
+                    <p className="text-xl text-muted-foreground font-medium">{personnelRecord?.rank || 'Civilian'}</p>
+                    {personnelRecord?.department && (
+                        <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                            {personnelRecord.department}
+                        </Badge>
+                    )}
+                </div>
             </div>
           </div>
+          <RefreshButton onRefresh={fetchData} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">

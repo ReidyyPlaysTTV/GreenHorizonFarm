@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -59,6 +60,7 @@ import { AddStaffIncidentDialog } from "@/components/manager/add-staff-incident-
 import { AddProductDialog } from "@/components/manager/add-product-dialog";
 import { AddPlanDialog } from "@/components/manager/add-plan-dialog";
 import { AddPromotionSuggestionDialog } from "@/components/manager/add-promotion-suggestion-dialog";
+import { AddAnnouncementDialog } from "@/components/dashboard/add-announcement-dialog";
 
 export default function CEOPortal() {
   const [orders, setOrders] = useState<DetailedFarmOrder[]>([]);
@@ -165,6 +167,7 @@ export default function CEOPortal() {
           <p className="text-muted-foreground mt-2 text-xl font-medium">Strategic control and high-level business oversight.</p>
         </div>
         <div className="flex items-center gap-3">
+             <AddAnnouncementDialog />
              <Button asChild variant="secondary" className="font-bold h-12 px-6 rounded-xl border border-primary/20">
                 <Link href="/applications" className="gap-2">
                     <ExternalLink className="h-5 w-5" /> Recruitment Center
@@ -384,7 +387,7 @@ export default function CEOPortal() {
           <Card className="border-destructive/20 bg-destructive/5 shadow-lg">
               <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-destructive">
-                      <UserX className="h-5 w-5" />
+                      <UserX className="h-5 w-5 text-destructive" />
                       Zero-Yield Staff (Inactive)
                   </CardTitle>
               </CardHeader>

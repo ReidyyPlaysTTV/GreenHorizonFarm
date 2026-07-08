@@ -10,12 +10,12 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   SidebarTrigger,
+  SidebarContent,
 } from "@/components/ui/sidebar";
 import { 
   Home, 
   Users, 
   Briefcase, 
-  ClipboardList, 
   BookOpen, 
   GitBranch, 
   Settings, 
@@ -25,31 +25,33 @@ import {
   Shield,
   Calendar,
   DollarSign,
-  UserCircle
+  UserCircle,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "../ui/button";
 import Image from "next/image";
 import { usePermissions } from "@/hooks/use-permissions";
 import { UserProfile } from "./user-profile";
+import { cn } from "@/lib/utils";
 
 const mainMenuItems = [
-  { href: "/dashboard", label: "Farm Overview", icon: Home, permission: 'ACCESS_DASHBOARD' },
+  { href: "/dashboard", label: "Dashboard", icon: Home, permission: 'ACCESS_DASHBOARD' },
   { href: "/roster", label: "Staff Roster", icon: Users, permission: 'VIEW_EMPLOYEES' },
-  { href: "/users", label: "User Directory", icon: UserCircle, permission: 'VIEW_USERS' },
+  { href: "/users", label: "Directory", icon: UserCircle, permission: 'VIEW_USERS' },
   { href: "/farmers", label: "Farmers Portal", icon: Sprout, permission: 'ACCESS_FARMERS' },
-  { href: "/security", label: "Security Portal", icon: Shield, permission: 'ACCESS_SECURITY' },
-  { href: "/events", label: "Events Portal", icon: Calendar, permission: 'ACCESS_EVENTS' },
-  { href: "/finances", label: "Finances Portal", icon: DollarSign, permission: 'ACCESS_FINANCES' },
-  { href: "/sops", label: "Farm Guidelines", icon: BookOpen, permission: 'VIEW_SOPS' },
+  { href: "/security", label: "Security", icon: Shield, permission: 'ACCESS_SECURITY' },
+  { href: "/events", label: "Events", icon: Calendar, permission: 'ACCESS_EVENTS' },
+  { href: "/finances", label: "Accounting", icon: DollarSign, permission: 'ACCESS_FINANCES' },
+  { href: "/sops", label: "Guidelines", icon: BookOpen, permission: 'VIEW_SOPS' },
 ];
 
 const managementMenuItems = [
-    { href: "/manager", label: "Manager Portal", icon: LayoutDashboard, permission: 'ACCESS_MANAGER_PORTAL' },
-    { href: "/ceo", label: "CEO Executive", icon: Briefcase, permission: 'ACCESS_CEO_PORTAL' },
-    { href: "/applications", label: "Hiring Portal", icon: GitBranch, permission: 'VIEW_APPLICATIONS' },
+    { href: "/manager", label: "Ops Manager", icon: LayoutDashboard, permission: 'ACCESS_MANAGER_PORTAL' },
+    { href: "/ceo", label: "Executive", icon: Briefcase, permission: 'ACCESS_CEO_PORTAL' },
+    { href: "/applications", label: "Recruitment", icon: GitBranch, permission: 'VIEW_APPLICATIONS' },
 ];
 
-const adminMenuItems = [
+const technicalMenuItems = [
     { href: "/admin", label: "System Config", icon: Settings, permission: 'ACCESS_ADMIN_PANEL' },
 ];
 
@@ -61,15 +63,21 @@ export function SidebarNav() {
   const renderMenuItems = (items: any[]) => {
     return items.map((item) => {
         if (!hasPermission(item.permission)) return null;
+        const isActive = pathname === item.href;
         return (
             <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
-                isActive={pathname === item.href}
+                isActive={isActive}
                 onClick={() => router.push(item.href)}
                 tooltip={item.label}
+                className={cn(
+                    "relative h-10 transition-all duration-300 rounded-xl px-4",
+                    isActive ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "hover:bg-primary/10 hover:text-primary"
+                )}
                 >
-                <item.icon className="h-4 w-4" />
-                <span>{item.label}</span>
+                <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-primary-foreground" : "text-primary/60")} />
+                <span className="font-bold text-xs uppercase tracking-widest">{item.label}</span>
+                {isActive && <ChevronRight className="ml-auto h-3 w-3 animate-pulse" />}
                 </SidebarMenuButton>
             </SidebarMenuItem>
         )
@@ -77,51 +85,60 @@ export function SidebarNav() {
   }
 
   return (
-    <Sidebar collapsible="icon" className="border-r bg-card">
-      <SidebarHeader>
-        <div className="flex items-center gap-3 px-4 h-14">
-            <Image 
-                src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png" 
-                alt="Green Horizon Logo" 
-                width={32} 
-                height={32} 
-                className="h-8 w-8 rounded-full object-cover"
-            />
+    <Sidebar collapsible="icon" className="border-r border-white/5 bg-black/40 backdrop-blur-xl">
+      <SidebarHeader className="p-6">
+        <div className="flex items-center gap-4 transition-all duration-500 group-data-[collapsible=icon]:gap-0">
+            <div className="relative">
+                <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+                <Image 
+                    src="https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png" 
+                    alt="Logo" 
+                    width={40} 
+                    height={40} 
+                    className="relative h-10 w-10 rounded-xl border border-primary/20 object-cover"
+                />
+            </div>
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-                <span className="text-sm font-bold tracking-tight">Green Horizon</span>
-                <span className="text-[10px] uppercase text-muted-foreground font-semibold">Farm Management</span>
+                <span className="text-lg font-black tracking-tighter text-white leading-none">GREEN HORIZON</span>
+                <span className="text-[8px] uppercase text-primary font-black tracking-[0.3em] mt-1">Management v2.0</span>
             </div>
         </div>
       </SidebarHeader>
       
-      <SidebarMenu className="flex-1 p-2 space-y-4">
-        <div className="px-2 pb-4 border-b border-white/5">
+      <SidebarContent className="px-4 space-y-8">
+        <div className="pt-2">
             <UserProfile />
         </div>
 
-        <div>
-            <p className="text-[10px] font-bold text-muted-foreground/60 px-3 pb-2 uppercase tracking-wider group-data-[collapsible=icon]:hidden">Operations</p>
-            {renderMenuItems(mainMenuItems)}
-        </div>
-        
-        <div>
-            <p className="text-[10px] font-bold text-muted-foreground/60 px-3 pb-2 uppercase tracking-wider group-data-[collapsible=icon]:hidden">Leadership</p>
-            {renderMenuItems(managementMenuItems)}
-        </div>
+        <div className="space-y-4">
+            <div className="space-y-1">
+                <p className="text-[9px] font-black text-white/30 px-4 pb-2 uppercase tracking-[0.2em] group-data-[collapsible=icon]:hidden">Field Operations</p>
+                {renderMenuItems(mainMenuItems)}
+            </div>
+            
+            <div className="space-y-1">
+                <p className="text-[9px] font-black text-white/30 px-4 pb-2 uppercase tracking-[0.2em] group-data-[collapsible=icon]:hidden">Leadership Hub</p>
+                {renderMenuItems(managementMenuItems)}
+            </div>
 
-        <div>
-            <p className="text-[10px] font-bold text-muted-foreground/60 px-3 pb-2 uppercase tracking-wider group-data-[collapsible=icon]:hidden">Technical</p>
-            {renderMenuItems(adminMenuItems)}
+            <div className="space-y-1">
+                <p className="text-[9px] font-black text-white/30 px-4 pb-2 uppercase tracking-[0.2em] group-data-[collapsible=icon]:hidden">Technical</p>
+                {renderMenuItems(technicalMenuItems)}
+            </div>
         </div>
-      </SidebarMenu>
+      </SidebarContent>
        
-      <SidebarFooter className="p-4 mt-auto">
-        <Button variant="outline" className="w-full justify-start gap-2 border-primary/20 hover:bg-primary/10" onClick={() => router.push('/')}>
-            <LogOut className="h-4 w-4 text-primary"/>
-            <span className="group-data-[collapsible=icon]:hidden">Exit System</span>
+      <SidebarFooter className="p-6 mt-auto space-y-4">
+        <Button 
+            variant="ghost" 
+            className="w-full justify-start gap-3 h-12 rounded-xl text-white/40 hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20 transition-all group" 
+            onClick={() => router.push('/')}
+        >
+            <LogOut className="h-4 w-4 transition-transform group-hover:-translate-x-1"/>
+            <span className="group-data-[collapsible=icon]:hidden font-black text-[10px] uppercase tracking-widest">Sign Out</span>
         </Button>
-        <div className="mt-4 flex justify-center">
-            <SidebarTrigger />
+        <div className="flex justify-center group-data-[collapsible=icon]:rotate-180 transition-transform">
+            <SidebarTrigger className="h-10 w-10 text-white/20 hover:text-primary transition-colors" />
         </div>
       </SidebarFooter>
     </Sidebar>

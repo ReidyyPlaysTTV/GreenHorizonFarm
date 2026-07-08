@@ -19,9 +19,9 @@ try {
         waitForConnections: true,
         connectionLimit: 5,
         queueLimit: 0,
-        // Aggressive 3s timeout to keep the app fast
-        connectTimeout: 3000,
-        acquireTimeout: 3000,
+        // Aggressive timeout to keep the app fast
+        connectTimeout: 5000,
+        acquireTimeout: 5000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });
@@ -112,6 +112,16 @@ async function createFarmTables(connection: any) {
                 actionType VARCHAR(255) NOT NULL,
                 description TEXT NOT NULL,
                 timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS announcements (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                content TEXT NOT NULL,
+                priority ENUM('high', 'medium', 'low') NOT NULL DEFAULT 'medium',
+                user_id VARCHAR(36) NOT NULL,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
 

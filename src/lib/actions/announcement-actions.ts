@@ -13,11 +13,17 @@ export async function getAnnouncements(): Promise<Announcement[]> {
     try {
         const [rows] = await connection.query(`
             SELECT 
-                a.id, a.content, a.is_urgent, a.createdAt,
+                a.id, a.content, a.priority, a.createdAt,
                 u.id as author_id, u.username as author_username, u.avatarUrl as author_avatarUrl
             FROM announcements a
             JOIN users u ON a.user_id = u.id
-            ORDER BY a.is_urgent DESC, a.createdAt DESC
+            ORDER BY 
+                CASE a.priority 
+                    WHEN 'high' THEN 1 
+                    WHEN 'medium' THEN 2 
+                    WHEN 'low' THEN 3 
+                END ASC,
+                a.createdAt DESC
             LIMIT 10
         `);
         
@@ -28,7 +34,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         return (rows as any[]).map(row => ({
             id: row.id,
             content: row.content,
-            is_urgent: !!row.is_urgent,
+            priority: row.priority,
             createdAt: new Date(row.createdAt),
             author: {
                 id: row.author_id,
@@ -38,10 +44,6 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         }));
     } catch (error) {
         console.error("Failed to fetch announcements:", error);
-        if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
-            console.log("Announcements table does not exist yet. It will be created on app start.");
-            return [];
-        }
         return [];
     } finally {
         connection.release();
@@ -49,9 +51,9 @@ export async function getAnnouncements(): Promise<Announcement[]> {
 }
 
 const addAnnouncementSchema = z.object({
-    content: z.string().min(10, 'Announcement must be at least 10 characters long.'),
-    isUrgent: z.boolean(),
-    userId: z.string(), // The ID of the user creating the announcement
+    content: z.string().min(1, 'Announcement cannot be empty.'),
+    priority: z.enum(['high', 'medium', 'low']),
+    userId: z.string(),
 });
 
 export async function addAnnouncement(data: unknown) {
@@ -59,7 +61,7 @@ export async function addAnnouncement(data: unknown) {
     if (!validation.success) {
         return { success: false, message: validation.error.errors[0].message };
     }
-    const { content, isUrgent, userId } = validation.data;
+    const { content, priority, userId } = validation.data;
     
     const [userRows] = await db.query('SELECT username FROM users WHERE id = ?', [userId]);
     const username = (userRows as any)[0]?.username;
@@ -78,12 +80,11 @@ export async function addAnnouncement(data: unknown) {
         await connection.beginTransaction();
 
         await connection.query(
-            'INSERT INTO announcements (id, content, is_urgent, user_id) VALUES (?, ?, ?, ?)',
-            [crypto.randomUUID(), content, isUrgent, userId]
+            'INSERT INTO announcements (id, content, priority, user_id) VALUES (?, ?, ?, ?)',
+            [crypto.randomUUID(), content, priority, userId]
         );
         
-        const logMessage = `Created a${isUrgent ? 'n URGENT' : ''} announcement: "${content.substring(0, 50)}..."`;
-        await logUserAction(username, 'Create Announcement', logMessage, connection);
+        await logUserAction(username, 'Create Announcement', `Created a ${priority} priority announcement.`, connection);
 
         await connection.commit();
         revalidatePath('/dashboard');

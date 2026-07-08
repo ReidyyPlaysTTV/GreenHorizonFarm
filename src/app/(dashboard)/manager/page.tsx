@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -48,7 +49,7 @@ import { AddStaffIncidentDialog } from "@/components/manager/add-staff-incident-
 import { AddProductDialog } from "@/components/manager/add-product-dialog";
 import { AddPlanDialog } from "@/components/manager/add-plan-dialog";
 import { AddPromotionSuggestionDialog } from "@/components/manager/add-promotion-suggestion-dialog";
-import { cn } from "@/lib/utils";
+import { AddAnnouncementDialog } from "@/components/dashboard/add-announcement-dialog";
 
 const StatusBadge = ({ status, feedback }: { status: string, feedback?: string }) => {
     let icon = <Clock className="h-3 w-3" />;
@@ -141,7 +142,8 @@ export default function ManagerPortal() {
           <p className="text-muted-foreground mt-1 text-lg font-medium">Global operations oversight and leadership workspace.</p>
         </div>
         <div className="flex items-center gap-2">
-            <Button asChild variant="secondary" className="font-bold border border-primary/20">
+             <AddAnnouncementDialog />
+            <Button asChild variant="secondary" className="font-bold border border-primary/20 h-10">
                 <Link href="/applications" className="gap-2">
                     <ExternalLink className="h-4 w-4" /> Recruitment
                 </Link>
