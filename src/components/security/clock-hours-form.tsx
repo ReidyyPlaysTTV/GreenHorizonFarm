@@ -48,7 +48,8 @@ export function ClockHoursForm() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setCurrentUser(localStorage.getItem('loggedInUser') || "System");
+      const user = localStorage.getItem('loggedInUser');
+      if (user) setCurrentUser(user);
     }
   }, []);
 
@@ -63,26 +64,35 @@ export function ClockHoursForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    const result = await submitSecurityTimeLog({ 
-        ...values, 
-        date: format(values.date, 'yyyy-MM-dd'),
-        user: currentUser 
-    });
-    if (result.success) {
-      toast({
-        title: "Hours Registered",
-        description: "Your work hours have been logged successfully.",
-      });
-      setIsOpen(false);
-      form.reset();
-    } else {
-       toast({
-        variant: "destructive",
-        title: "Error",
-        description: result.message,
-      });
+    try {
+        const result = await submitSecurityTimeLog({ 
+            ...values, 
+            date: format(values.date, 'yyyy-MM-dd'),
+            user: currentUser 
+        });
+        if (result.success) {
+            toast({
+                title: "Hours Registered",
+                description: "Your work hours have been logged successfully.",
+            });
+            setIsOpen(false);
+            form.reset();
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: result.message,
+            });
+        }
+    } catch (e) {
+        toast({
+            variant: "destructive",
+            title: "Network Error",
+            description: "Could not connect to the logistics network. Please try again.",
+        });
+    } finally {
+        setIsLoading(false);
     }
-    setIsLoading(false);
   }
 
   return (

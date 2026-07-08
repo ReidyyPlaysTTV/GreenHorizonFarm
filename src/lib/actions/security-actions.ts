@@ -21,26 +21,32 @@ export async function submitSecurityTimeLog(data: unknown) {
     }
     const { hours, description, date, user } = validation.data;
 
-    const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
 
-        await connection.query(
-            'INSERT INTO security_time_logs (id, user, hours, description, date) VALUES (?, ?, ?, ?, ?)',
-            [crypto.randomUUID(), user, hours, description, date]
-        );
+            const id = crypto.randomUUID();
+            await connection.query(
+                'INSERT INTO security_time_logs (id, user, hours, description, date) VALUES (?, ?, ?, ?, ?)',
+                [id, user || 'Unknown Staff', hours, description, date]
+            );
 
-        await logUserAction(user, "Log Security Hours", `Logged ${hours} hours for ${date}.`, connection);
+            await logUserAction(user, "Log Security Hours", `Logged ${hours} hours for ${date}.`, connection);
 
-        await connection.commit();
-        revalidatePath('/security');
-        return { success: true, message: 'Hours logged successfully.' };
+            await connection.commit();
+            revalidatePath('/security');
+            return { success: true, message: 'Hours logged successfully.' };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
     } catch (error) {
-        await connection.rollback();
         console.error("Failed to log security hours:", error);
-        return { success: false, message: 'Database operation failed.' };
-    } finally {
-        connection.release();
+        return { success: false, message: 'Database link failure. Please try again.' };
     }
 }
 
@@ -60,61 +66,73 @@ export async function submitSecurityIncident(data: unknown) {
     }
     const { title, description, location, pd_called, injured_details, user } = validation.data;
 
-    const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
 
-        await connection.query(
-            'INSERT INTO security_incidents (id, title, description, location, pd_called, injured_details, reported_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [crypto.randomUUID(), title, description, location, pd_called, injured_details || null, user]
-        );
+            const id = crypto.randomUUID();
+            await connection.query(
+                'INSERT INTO security_incidents (id, title, description, location, pd_called, injured_details, reported_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [id, title, description, location, pd_called, injured_details || null, user]
+            );
 
-        await logUserAction(user, "Report Security Incident", `Reported incident: ${title} at ${location}`, connection);
+            await logUserAction(user, "Report Security Incident", `Reported incident: ${title} at ${location}`, connection);
 
-        await connection.commit();
-        revalidatePath('/security');
-        return { success: true, message: 'Incident reported successfully.' };
+            await connection.commit();
+            revalidatePath('/security');
+            return { success: true, message: 'Incident reported successfully.' };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
     } catch (error) {
-        await connection.rollback();
         console.error("Failed to report incident:", error);
-        return { success: false, message: 'Database operation failed.' };
-    } finally {
-        connection.release();
+        return { success: false, message: 'Database link failure.' };
     }
 }
 
 export async function getSecurityTimeLogs(): Promise<SecurityTimeLog[]> {
-    const connection = await db.getConnection();
     try {
-        const [rows] = await connection.query('SELECT * FROM security_time_logs ORDER BY date DESC, created_at DESC LIMIT 50');
-        if (!Array.isArray(rows)) return [];
-        return (rows as any[]).map(row => ({
-            ...row,
-            date: new Date(row.date),
-            created_at: new Date(row.created_at)
-        }));
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            const [rows] = await connection.query('SELECT * FROM security_time_logs ORDER BY date DESC, created_at DESC LIMIT 50');
+            if (!Array.isArray(rows)) return [];
+            return (rows as any[]).map(row => ({
+                ...row,
+                date: new Date(row.date),
+                created_at: new Date(row.created_at)
+            }));
+        } finally {
+            connection.release();
+        }
     } catch (error) {
         console.error("Failed to fetch time logs:", error);
         return [];
-    } finally {
-        connection.release();
     }
 }
 
 export async function getSecurityIncidents(): Promise<SecurityIncident[]> {
-    const connection = await db.getConnection();
     try {
-        const [rows] = await connection.query('SELECT * FROM security_incidents ORDER BY created_at DESC LIMIT 50');
-        if (!Array.isArray(rows)) return [];
-        return (rows as any[]).map(row => ({
-            ...row,
-            pd_called: !!row.pd_called,
-            created_at: new Date(row.created_at)
-        }));
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            const [rows] = await connection.query('SELECT * FROM security_incidents ORDER BY created_at DESC LIMIT 50');
+            if (!Array.isArray(rows)) return [];
+            return (rows as any[]).map(row => ({
+                ...row,
+                pd_called: !!row.pd_called,
+                created_at: new Date(row.created_at)
+            }));
+        } finally {
+            connection.release();
+        }
     } catch (error) {
         console.error("Failed to fetch incidents:", error);
         return [];
-    } finally {
-        connection.release();
     }
 }
