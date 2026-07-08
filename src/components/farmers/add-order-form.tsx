@@ -43,7 +43,7 @@ const formSchema = z.object({
       quantity: z.coerce.number().min(1),
       price_at_sale: z.coerce.number().min(0),
   })).min(1, "At least one item must be added."),
-  discount_amount: z.coerce.number().min(0),
+  discount_amount: z.coerce.number().min(0).max(100, "Discount cannot exceed 100%"),
   total_price: z.coerce.number().min(0),
   logistics_used: z.boolean().default(false),
   employee_cut_value: z.coerce.number().min(0),
@@ -115,11 +115,13 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
   }, [watchedItems]);
 
   const suggestedTotal = useMemo(() => {
-      return Math.max(0, subtotal - (Number(watchedDiscount) || 0));
+      const discountPercentage = Number(watchedDiscount) || 0;
+      const discountDecimal = discountPercentage / 100;
+      return Math.max(0, subtotal * (1 - discountDecimal));
   }, [subtotal, watchedDiscount]);
 
   useEffect(() => {
-    form.setValue("total_price", suggestedTotal);
+    form.setValue("total_price", Number(suggestedTotal.toFixed(2)));
   }, [suggestedTotal, form]);
 
   useEffect(() => {
@@ -322,10 +324,10 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel className="flex items-center gap-2">
-                                <Tag className="h-4 w-4 text-orange-500" />
-                                Applied Discount ($)
+                                <Percent className="h-4 w-4 text-orange-500" />
+                                Applied Discount (%)
                             </FormLabel>
-                            <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                            <FormControl><Input type="number" step="1" min="0" max="100" {...field} /></FormControl>
                             <FormMessage />
                         </FormItem>
                         )}
