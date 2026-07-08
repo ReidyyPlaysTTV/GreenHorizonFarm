@@ -14,7 +14,7 @@ import { BannedUsersManagement } from "@/components/admin/banned-users-managemen
 import { usePermissions } from "@/hooks/use-permissions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { ShieldAlert, Loader2, Clock } from "lucide-react";
+import { ShieldAlert, Loader2, Clock, Database } from "lucide-react";
 import Link from "next/link";
 import type { AppUser, BugReport, Suggestion, AccessRequest } from '@/lib/types';
 
@@ -38,25 +38,18 @@ export default function AdminPage() {
     }
   }, []);
 
-  useEffect(() => {
+  const fetchData = async () => {
+    setIsLoading(true);
+    setIsTimedOut(false);
+    
+    // Set a safety timer but don't block the whole page if it fires
     const timeoutTimer = setTimeout(() => {
         if (isLoading) {
-            setIsLoading(false);
             setIsTimedOut(true);
         }
-    }, 7000);
+    }, 8000);
 
-    if (userRoles === null) return;
-
-    const canAccess = hasPermission('ACCESS_ADMIN_PANEL');
-    if (!canAccess) {
-      setIsLoading(false);
-      clearTimeout(timeoutTimer);
-      return;
-    }
-
-    const fetchData = async () => {
-      try {
+    try {
         const fetchPromise = Promise.all([
           getUsers(),
           getBugReports(),
@@ -70,46 +63,25 @@ export default function AdminPage() {
         
         setData({ users, bugReports, suggestions, accessRequests, applicationsOpen, isMaintenanceMode });
         clearTimeout(timeoutTimer);
-      } catch (error) {
+    } catch (error) {
         console.error("Failed to load admin data:", error);
-      } finally {
+    } finally {
         setIsLoading(false);
-      }
-    };
+    }
+  };
+
+  useEffect(() => {
+    if (userRoles === null) return;
+
+    const canAccess = hasPermission('ACCESS_ADMIN_PANEL');
+    if (!canAccess) {
+      setIsLoading(false);
+      return;
+    }
 
     fetchData();
-    return () => clearTimeout(timeoutTimer);
   }, [userRoles, hasPermission]);
   
-  if (isLoading) {
-    return (
-        <div className="flex h-full w-full items-center justify-center p-20">
-            <div className="flex flex-col items-center gap-4">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="text-sm font-bold uppercase tracking-widest animate-pulse opacity-50">Authorized Access Required...</p>
-            </div>
-        </div>
-    );
-  }
-
-  if (isTimedOut && !data) {
-    return (
-        <div className="container mx-auto p-4 md:p-8">
-            <Alert variant="destructive" className="bg-black/60 border-destructive/20 backdrop-blur-md">
-                <Clock className="h-4 w-4" />
-                <AlertTitle>Connection Refused</AlertTitle>
-                <AlertDescription>
-                   The database is taking too long to respond. This usually happens during high network lag or server maintenance.
-                   <br />
-                   <Button variant="outline" className="mt-4 border-destructive/20" onClick={() => window.location.reload()}>
-                        Retry Connection
-                   </Button>
-                </AlertDescription>
-            </Alert>
-        </div>
-    );
-  }
-
   if (!hasPermission('ACCESS_ADMIN_PANEL')) {
     return (
         <div className="container mx-auto p-4 md:p-8">
@@ -127,22 +99,6 @@ export default function AdminPage() {
         </div>
     );
   }
-  
-  if (!data) {
-    return (
-       <div className="container mx-auto p-4 md:p-8">
-         <Alert variant="destructive">
-            <ShieldAlert className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-                Failed to load administrative data. Please try refreshing the page.
-            </AlertDescription>
-        </Alert>
-       </div>
-    );
-  }
-
-  const { users, bugReports, suggestions, accessRequests, applicationsOpen, isMaintenanceMode } = data;
 
   return (
     <div className="container mx-auto p-4 md:p-8 bg-destructive text-destructive-foreground rounded-lg my-8">
@@ -153,7 +109,10 @@ export default function AdminPage() {
             Manage users, roles, and application-wide settings.
           </p>
         </div>
-        <RefreshButton />
+        <div className="flex items-center gap-2">
+            {isLoading && <Loader2 className="h-5 w-5 animate-spin opacity-50" />}
+            <RefreshButton onRefresh={fetchData} />
+        </div>
       </div>
 
        <Tabs defaultValue="users" className="w-full">
@@ -165,28 +124,56 @@ export default function AdminPage() {
           <TabsTrigger value="settings" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">App Settings</TabsTrigger>
           <TabsTrigger value="developer" className="data-[state=active]:bg-destructive-foreground data-[state=active]:text-destructive">Developer</TabsTrigger>
         </TabsList>
-        <TabsContent value="users" className="mt-6">
-           <UserManagement users={users} currentUser={currentUser || ''} />
-        </TabsContent>
-        <TabsContent value="banned" className="mt-6">
-            <BannedUsersManagement users={users} />
-        </TabsContent>
-         <TabsContent value="access_requests" className="mt-6">
-            <AccessRequestManagement requests={accessRequests} />
-        </TabsContent>
-        <TabsContent value="permissions" className="mt-6">
-            <PermissionManagement />
-        </TabsContent>
-        <TabsContent value="settings" className="mt-6">
-            <SettingsManagement 
-                applicationsOpen={applicationsOpen}
-                isMaintenanceMode={isMaintenanceMode}
-            />
-        </TabsContent>
-        <TabsContent value="developer" className="mt-6">
-            <DeveloperPanel bugReports={bugReports} suggestions={suggestions} />
-        </TabsContent>
+
+        <div className="mt-6">
+            {isTimedOut && !data && (
+                <Alert variant="destructive" className="mb-6 bg-black/40 border-white/10 text-white">
+                    <Clock className="h-4 w-4 text-orange-400" />
+                    <AlertTitle>Data Link Latency</AlertTitle>
+                    <AlertDescription>
+                        The server is taking longer than usual to respond. Main tables may be empty, but you can still run diagnostics in the **Developer** tab.
+                        <Button variant="outline" size="sm" className="ml-4 h-7 text-[10px]" onClick={fetchData}>Retry Sync</Button>
+                    </AlertDescription>
+                </Alert>
+            )}
+
+            <TabsContent value="users">
+                {data ? <UserManagement users={data.users} currentUser={currentUser || ''} /> : <LoadingPlaceholder />}
+            </TabsContent>
+            <TabsContent value="banned">
+                {data ? <BannedUsersManagement users={data.users} /> : <LoadingPlaceholder />}
+            </TabsContent>
+            <TabsContent value="access_requests">
+                {data ? <AccessRequestManagement requests={data.accessRequests} /> : <LoadingPlaceholder />}
+            </TabsContent>
+            <TabsContent value="permissions">
+                <PermissionManagement />
+            </TabsContent>
+            <TabsContent value="settings">
+                {data ? (
+                    <SettingsManagement 
+                        applicationsOpen={data.applicationsOpen}
+                        isMaintenanceMode={data.isMaintenanceMode}
+                    />
+                ) : <LoadingPlaceholder />}
+            </TabsContent>
+            <TabsContent value="developer">
+                <DeveloperPanel 
+                    bugReports={data?.bugReports || []} 
+                    suggestions={data?.suggestions || []} 
+                />
+            </TabsContent>
+        </div>
       </Tabs>
     </div>
   );
+}
+
+function LoadingPlaceholder() {
+    return (
+        <div className="flex flex-col items-center justify-center py-20 bg-black/20 rounded-xl border border-dashed border-white/10">
+            <Loader2 className="h-8 w-8 animate-spin text-white opacity-20" />
+            <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-white/40">Synchronizing Data Node...</p>
+        </div>
+    )
 }

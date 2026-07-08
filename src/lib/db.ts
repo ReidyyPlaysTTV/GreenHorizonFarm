@@ -13,11 +13,11 @@ try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 30, // Increased for concurrent production users
+        connectionLimit: 30,
         maxIdle: 20,
         idleTimeout: 60000, 
         queueLimit: 0,
-        connectTimeout: 5000, 
+        connectTimeout: 10000, // Increased for stability
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });
@@ -290,7 +290,7 @@ export async function ensureDbInitialized(force: boolean = false) {
             
             const [tables]: any = await connection.query({
                 sql: "SHOW TABLES LIKE 'users'",
-                timeout: 3000 
+                timeout: 5000 
             });
 
             if (!tables || tables.length === 0) {
@@ -298,20 +298,19 @@ export async function ensureDbInitialized(force: boolean = false) {
                 await createFarmTables(connection);
                 await seedDatabase(pool);
             } else {
-                // Production-ready migrations/patches
                 try {
                     await connection.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS lastLogin DATETIME");
                     await connection.query("ALTER TABLE detailed_farm_orders ADD COLUMN IF NOT EXISTS completed_at DATETIME");
-                } catch (e) {
-                    // Ignore if already exists
-                }
+                } catch (e) {}
             }
             
             isInitialized = true;
             return pool;
         } catch (err: any) {
             initPromise = null; 
-            console.error("DB Readiness Check Delayed (MariaDB Latency):", err.message);
+            console.error("DB Readiness Check Failed:", err.message);
+            // If forced (e.g. diagnostics), throw the error so UI knows
+            if (force) throw err;
             return pool; 
         } finally {
             if (connection) connection.release();
