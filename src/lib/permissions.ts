@@ -6,7 +6,7 @@ import { initialPermissionsMap } from './data';
 
 let permissionsCache: Record<Role, Permission[]> | null = null;
 let lastCacheUpdate = 0;
-const CACHE_TTL = 30000;
+const CACHE_TTL = 60000; // Increased to 60s for better performance
 
 async function getInternalPermissionsMap(): Promise<Record<Role, Permission[]>> {
     const now = Date.now();
@@ -32,8 +32,9 @@ async function getInternalPermissionsMap(): Promise<Record<Role, Permission[]>> 
             return map;
         })();
 
+        // Aggressive timeout: if DB is slow, use defaults to keep app responsive
         const timeoutPromise = new Promise<Record<Role, Permission[]>>((resolve) => 
-            setTimeout(() => resolve(initialPermissionsMap), 2000)
+            setTimeout(() => resolve(initialPermissionsMap), 1500)
         );
 
         const map = await Promise.race([fetchPromise, timeoutPromise]);

@@ -13,9 +13,9 @@ try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 15, 
-        maxIdle: 10,
-        idleTimeout: 60000, 
+        connectionLimit: 20, 
+        maxIdle: 15,
+        idleTimeout: 30000, 
         queueLimit: 0,
         connectTimeout: 10000,
         enableKeepAlive: true,
@@ -272,11 +272,6 @@ async function createFarmTables(connection: any) {
             await connection.query(query);
         }
         
-        // Dynamic column checks (for status in detailed orders)
-        try {
-            await connection.query("ALTER TABLE detailed_farm_orders ADD COLUMN IF NOT EXISTS status ENUM('Active', 'Completed', 'Cancelled') DEFAULT 'Completed'");
-        } catch (e) {}
-
     } catch (error) {
         console.error("SQL Schema execution failed:", error);
     }
