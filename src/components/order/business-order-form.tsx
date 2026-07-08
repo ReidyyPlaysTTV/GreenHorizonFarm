@@ -9,7 +9,8 @@ import { Loader2, ShoppingBasket, Plus, Trash2, CheckCircle2, Building2, Receipt
 import { useToast } from "@/hooks/use-toast";
 import { getManagerData } from "@/lib/actions/manager-actions";
 import { submitBusinessOrder } from "@/lib/actions/order-actions";
-import type { FarmProduct } from "@/lib/types";
+import { getBusinesses } from "@/lib/actions/business-actions";
+import type { FarmProduct, Business } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -19,6 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 const formSchema = z.object({
   business_name: z.string().min(1, "Company name is required."),
+  contact_info: z.string().optional(),
   items: z.array(z.object({
       product_id: z.string().min(1, "Select product"),
       product_name: z.string(),
@@ -29,17 +31,19 @@ const formSchema = z.object({
 
 export function BusinessOrderForm() {
   const [products, setProducts] = useState<FarmProduct[]>([]);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     getManagerData().then(data => setProducts(data.farmProducts));
+    getBusinesses().then(setBusinesses);
   }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { business_name: "", items: [] }
+    defaultValues: { business_name: "", contact_info: "", items: [] }
   });
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "items" });
@@ -77,14 +81,44 @@ export function BusinessOrderForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="max-w-md mx-auto">
+        <div className="grid md:grid-cols-2 gap-6">
             <FormField
             control={form.control}
             name="business_name"
             render={({ field }) => (
                 <FormItem>
-                <FormLabel className="flex items-center gap-2"><Building2 className="h-4 w-4" /> Company Name</FormLabel>
-                <FormControl><Input placeholder="e.g. Galaxy Nightclub" {...field} /></FormControl>
+                <FormLabel className="flex items-center gap-2"><Building2 className="h-4 w-4" /> Company Selection</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select your business" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                        <SelectItem value="Other/Manual">New/Other Client</SelectItem>
+                        {businesses.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            {form.watch('business_name') === 'Other/Manual' && (
+                <FormField
+                    control={form.control}
+                    name="business_name"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Manual Company Name</FormLabel>
+                            <FormControl><Input placeholder="Enter your business name" onChange={(e) => field.onChange(e.target.value)} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            )}
+            <FormField
+            control={form.control}
+            name="contact_info"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Contact Details (Phone/Discord)</FormLabel>
+                <FormControl><Input placeholder="How can we reach you?" {...field} /></FormControl>
                 <FormMessage />
                 </FormItem>
             )}

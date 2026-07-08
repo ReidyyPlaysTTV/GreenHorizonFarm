@@ -59,6 +59,13 @@ export type Division = "Harvesting" | "Processing" | "Logistics" | "Sales" | "Ma
 export type EmployeeStatus = 'Active' | 'On Leave' | 'Inactive' | 'Probation';
 export type UserStatus = 'Active' | 'Banned';
 
+export interface Business {
+    id: string;
+    name: string;
+    bank_account?: string;
+    created_at: Date;
+}
+
 export interface OrderItem {
     product_id: string;
     product_name: string;

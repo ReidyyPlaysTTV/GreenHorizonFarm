@@ -52,6 +52,7 @@ import { EditProductDialog } from "@/components/manager/edit-product-dialog";
 import { AddPlanDialog } from "@/components/manager/add-plan-dialog";
 import { AddPromotionSuggestionDialog } from "@/components/manager/add-promotion-suggestion-dialog";
 import { AddAnnouncementDialog } from "@/components/dashboard/add-announcement-dialog";
+import { BusinessManagement } from "@/components/manager/business-management";
 
 const StatusBadge = ({ status, feedback }: { status: string, feedback?: string }) => {
     let icon = <Clock className="h-3 w-3" />;
@@ -162,6 +163,31 @@ export default function ManagerPortal() {
           <AddPromotionSuggestionDialog />
       </div>
 
+      <div className="grid gap-8 lg:grid-cols-2">
+           <BusinessManagement />
+           <Card className="border-destructive/20 bg-destructive/5">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-destructive">
+                        <UserX className="h-5 w-5 text-destructive" />
+                        Zero-Yield Staff (Inactive)
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <ScrollArea className="h-[300px]">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            {inactivePersonnel.map(p => (
+                                <div key={p.id} className="p-3 bg-background/50 rounded-lg text-center border border-destructive/10">
+                                    <p className="font-bold text-xs">{p.name}</p>
+                                    <Badge variant="outline" className="text-[9px] uppercase text-destructive border-destructive/20">0 Orders</Badge>
+                                </div>
+                            ))}
+                            {inactivePersonnel.length === 0 && <p className="text-center text-muted-foreground py-10 text-sm italic col-span-full">All staff have logged orders.</p>}
+                        </div>
+                    </ScrollArea>
+                </CardContent>
+            </Card>
+      </div>
+
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Activity Feed */}
         <Card className="lg:col-span-2 border-primary/10 bg-card/40">
@@ -192,72 +218,23 @@ export default function ManagerPortal() {
             </CardContent>
         </Card>
 
-        {/* Inactive Personnel */}
-        <Card className="border-destructive/20 bg-destructive/5">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <UserX className="h-5 w-5 text-destructive" />
-                    Inactive Staff
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <ScrollArea className="h-[350px]">
-                    <div className="space-y-3">
-                        {inactivePersonnel.map(p => (
-                            <div key={p.id} className="p-3 bg-background/50 rounded-lg flex items-center justify-between border border-destructive/10">
-                                <p className="font-bold text-xs">{p.name}</p>
-                                <Badge variant="outline" className="text-[9px] uppercase text-destructive border-destructive/20">0 Orders</Badge>
-                            </div>
-                        ))}
-                        {inactivePersonnel.length === 0 && <p className="text-center text-muted-foreground py-10 text-sm italic">All staff have logged orders.</p>}
-                    </div>
-                </ScrollArea>
-            </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-8 lg:grid-cols-2">
-          {/* Income Feed */}
-          <Card className="border-emerald-500/20 bg-emerald-500/5">
+        {/* Global Income/Expense summary for quick look */}
+         <Card className="border-primary/10 bg-card/40">
               <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-emerald-500" />
-                      Recent Income
+                      <TrendingUp className="h-5 w-5 text-primary" />
+                      Financial Pulse
                   </CardTitle>
               </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[250px]">
-                    <div className="space-y-2">
-                        {recentIncome.map((i, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-3 bg-background/40 rounded-lg border border-white/5">
-                                <p className="text-sm font-bold">{i.desc}</p>
-                                <span className="text-emerald-500 font-black">+${i.amt.toLocaleString()}</span>
-                            </div>
-                        ))}
-                    </div>
-                </ScrollArea>
-              </CardContent>
-          </Card>
-
-          {/* Expense Feed */}
-          <Card className="border-red-500/20 bg-red-500/5">
-              <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                      <ReceiptText className="h-5 w-5 text-red-500" />
-                      Recent Outgoings
-                  </CardTitle>
-              </CardHeader>
-              <CardContent>
-                  <ScrollArea className="h-[250px]">
-                    <div className="space-y-2">
-                        {recentExpenses.map((e, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-3 bg-background/40 rounded-lg border border-white/5">
-                                <p className="text-sm font-bold">{e.desc}</p>
-                                <span className="text-red-400 font-black">-${e.amt.toLocaleString()}</span>
-                            </div>
-                        ))}
-                    </div>
-                </ScrollArea>
+              <CardContent className="space-y-4">
+                  <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                      <p className="text-[10px] font-black uppercase text-emerald-500">Gross Income (Recent)</p>
+                      <p className="text-2xl font-black text-emerald-400">${recentIncome.reduce((acc, i) => acc + i.amt, 0).toLocaleString()}</p>
+                  </div>
+                  <div className="p-4 bg-destructive/10 rounded-xl border border-destructive/20">
+                      <p className="text-[10px] font-black uppercase text-destructive">Recent Expenses</p>
+                      <p className="text-2xl font-black text-destructive">${recentExpenses.reduce((acc, e) => acc + e.amt, 0).toLocaleString()}</p>
+                  </div>
               </CardContent>
           </Card>
       </div>

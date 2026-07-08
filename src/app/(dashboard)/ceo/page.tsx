@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -10,6 +11,7 @@ import {
     getPersonnel, 
     getRecentActivity, 
     getSecurityIncidents,
+    getBusinesses
 } from "@/lib/actions";
 import { 
     getManagerData, 
@@ -28,7 +30,8 @@ import type {
     FarmProduct,
     ManagerPlan,
     PromotionSuggestion,
-    CeoChatMessage
+    CeoChatMessage,
+    Business
 } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -62,6 +65,7 @@ import { EditProductDialog } from "@/components/manager/edit-product-dialog";
 import { AddPlanDialog } from "@/components/manager/add-plan-dialog";
 import { AddPromotionSuggestionDialog } from "@/components/manager/add-promotion-suggestion-dialog";
 import { AddAnnouncementDialog } from "@/components/dashboard/add-announcement-dialog";
+import { BusinessManagement } from "@/components/manager/business-management";
 
 export default function CEOPortal() {
   const [orders, setOrders] = useState<DetailedFarmOrder[]>([]);
@@ -76,6 +80,7 @@ export default function CEOPortal() {
     promotionSuggestions: PromotionSuggestion[];
   } | null>(null);
   const [chatMessages, setChatMessages] = useState<CeoChatMessage[]>([]);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState("System");
@@ -84,14 +89,15 @@ export default function CEOPortal() {
   const fetchData = async () => {
     setLoading(true);
     try {
-        const [o, t, p, a, s, m, c] = await Promise.all([
+        const [o, t, p, a, s, m, c, b] = await Promise.all([
             getDetailedOrders(),
             getFarmTransactions(),
             getPersonnel(),
             getRecentActivity(),
             getSecurityIncidents(),
             getManagerData(),
-            getCeoChatMessages()
+            getCeoChatMessages(),
+            getBusinesses()
         ]);
         setOrders(o);
         setTransactions(t);
@@ -100,6 +106,7 @@ export default function CEOPortal() {
         setSecurityIncidents(s);
         setManagerData(m);
         setChatMessages(c);
+        setBusinesses(b);
     } catch (e) {
         console.error(e);
     } finally {
@@ -260,6 +267,7 @@ export default function CEOPortal() {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
+           <BusinessManagement />
            <Card className="border-blue-500/20 bg-blue-500/5 shadow-xl">
               <CardHeader className="bg-blue-500/10 border-b border-blue-500/20">
                   <CardTitle className="flex items-center gap-2 text-blue-400">
@@ -290,33 +298,52 @@ export default function CEOPortal() {
                   </ScrollArea>
               </CardContent>
           </Card>
+      </div>
 
-          <div className="space-y-8">
-              <Card className="border-primary/10 bg-card/40">
-                  <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                          <ClipboardCheck className="h-5 w-5 text-primary" />
-                          Recent Job Completions
-                      </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                      <ScrollArea className="h-[300px]">
-                          <Table>
-                              <TableHeader><TableRow><TableHead>Staff</TableHead><TableHead>Value</TableHead><TableHead className="text-right">Time</TableHead></TableRow></TableHeader>
-                              <TableBody>
-                                  {orders.slice(0, 10).map(o => (
-                                      <TableRow key={o.id}>
-                                          <TableCell className="font-bold">{o.completed_by}</TableCell>
-                                          <TableCell className="text-emerald-500 font-black">${Number(o.total_price).toLocaleString()}</TableCell>
-                                          <TableCell className="text-right text-[10px] text-muted-foreground">{format(new Date(o.created_at), 'MMM dd HH:mm')}</TableCell>
-                                      </TableRow>
-                                  ))}
-                              </TableBody>
-                          </Table>
-                      </ScrollArea>
-                  </CardContent>
-              </Card>
-          </div>
+      <div className="grid gap-8 lg:grid-cols-2">
+          <Card className="border-primary/10 bg-card/40">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                      <ClipboardCheck className="h-5 w-5 text-primary" />
+                      Recent Job Completions
+                  </CardTitle>
+              </CardHeader>
+              <CardContent>
+                  <ScrollArea className="h-[300px]">
+                      <Table>
+                          <TableHeader><TableRow><TableHead>Staff</TableHead><TableHead>Value</TableHead><TableHead className="text-right">Time</TableHead></TableRow></TableHeader>
+                          <TableBody>
+                              {orders.slice(0, 10).map(o => (
+                                  <TableRow key={o.id}>
+                                      <TableCell className="font-bold">{o.completed_by}</TableCell>
+                                      <TableCell className="text-emerald-500 font-black">${Number(o.total_price).toLocaleString()}</TableCell>
+                                      <TableCell className="text-right text-[10px] text-muted-foreground">{format(new Date(o.created_at), 'MMM dd HH:mm')}</TableCell>
+                                  </TableRow>
+                              ))}
+                          </TableBody>
+                      </Table>
+                  </ScrollArea>
+              </CardContent>
+          </Card>
+          <Card className="border-destructive/20 bg-destructive/5 shadow-lg">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                      <UserX className="h-5 w-5 text-destructive" />
+                      Zero-Yield Staff (Inactive)
+                  </CardTitle>
+              </CardHeader>
+              <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {inactivePersonnel.slice(0, 12).map(p => (
+                          <div key={p.id} className="p-3 bg-background/60 rounded-xl border border-destructive/10 text-center">
+                              <p className="font-black text-sm">{p.name}</p>
+                              <p className="text-[8px] text-muted-foreground uppercase mt-1">{p.rank}</p>
+                          </div>
+                      ))}
+                      {inactivePersonnel.length === 0 && <p className="col-span-full py-10 text-center text-muted-foreground text-sm italic">All staff are actively yielding orders.</p>}
+                  </div>
+              </CardContent>
+          </Card>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
@@ -376,52 +403,6 @@ export default function CEOPortal() {
                               <div key={si.id} className="p-2 bg-black/30 rounded-lg border border-destructive/10">
                                   <h4 className="font-bold text-[10px] text-destructive truncate">{si.title}</h4>
                                   <p className="text-[8px] text-muted-foreground">{si.location} • {format(new Date(si.created_at), 'MMM dd')}</p>
-                              </div>
-                          ))}
-                      </div>
-                  </ScrollArea>
-              </CardContent>
-          </Card>
-      </div>
-
-      <div className="grid gap-8 lg:grid-cols-2">
-          <Card className="border-destructive/20 bg-destructive/5 shadow-lg">
-              <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-destructive">
-                      <UserX className="h-5 w-5 text-destructive" />
-                      Zero-Yield Staff (Inactive)
-                  </CardTitle>
-              </CardHeader>
-              <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {inactivePersonnel.slice(0, 12).map(p => (
-                          <div key={p.id} className="p-3 bg-background/60 rounded-xl border border-destructive/10 text-center">
-                              <p className="font-black text-sm">{p.name}</p>
-                              <p className="text-[8px] text-muted-foreground uppercase mt-1">{p.rank}</p>
-                          </div>
-                      ))}
-                      {inactivePersonnel.length === 0 && <p className="col-span-full py-10 text-center text-muted-foreground text-sm italic">All staff are actively yielding orders.</p>}
-                  </div>
-              </CardContent>
-          </Card>
-
-          <Card className="border-primary/10 bg-card/30">
-              <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                      <UserPlus className="h-5 w-5 text-primary" />
-                      Global Personnel Flow
-                  </CardTitle>
-              </CardHeader>
-              <CardContent>
-                  <ScrollArea className="h-[200px]">
-                      <div className="space-y-3">
-                          {activity.slice(0, 10).map(e => (
-                              <div key={e.id} className="flex items-center justify-between p-3 bg-muted/10 rounded-lg border border-white/5">
-                                  <div>
-                                      <p className="text-xs font-bold">{e.personnel_name}</p>
-                                      <p className="text-[10px] text-muted-foreground">{e.description}</p>
-                                  </div>
-                                  <Badge variant="outline" className="text-[8px] uppercase">{e.event_type}</Badge>
                               </div>
                           ))}
                       </div>

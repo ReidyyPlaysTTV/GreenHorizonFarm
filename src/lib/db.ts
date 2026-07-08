@@ -54,6 +54,12 @@ async function createFarmTables(connection: any) {
                 is_rehired BOOLEAN NOT NULL DEFAULT FALSE,
                 userId VARCHAR(36)
             )`,
+            `CREATE TABLE IF NOT EXISTS businesses (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL UNIQUE,
+                bank_account VARCHAR(50),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`,
             `CREATE TABLE IF NOT EXISTS personnel_events (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 personnel_name VARCHAR(255) NOT NULL,

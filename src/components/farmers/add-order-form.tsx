@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, PlusCircle, ShoppingCart, Trash2, Tag, Percent, Users, UserPlus } from "lucide-react";
+import { Loader2, PlusCircle, ShoppingCart, Trash2, Tag, Percent, Users, UserPlus, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -30,13 +30,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { submitDetailedOrder, getPersonnel } from "@/lib/actions";
+import { submitDetailedOrder, getPersonnel, getBusinesses } from "@/lib/actions";
 import { getManagerData } from "@/lib/actions/manager-actions";
-import type { FarmProduct, Personnel, BusinessOrder } from "@/lib/types";
+import type { FarmProduct, Personnel, BusinessOrder, Business } from "@/lib/types";
 import { Badge } from "../ui/badge";
 
 const formSchema = z.object({
-  business_name: z.string().min(1, "Business name is required."),
+  business_name: z.string().min(1, "Client name is required."),
   items: z.array(z.object({
       product_id: z.string().min(1, "Select a product"),
       product_name: z.string(),
@@ -59,6 +59,7 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState<FarmProduct[]>([]);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
   const [roster, setRoster] = useState<Personnel[]>([]);
   const [currentUser, setCurrentUser] = useState("System");
   const { toast } = useToast();
@@ -70,13 +71,14 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
     if (isOpen || businessOrder) {
         getManagerData().then(data => setProducts(data.farmProducts));
         getPersonnel().then(setRoster);
+        getBusinesses().then(setBusinesses);
     }
   }, [isOpen, businessOrder]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      business_name: businessOrder?.business_name || "",
+      business_name: businessOrder?.business_name || "Local Farmer",
       items: businessOrder?.items || [],
       discount_amount: 0,
       total_price: 0,
@@ -96,6 +98,11 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
   const watchedDiscount = form.watch("discount_amount");
   const watchedCutPercentage = form.watch("employee_cut_percentage");
   const watchedCollaborators = form.watch("collaborators");
+  const watchedBusiness = form.watch("business_name");
+
+  const selectedBusinessData = useMemo(() => 
+    businesses.find(b => b.name === watchedBusiness)
+  , [businesses, watchedBusiness]);
 
   const subtotal = useMemo(() => {
     return (watchedItems || []).reduce((acc, item) => acc + (item.quantity * item.price_at_sale), 0);
@@ -159,17 +166,47 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
             <div className="grid md:grid-cols-2 gap-8">
                 {/* Left Side: Order Details */}
                 <div className="space-y-6">
-                    <FormField
-                    control={form.control}
-                    name="business_name"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Client / Business Name</FormLabel>
-                        <FormControl><Input placeholder="e.g. Vanilla Unicorn" {...field} /></FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
+                    <div className="grid gap-4">
+                        <FormField
+                        control={form.control}
+                        name="business_name"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel className="flex items-center gap-2"><Building2 className="h-4 w-4" /> Client Selection</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select Client" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="Local Farmer">Local Farmer (Public)</SelectItem>
+                                    {businesses.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
+                                    <SelectItem value="Manual Entry">Manual Entry / Other</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        {watchedBusiness === 'Manual Entry' && (
+                            <FormField
+                                control={form.control}
+                                name="business_name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormControl><Input placeholder="Enter client name..." onChange={(e) => field.onChange(e.target.value)} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+                        {selectedBusinessData && (
+                            <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-muted-foreground">Partner Billing Info</p>
+                                    <p className="text-sm font-bold text-primary">Account: {selectedBusinessData.bank_account || 'NONE ON FILE'}</p>
+                                </div>
+                                <Badge variant="outline" className="text-[9px]">REGISTERED</Badge>
+                            </div>
+                        )}
+                    </div>
 
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
