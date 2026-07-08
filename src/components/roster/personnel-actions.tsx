@@ -49,7 +49,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "../ui/form";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/use-permissions";
-import { staffRoles } from "@/lib/data";
+import { staffRoles, divisions } from "@/lib/data";
 
 
 interface PersonnelActionsProps {
@@ -64,6 +64,7 @@ const fireFormSchema = z.object({
 const editFormSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters.").regex(/^[A-Z][a-z]+ [A-Z][a-z]+$/, "Must be IC Name format"),
   rank: z.string(),
+  department: z.string(),
   discordUsername: z.string().optional(),
   phoneNumber: z.string().optional(),
   bankAccount: z.string().optional(),
@@ -111,6 +112,7 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
     defaultValues: {
       name: personnel.name,
       rank: personnel.rank,
+      department: personnel.department || "",
       discordUsername: personnel.discordUsername || "",
       phoneNumber: personnel.phoneNumber || "",
       bankAccount: personnel.bankAccount || "",
@@ -319,18 +321,32 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
                         )}/>
                     </div>
 
-                    <FormField control={editForm.control} name="rank" render={({field}) => (
-                        <FormItem>
-                            <Label>Position</Label>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {staffRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage/>
-                        </FormItem>
-                    )}/>
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField control={editForm.control} name="rank" render={({field}) => (
+                            <FormItem>
+                                <Label>Position</Label>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {staffRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage/>
+                            </FormItem>
+                        )}/>
+                        <FormField control={editForm.control} name="department" render={({field}) => (
+                            <FormItem>
+                                <Label>Division</Label>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {divisions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage/>
+                            </FormItem>
+                        )}/>
+                    </div>
 
                     <FormField
                         control={editForm.control}

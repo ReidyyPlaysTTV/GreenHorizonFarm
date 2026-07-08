@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/select";
 import { addPersonnel } from "@/lib/actions";
 import { usePermissions } from "@/hooks/use-permissions";
-import { staffRoles } from "@/lib/data";
+import { staffRoles, divisions } from "@/lib/data";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -45,6 +45,7 @@ import { Calendar } from "../ui/calendar";
 const formSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters.").regex(/^[A-Z][a-z]+ [A-Z][a-z]+$/, "Must be IC Name format (e.g. 'John Doe')"),
   rank: z.string({ required_error: "Please select a position." }),
+  department: z.string({ required_error: "Please select a division." }),
   discordUsername: z.string().optional(),
   phoneNumber: z.string().optional(),
   bankAccount: z.string().optional(),
@@ -72,6 +73,7 @@ export function AddPersonnelForm() {
       phoneNumber: "",
       bankAccount: "",
       rank: "",
+      department: "",
       hireDate: new Date(),
     },
   });
@@ -167,30 +169,56 @@ export function AddPersonnelForm() {
                 />
             </div>
 
-            <FormField
-            control={form.control}
-            name="rank"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Assigned Position</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select a position" />
-                    </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                    {staffRoles.map((role) => (
-                        <SelectItem key={role} value={role}>
-                        {role}
-                        </SelectItem>
-                    ))}
-                    </SelectContent>
-                </Select>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="rank"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Position</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select rank" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {staffRoles.map((role) => (
+                            <SelectItem key={role} value={role}>
+                            {role}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Division</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select division" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {divisions.map((div) => (
+                            <SelectItem key={div} value={div}>
+                            {div}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
 
             <FormField
                 control={form.control}

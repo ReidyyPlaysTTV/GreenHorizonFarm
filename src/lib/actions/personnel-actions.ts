@@ -6,7 +6,6 @@ import { revalidatePath } from 'next/cache';
 import db from '../db';
 import type { Personnel, Rank } from '../types';
 import { logUserAction } from './audit-log-actions';
-import { updateApplicationStatus } from './form-actions';
 import { checkPermissions } from '../permissions';
 import { staffRoles } from '../data';
 
@@ -139,7 +138,7 @@ export async function firePersonnel(personnelId: string, reason: string, user: s
 
     await connection.query(
         'INSERT INTO archived_personnel (id, name, rank, discord_username, status, date, reason) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [personnel.id, personnel.name, personnel.rank, personnel.discord_username, 'Fired', new Date(), reason]
+        [personnel.id, personnel.name, personnel.rank, personnel.discord_username || null, 'Fired', new Date(), reason]
     );
 
     await connection.query('DELETE FROM personnel WHERE id = ?', [personnelId]);
@@ -164,6 +163,7 @@ export async function firePersonnel(personnelId: string, reason: string, user: s
 const updatePersonnelSchema = z.object({
   name: z.string().min(3).regex(/^[A-Z][a-z]+ [A-Z][a-z]+$/, "Name must be in IC format (e.g., 'Leon Green')."),
   rank: z.string(),
+  department: z.string(),
   discordUsername: z.string().optional(),
   phoneNumber: z.string().optional(),
   bankAccount: z.string().optional(),
@@ -176,7 +176,7 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
   if (!validation.success) {
     return { success: false, message: validation.error.errors[0].message };
   }
-  const { name, rank, discordUsername, phoneNumber, bankAccount, hireDate, user } = validation.data;
+  const { name, rank, department, discordUsername, phoneNumber, bankAccount, hireDate, user } = validation.data;
   
   const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
   if (!hasPermission) {
@@ -192,8 +192,8 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
     }
 
     await connection.query(
-        'UPDATE personnel SET name = ?, rank = ?, discord_username = ?, phone_number = ?, bank_account = ?, hire_date = ? WHERE id = ?', 
-        [name, rank, discordUsername, phoneNumber, bankAccount, hireDate || null, personnelId]
+        'UPDATE personnel SET name = ?, rank = ?, department = ?, discord_username = ?, phone_number = ?, bank_account = ?, hire_date = ? WHERE id = ?', 
+        [name, rank, department, discordUsername || null, phoneNumber || null, bankAccount || null, hireDate || null, personnelId]
     );
 
     await logUserAction(user, "Update Personnel", `Updated details for ${name}.`, connection);
@@ -215,6 +215,7 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
 const addPersonnelSchema = z.object({
   name: z.string().min(3).regex(/^[A-Z][a-z]+ [A-Z][a-z]+$/, "Name must be in IC format (e.g., 'Leon Green')."),
   rank: z.string({ required_error: "Please select a rank." }),
+  department: z.string({ required_error: "Please select a division." }),
   discordUsername: z.string().optional(),
   phoneNumber: z.string().optional(),
   bankAccount: z.string().optional(),
@@ -228,7 +229,7 @@ export async function addPersonnel(data: unknown) {
     if (!validation.success) {
         return { success: false, message: validation.error.errors[0].message };
     }
-    const { name, rank, discordUsername, phoneNumber, bankAccount, hireDate, user, applicationId } = validation.data;
+    const { name, rank, department, discordUsername, phoneNumber, bankAccount, hireDate, user, applicationId } = validation.data;
     
     const hasPermission = await checkPermissions(user, 'HIRE_PERSONNEL');
     if (!hasPermission) {
@@ -243,14 +244,13 @@ export async function addPersonnel(data: unknown) {
         const userId = (userRows as any)[0]?.id || null;
 
         const personnelId = crypto.randomUUID();
-        // Providing a dummy badgeNumber since it is currently required in DB but removed from UI
         const dummyBadge = Math.floor(1000 + Math.random() * 9000).toString();
 
         await connection.query(
-            'INSERT INTO personnel (id, name, rank, badgeNumber, discord_username, phone_number, bank_account, hire_date, status, loa_until, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [personnelId, name, rank, dummyBadge, discordUsername, phoneNumber, bankAccount, hireDate, 'Active', null, userId]
+            'INSERT INTO personnel (id, name, rank, department, badgeNumber, discord_username, phone_number, bank_account, hire_date, status, loa_until, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [personnelId, name, rank, department, dummyBadge, discordUsername || null, phoneNumber || null, bankAccount || null, hireDate, 'Active', null, userId]
         );
-        await logEvent(name, 'Hired', `Hired as ${rank}`, connection);
+        await logEvent(name, 'Hired', `Hired as ${rank} in ${department}`, connection);
         
         let logDescription = `Added ${name} to the roster as ${rank}.`;
         if (applicationId) {

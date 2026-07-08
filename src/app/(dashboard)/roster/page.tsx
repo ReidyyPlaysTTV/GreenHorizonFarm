@@ -133,7 +133,7 @@ const RosterTable = ({ personnel, ranks }: { personnel: Personnel[], ranks: Rank
             ) : (
                 <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center">
-                    No personnel found in this division.
+                    No personnel found.
                 </TableCell>
                 </TableRow>
             )}
@@ -159,6 +159,8 @@ export default async function RosterPage() {
     }
     return a.name.localeCompare(b.name);
   });
+
+  const unassignedPersonnel = sortedPersonnel.filter(p => !p.department || !divisions.includes(p.department as any));
 
   return (
     <div className="flex flex-col h-full bg-background/50">
@@ -195,6 +197,20 @@ export default async function RosterPage() {
                     </Card>
                 )
                 })}
+
+                {unassignedPersonnel.length > 0 && (
+                     <Card className="border-destructive/20 bg-card/40 backdrop-blur-sm overflow-hidden">
+                     <CardHeader className="bg-destructive/5 py-3 border-b border-destructive/10">
+                         <CardTitle className="text-sm uppercase tracking-widest font-black text-destructive flex items-center gap-2">
+                             <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
+                             Unassigned / Needs Division
+                         </CardTitle>
+                     </CardHeader>
+                     <CardContent className="p-0">
+                         <RosterTable personnel={unassignedPersonnel} ranks={ranks} />
+                     </CardContent>
+                     </Card>
+                )}
             </div>
         </div>
     </div>
