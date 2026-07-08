@@ -66,8 +66,9 @@ export async function getUsers(): Promise<AppUser[]> {
         const personnelMap = new Map();
         if (Array.isArray(personnel)) { 
             personnel.forEach((p: any) => {
-                const key = (p.userId || p.name || "").toString().toLowerCase();
-                personnelMap.set(key, p);
+                // Map by both ID and Name to handle different linking states
+                if (p.userId) personnelMap.set(p.userId.toString().toLowerCase(), p);
+                if (p.name) personnelMap.set(p.name.toString().toLowerCase(), p);
             }); 
         }
 
@@ -87,7 +88,7 @@ export async function getUsers(): Promise<AppUser[]> {
                 ...u, 
                 roles: Array.isArray(userRoles) ? userRoles : [], 
                 createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined, 
-                personnel: pRecord || null 
+                personnel: pRecord ? { ...pRecord } : null 
             };
         });
     } catch (error) { 

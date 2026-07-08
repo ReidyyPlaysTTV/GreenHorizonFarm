@@ -13,6 +13,7 @@ import { SettingsManagement } from "@/components/admin/settings-management";
 import { BannedUsersManagement } from "@/components/admin/banned-users-management";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { ShieldAlert, Loader2, Clock } from "lucide-react";
 import Link from "next/link";
 import type { AppUser, BugReport, Suggestion, AccessRequest } from '@/lib/types';
