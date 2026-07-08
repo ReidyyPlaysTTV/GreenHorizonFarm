@@ -53,9 +53,10 @@ const formSchema = z.object({
 
 interface AddOrderFormProps {
     businessOrder?: BusinessOrder;
+    children?: React.ReactNode;
 }
 
-export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
+export function AddOrderForm({ businessOrder, children }: AddOrderFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState<FarmProduct[]>([]);
@@ -68,12 +69,12 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
     if (typeof window !== 'undefined') {
       setCurrentUser(localStorage.getItem('loggedInUser') || "System");
     }
-    if (isOpen || businessOrder) {
-        getManagerData().then(data => setProducts(data.farmProducts));
+    if (isOpen) {
+        getManagerData().then(data => setProducts(data.farmProducts || []));
         getPersonnel().then(setRoster);
         getBusinesses().then(setBusinesses);
     }
-  }, [isOpen, businessOrder]);
+  }, [isOpen]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -94,7 +95,6 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
     name: "items"
   });
 
-  // Use deep watching for real-time calculations
   const watchedItems = useWatch({ control: form.control, name: "items" });
   const watchedDiscount = useWatch({ control: form.control, name: "discount_amount" });
   const watchedCutPercentage = useWatch({ control: form.control, name: "employee_cut_percentage" });
@@ -151,9 +151,9 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
   }
 
   return (
-    <Dialog open={isOpen || !!businessOrder} onOpenChange={(v) => !businessOrder && setIsOpen(v)}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        {!businessOrder && (
+        {children || (
             <Button size="lg" className="gap-2 h-16 text-lg font-bold rounded-2xl">
                 <PlusCircle className="h-6 w-6" />
                 Record Personal Sale
@@ -173,7 +173,6 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
             <div className="grid md:grid-cols-2 gap-8">
-                {/* Left Side: Order Details */}
                 <div className="space-y-6">
                     <div className="grid gap-4">
                         <FormField
@@ -235,7 +234,7 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
                                                 if (prod) {
                                                     form.setValue(`items.${index}.product_id`, prod.id);
                                                     form.setValue(`items.${index}.product_name`, prod.name);
-                                                    form.setValue(`items.${index}.price_at_sale`, prod.price);
+                                                    form.setValue(`items.${index}.price_at_sale`, Number(prod.price));
                                                 }
                                             }}
                                             defaultValue={field.product_id}
@@ -254,7 +253,6 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
                     </div>
                 </div>
 
-                {/* Right Side: Staff Splits */}
                 <div className="space-y-6 border-l border-white/5 pl-8">
                     <div>
                         <div className="flex items-center justify-between mb-4">
@@ -350,7 +348,6 @@ export function AddOrderForm({ businessOrder }: AddOrderFormProps) {
 
             <DialogFooter className="pt-4 gap-4">
               <Button type="button" variant="outline" onClick={() => {
-                  if(businessOrder) window.location.reload(); // Quick fix for managed close
                   setIsOpen(false);
               }}>Cancel</Button>
               <Button type="submit" disabled={isLoading || fields.length === 0} className="bg-primary hover:bg-primary/90 font-black h-12 px-12 rounded-xl text-lg">

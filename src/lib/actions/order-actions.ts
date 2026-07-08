@@ -148,11 +148,10 @@ export async function submitBusinessOrder(data: unknown) {
     }
     
     try {
-        // High-resilience race to handle ZAP-Hosting lag
         const result = await Promise.race([
             (async () => {
                 await ensureDbInitialized();
-                const connection = await db.getConnection();
+                const connection = await pool.getConnection();
                 try {
                     const id = crypto.randomUUID();
                     await connection.query(
@@ -179,6 +178,23 @@ export async function submitBusinessOrder(data: unknown) {
                 ? "Database link is slow. Please click transmit again." 
                 : "Logistics network currently unreachable." 
         };
+    }
+}
+
+export async function cancelBusinessOrder(orderId: string, user: string) {
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        await connection.query("UPDATE business_orders SET status = 'Cancelled' WHERE id = ?", [orderId]);
+        await logUserAction(user, "Cancel Business Order", `Rejected business request ID: ${orderId}`, connection);
+        await connection.commit();
+        revalidatePath('/farmers');
+        return { success: true, message: 'Order rejected and removed from queue.' };
+    } catch (e) {
+        await connection.rollback();
+        return { success: false, message: 'Failed to update order status.' };
+    } finally {
+        connection.release();
     }
 }
 

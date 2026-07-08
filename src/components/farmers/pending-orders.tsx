@@ -4,16 +4,30 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, Clock, CheckCircle2, ChevronRight, Loader2 } from "lucide-react";
-import { getPendingBusinessOrders } from "@/lib/actions/order-actions";
+import { Package, Clock, CheckCircle2, ChevronRight, Loader2, XCircle } from "lucide-react";
+import { getPendingBusinessOrders, cancelBusinessOrder } from "@/lib/actions/order-actions";
 import type { BusinessOrder } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "../ui/button";
 import { AddOrderForm } from "./add-order-form";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export function PendingOrders() {
     const [orders, setOrders] = useState<BusinessOrder[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentUser, setCurrentUser] = useState("System");
+    const { toast } = useToast();
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -23,8 +37,19 @@ export function PendingOrders() {
     };
 
     useEffect(() => {
+        if (typeof window !== 'undefined') setCurrentUser(localStorage.getItem('loggedInUser') || "System");
         fetchOrders();
     }, []);
+
+    const handleCancel = async (id: string) => {
+        const res = await cancelBusinessOrder(id, currentUser);
+        if (res.success) {
+            toast({ title: "Order Rejected", description: "The request has been removed from the network." });
+            fetchOrders();
+        } else {
+            toast({ variant: "destructive", title: "Error", description: res.message });
+        }
+    };
 
     if (loading) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin opacity-20" /></div>;
 
@@ -52,7 +77,7 @@ export function PendingOrders() {
                                 </div>
                                 <CardTitle className="text-xl font-black tracking-tight">{order.business_name}</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-4">
+                            <CardContent className="space-y-6">
                                 <div className="space-y-1.5">
                                     {order.items.map((item, i) => (
                                         <div key={i} className="flex justify-between items-center p-2 bg-white/5 rounded-lg text-xs">
@@ -62,12 +87,36 @@ export function PendingOrders() {
                                     ))}
                                 </div>
                                 
-                                <AddOrderForm businessOrder={order}>
-                                    <Button className="w-full h-10 font-bold gap-2 group">
-                                        Claim & Fulfill Order
-                                        <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                                    </Button>
-                                </AddOrderForm>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <AddOrderForm businessOrder={order}>
+                                        <Button className="w-full h-10 font-bold gap-2 bg-emerald-600 hover:bg-emerald-700">
+                                            Claim & Process
+                                        </Button>
+                                    </AddOrderForm>
+
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="outline" className="w-full h-10 font-bold gap-2 border-destructive/20 text-destructive/80 hover:bg-destructive/10">
+                                                <XCircle className="h-4 w-4" />
+                                                Reject
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Reject Requisition?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Are you sure you want to reject the order from **{order.business_name}**? This will remove it from the system permanently.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Keep Pending</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleCancel(order.id)} className="bg-destructive text-white">
+                                                    Yes, Reject Order
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
                             </CardContent>
                         </Card>
                     ))}
