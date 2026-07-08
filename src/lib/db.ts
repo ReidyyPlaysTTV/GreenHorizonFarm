@@ -13,11 +13,11 @@ try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 20, 
-        maxIdle: 15,
-        idleTimeout: 30000, 
+        connectionLimit: 10, // Reduced to prevent overwhelming slow DB
+        maxIdle: 10,
+        idleTimeout: 60000, 
         queueLimit: 0,
-        connectTimeout: 10000,
+        connectTimeout: 5000, // Fail fast on initial connection
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });
@@ -284,21 +284,27 @@ export async function ensureDbInitialized(force: boolean = false) {
     initPromise = (async () => {
         let connection;
         try {
+            // High-resilience handshake
             connection = await pool.getConnection();
+            
+            // Check for existence of core table with short timeout
             const [tables]: any = await connection.query({
                 sql: "SHOW TABLES LIKE 'users'",
-                timeout: 5000 
+                timeout: 3000 
             });
+
             if (!tables || tables.length === 0) {
+                console.log("Database empty. Seeding initial schema...");
                 await createFarmTables(connection);
                 await seedDatabase(pool);
             }
+            
             isInitialized = true;
             return pool;
         } catch (err: any) {
             initPromise = null; 
-            console.error("DB Readiness Check Failed (Will Retry):", err.message);
-            return pool;
+            console.error("DB Readiness Check Delayed (MariaDB Latency):", err.message);
+            return pool; // Return the pool anyway so callers can try their own queries
         } finally {
             if (connection) connection.release();
         }

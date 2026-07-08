@@ -3,18 +3,23 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getMaintenanceMode } from "@/lib/actions/settings-actions";
 
+/**
+ * Provides server-side route protection and maintenance mode enforcement.
+ * Uses an aggressive race strategy to prevent MariaDB latency from blocking navigation.
+ */
 export async function RouteProtectionProvider({ children }: { children: React.ReactNode }) {
     let isMaintenanceMode = false;
     
     try {
+        // Race the DB check against a tight timeout
         const maintenancePromise = getMaintenanceMode();
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('FAIL_FAST')), 1500)
+        const timeoutPromise = new Promise<boolean>((resolve) => 
+            setTimeout(() => resolve(false), 800) // 800ms fail-fast for navigation snappiness
         );
         
-        isMaintenanceMode = await Promise.race([maintenancePromise, timeoutPromise]) as boolean;
+        isMaintenanceMode = await Promise.race([maintenancePromise, timeoutPromise]);
     } catch (error) {
-        console.warn("RouteProtectionProvider: Database fail-fast triggered, bypassing maintenance.");
+        // Silent fail - assume app is operational if DB is unreachable
     }
 
     if (isMaintenanceMode) {
@@ -33,6 +38,7 @@ export async function RouteProtectionProvider({ children }: { children: React.Re
             }
         }
         
+        // Only Leon Green and admin bypass maintenance
         if (decodedUser !== 'Leon Green' && decodedUser !== 'admin') {
             redirect('/maintenance');
         }

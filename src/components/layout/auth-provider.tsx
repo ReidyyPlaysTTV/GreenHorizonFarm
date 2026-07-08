@@ -11,24 +11,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
     const [isLoading, setIsLoading] = useState(true);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
         const checkAuth = () => {
             if (typeof window !== 'undefined') {
                 const loggedInUser = localStorage.getItem('loggedInUser');
+                const isPublic = PUBLIC_ROUTES.includes(pathname);
                 
-                // If not logged in and trying to access a protected route, redirect to login
-                if (!loggedInUser && !PUBLIC_ROUTES.includes(pathname)) {
+                if (!loggedInUser && !isPublic) {
+                    // Force immediate redirect without rendering children
                     router.replace('/login');
+                } else {
+                    setIsAuthenticated(!!loggedInUser);
+                    setIsLoading(false);
                 }
             }
-            setIsLoading(false);
         };
 
         checkAuth();
     }, [pathname, router]);
 
-    if (isLoading) {
+    // While checking or if we are about to redirect, show nothing but the loader
+    // to prevent dashboard elements from leaking into the login flow.
+    if (isLoading || (!isAuthenticated && !PUBLIC_ROUTES.includes(pathname))) {
         return <Loading />;
     }
 
