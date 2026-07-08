@@ -76,6 +76,16 @@ export interface DetailedFarmOrder {
     employee_cut_value: number;
     employee_cut_percentage: number;
     completed_by: string;
+    collaborators: string[]; // Additional workers
+    created_at: Date;
+}
+
+export interface BusinessOrder {
+    id: string;
+    business_name: string;
+    contact_info: string;
+    items: OrderItem[];
+    status: 'Pending' | 'Accepted' | 'Completed' | 'Cancelled';
     created_at: Date;
 }
 

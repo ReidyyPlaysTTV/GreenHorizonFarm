@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import db, { ensureDbInitialized } from '../db';
 import { revalidatePath } from 'next/cache';
-import type { DetailedFarmOrder } from '../types';
+import type { DetailedFarmOrder, BusinessOrder } from '../types';
 import { logUserAction } from './audit-log-actions';
 
 const orderSchema = z.object({
@@ -21,6 +21,8 @@ const orderSchema = z.object({
   employee_cut_value: z.coerce.number().min(0),
   employee_cut_percentage: z.coerce.number().min(0).max(100),
   user: z.string(),
+  collaborators: z.array(z.string()).default([]),
+  businessOrderId: z.string().optional(),
 });
 
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1523878492029194361/gqg_zA8_TQo10FUQBeX2dsecgcKtHQKC2aWyZyx9_t1bHqFu9jtjoSw2G-L7HLRGfTzo";
@@ -28,6 +30,7 @@ const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/152387849202919436
 async function sendOrderWebhook(order: any) {
     try {
         const itemsList = order.items_sold.map((i: any) => `- ${i.quantity}x ${i.product_name}`).join('\n');
+        const staffList = [order.user, ...order.collaborators].join(', ');
         
         const payload = {
             embeds: [{
@@ -36,10 +39,10 @@ async function sendOrderWebhook(order: any) {
                 fields: [
                     { name: "Client / Business", value: `**${order.business_name}**`, inline: true },
                     { name: "Total Paid", value: `\`$${order.total_price.toLocaleString()}\``, inline: true },
-                    { name: "Completed By", value: order.user, inline: true },
+                    { name: "Staff Involved", value: staffList, inline: true },
                     { name: "Yield Details", value: itemsList || "No items listed" },
                     { name: "Logistics Used", value: order.logistics_used ? "✅ Yes" : "❌ No", inline: true },
-                    { name: "Employee Commission", value: `$${order.employee_cut_value.toLocaleString()} (${order.employee_cut_percentage}%)`, inline: true },
+                    { name: "Shared Commission", value: `$${order.employee_cut_value.toLocaleString()} (${order.employee_cut_percentage}%)`, inline: true },
                 ],
                 timestamp: new Date().toISOString(),
                 footer: { text: "Green Horizon Management System • Ledger Update" }
@@ -63,7 +66,8 @@ export async function submitDetailedOrder(data: unknown) {
     }
     const { 
         business_name, items_sold, discount_amount, total_price, 
-        logistics_used, employee_cut_value, employee_cut_percentage, user 
+        logistics_used, employee_cut_value, employee_cut_percentage, user,
+        collaborators, businessOrderId
     } = validation.data;
 
     try {
@@ -76,12 +80,16 @@ export async function submitDetailedOrder(data: unknown) {
             await connection.query(
                 `INSERT INTO detailed_farm_orders (
                     id, business_name, items_sold, discount_amount, total_price, logistics_used, 
-                    employee_cut_value, employee_cut_percentage, completed_by
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [id, business_name, JSON.stringify(items_sold), discount_amount, total_price, logistics_used, employee_cut_value, employee_cut_percentage, user]
+                    employee_cut_value, employee_cut_percentage, completed_by, collaborators
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [id, business_name, JSON.stringify(items_sold), discount_amount, total_price, logistics_used, employee_cut_value, employee_cut_percentage, user, JSON.stringify(collaborators)]
             );
 
-            await logUserAction(user, "Submit Order", `Submitted a completed order for ${business_name} totalling $${total_price}.`, connection);
+            if (businessOrderId) {
+                await connection.query("UPDATE business_orders SET status = 'Completed' WHERE id = ?", [businessOrderId]);
+            }
+
+            await logUserAction(user, "Submit Order", `Submitted order for ${business_name}. Shared by ${collaborators.length + 1} staff.`, connection);
             await connection.commit();
             await sendOrderWebhook(validation.data);
 
@@ -95,7 +103,7 @@ export async function submitDetailedOrder(data: unknown) {
             connection.release();
         }
     } catch (error) {
-        return { success: false, message: 'Database operation failed. Ensure the server is online.' };
+        return { success: false, message: 'Database operation failed.' };
     }
 }
 
@@ -109,6 +117,7 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
             return (rows as any[]).map(row => ({
                 ...row,
                 items_sold: typeof row.items_sold === 'string' ? JSON.parse(row.items_sold) : (row.items_sold || []),
+                collaborators: typeof row.collaborators === 'string' ? JSON.parse(row.collaborators) : (row.collaborators || []),
                 logistics_used: !!row.logistics_used,
                 created_at: new Date(row.created_at)
             }));
@@ -120,19 +129,66 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
     }
 }
 
+// Business Order Actions
+const businessOrderSchema = z.object({
+    business_name: z.string().min(1),
+    contact_info: z.string().min(1),
+    items: z.array(z.object({
+        product_id: z.string(),
+        product_name: z.string(),
+        quantity: z.number().min(1),
+        price_at_sale: z.number()
+    }))
+});
+
+export async function submitBusinessOrder(data: unknown) {
+    const validation = businessOrderSchema.safeParse(data);
+    if (!validation.success) return { success: false, message: "Invalid order data" };
+    
+    const connection = await db.getConnection();
+    try {
+        const id = crypto.randomUUID();
+        await connection.query(
+            "INSERT INTO business_orders (id, business_name, contact_info, items, status) VALUES (?, ?, ?, ?, ?)",
+            [id, validation.data.business_name, validation.data.contact_info, JSON.stringify(validation.data.items), 'Pending']
+        );
+        return { success: true, orderId: id };
+    } catch (e) {
+        return { success: false, message: "Database error" };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function getPendingBusinessOrders(): Promise<BusinessOrder[]> {
+    await ensureDbInitialized();
+    const connection = await db.getConnection();
+    try {
+        const [rows] = await connection.query("SELECT * FROM business_orders WHERE status = 'Pending' ORDER BY created_at DESC");
+        return (rows as any[]).map(r => ({
+            ...r,
+            items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items,
+            created_at: new Date(r.created_at)
+        }));
+    } finally {
+        connection.release();
+    }
+}
+
 export async function getOrdersByStaff(name: string): Promise<DetailedFarmOrder[]> {
     try {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
             const [rows] = await connection.query(
-                'SELECT * FROM detailed_farm_orders WHERE completed_by = ? ORDER BY created_at DESC LIMIT 20',
-                [name]
+                "SELECT * FROM detailed_farm_orders WHERE completed_by = ? OR JSON_CONTAINS(collaborators, JSON_QUOTE(?)) ORDER BY created_at DESC LIMIT 20",
+                [name, name]
             );
             if (!Array.isArray(rows)) return [];
             return (rows as any[]).map(row => ({
                 ...row,
                 items_sold: typeof row.items_sold === 'string' ? JSON.parse(row.items_sold) : (row.items_sold || []),
+                collaborators: typeof row.collaborators === 'string' ? JSON.parse(row.collaborators) : (row.collaborators || []),
                 logistics_used: !!row.logistics_used,
                 created_at: new Date(row.created_at)
             }));
@@ -140,7 +196,6 @@ export async function getOrdersByStaff(name: string): Promise<DetailedFarmOrder[
             connection.release();
         }
     } catch (error) {
-        console.error("Failed to fetch staff orders:", error);
         return [];
     }
 }

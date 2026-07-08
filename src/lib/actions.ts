@@ -1,8 +1,4 @@
 
-// This file serves as a central hub for re-exporting all server actions.
-// We DO NOT use 'use server' here to avoid build errors with barrel re-exports.
-// The underlying action files contain the 'use server' directive.
-
 export {
     promotePersonnel,
     demotePersonnel,
@@ -116,7 +112,9 @@ export {
 export {
     submitDetailedOrder,
     getDetailedOrders,
-    getOrdersByStaff
+    getOrdersByStaff,
+    submitBusinessOrder,
+    getPendingBusinessOrders
 } from './actions/order-actions';
 
 export {

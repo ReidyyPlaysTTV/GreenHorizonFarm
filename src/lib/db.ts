@@ -70,6 +70,18 @@ async function createFarmTables(connection: any) {
                 employee_cut_value DECIMAL(10, 2) DEFAULT 0,
                 employee_cut_percentage INT DEFAULT 0,
                 completed_by VARCHAR(255) NOT NULL,
+                collaborators JSON,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS business_orders (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                business_name VARCHAR(255) NOT NULL,
+                contact_info VARCHAR(255),
+                items JSON NOT NULL,
+                status ENUM('Pending', 'Accepted', 'Completed', 'Cancelled') NOT NULL DEFAULT 'Pending',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
@@ -139,7 +151,6 @@ export async function ensureDbInitialized(force: boolean = false) {
         try {
             await createFarmTables(connection);
             await seedDatabase(pool);
-            // Permission and Rank seeding moved out of initial core path to break circular loops
             isInitialized = true;
             return pool;
         } finally {
