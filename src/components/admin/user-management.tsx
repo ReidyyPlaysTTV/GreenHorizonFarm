@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import type { AppUser } from "@/lib/types";
@@ -21,10 +19,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { User } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 interface UserManagementProps {
     users: AppUser[];
     currentUser: string;
+}
+
+const getRoleClass = (role: string) => {
+    return "animate-rgb-mesh border-none text-white font-black text-[10px] shadow-sm";
 }
 
 export function UserManagement({ users, currentUser }: UserManagementProps) {
@@ -84,7 +87,7 @@ export function UserManagement({ users, currentUser }: UserManagementProps) {
     const activeUsers = users.filter(u => u.status === 'Active');
 
     return (
-        <Card className="bg-black text-white">
+        <Card className="bg-black text-white border-white/5">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>User Management</CardTitle>
@@ -99,38 +102,40 @@ export function UserManagement({ users, currentUser }: UserManagementProps) {
                         if (usersInRole.length === 0) return null;
 
                         return (
-                            <AccordionItem value={role} key={role} className="border-gray-700">
-                                <AccordionTrigger className="text-lg font-medium hover:no-underline text-white">
-                                    <span className="flex-1 text-left">{role} ({usersInRole.length})</span>
+                            <AccordionItem value={role} key={role} className="border-gray-800">
+                                <AccordionTrigger className="text-lg font-black hover:no-underline text-white/90">
+                                    <span className="flex-1 text-left uppercase tracking-widest">{role} ({usersInRole.length})</span>
                                 </AccordionTrigger>
                                 <AccordionContent>
                                     <Table>
                                         <TableHeader>
                                             <TableRow className="border-gray-700">
                                                 <TableHead className="w-[50px]"></TableHead>
-                                                <TableHead className="text-white">Username</TableHead>
-                                                <TableHead className="text-white">Roles</TableHead>
-                                                <TableHead className="text-white">Status</TableHead>
-                                                <TableHead className="text-right text-white">Actions</TableHead>
+                                                <TableHead className="text-white font-black uppercase text-[10px]">Username</TableHead>
+                                                <TableHead className="text-white font-black uppercase text-[10px]">Permission Groups</TableHead>
+                                                <TableHead className="text-white font-black uppercase text-[10px]">Status</TableHead>
+                                                <TableHead className="text-right text-white font-black uppercase text-[10px]">Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {usersInRole.map(user => (
-                                                <TableRow key={user.id} className="border-gray-800">
+                                                <TableRow key={user.id} className="border-gray-800 hover:bg-white/5 transition-colors">
                                                     <TableCell>
-                                                        <Avatar className="h-8 w-8">
-                                                            <AvatarImage src={user.avatarUrl} alt={user.username} />
-                                                            <AvatarFallback><User className="h-4 w-4"/></AvatarFallback>
+                                                        <Avatar className="h-8 w-8 border border-white/10">
+                                                            <AvatarImage src={user.avatarUrl} alt={user.username} className="object-cover" />
+                                                            <AvatarFallback className="bg-muted text-[10px]">{user.username[0]}</AvatarFallback>
                                                         </Avatar>
                                                     </TableCell>
-                                                    <TableCell className="font-medium">{user.username}</TableCell>
+                                                    <TableCell className="font-bold text-sm tracking-tight">{user.username}</TableCell>
                                                     <TableCell>
                                                         <div className="flex flex-wrap gap-1">
-                                                            {Array.isArray(user.roles) && user.roles.map(r => <Badge key={r} variant="secondary" className="bg-gray-700 text-white">{r}</Badge>)}
+                                                            {Array.isArray(user.roles) && user.roles.map(r => (
+                                                                <Badge key={r} className={getRoleClass(r)}>{r}</Badge>
+                                                            ))}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Badge variant={user.status === 'Active' ? 'secondary' : 'destructive'} className="bg-gray-700 text-white">
+                                                        <Badge variant={user.status === 'Active' ? 'secondary' : 'destructive'} className="text-[10px] uppercase font-black">
                                                             {user.status}
                                                         </Badge>
                                                     </TableCell>
@@ -139,11 +144,11 @@ export function UserManagement({ users, currentUser }: UserManagementProps) {
                                                              user.username !== currentUser && (
                                                                 <DropdownMenu>
                                                                     <DropdownMenuTrigger asChild>
-                                                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-800">
+                                                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-800 rounded-full">
                                                                             <MoreHorizontal className="h-4 w-4" />
                                                                         </Button>
                                                                     </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent>
+                                                                    <DropdownMenuContent className="glass-card">
                                                                         {canManageUsers && <>
                                                                             <EditUserDialog user={user} />
                                                                             <ResetPasswordDialog user={user} />
@@ -153,7 +158,7 @@ export function UserManagement({ users, currentUser }: UserManagementProps) {
                                                                             </DropdownMenuItem>
                                                                         </>}
                                                                         {canDeleteUsers && <>
-                                                                            <DropdownMenuSeparator />
+                                                                            <DropdownMenuSeparator className="bg-white/5" />
                                                                             <AlertDialog>
                                                                                 <AlertDialogTrigger asChild>
                                                                                      <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive focus:text-destructive">
@@ -161,7 +166,7 @@ export function UserManagement({ users, currentUser }: UserManagementProps) {
                                                                                          Delete User
                                                                                      </DropdownMenuItem>
                                                                                 </AlertDialogTrigger>
-                                                                                <AlertDialogContent>
+                                                                                <AlertDialogContent className="glass-card">
                                                                                     <AlertDialogHeader>
                                                                                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                                                                         <AlertDialogDescription>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -22,18 +21,7 @@ import { RefreshButton } from "@/components/layout/refresh-button";
 
 
 const getRoleClass = (role: string) => {
-    switch (role) {
-        case "Administrator":
-            return "animate-rainbow-text bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500 bg-clip-text text-transparent";
-        case "Developer":
-            return "animate-dev-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent";
-        case "CEO":
-            return "text-primary font-black";
-        case "Manager":
-            return "text-emerald-400 font-bold";
-        default:
-            return "";
-    }
+    return "animate-rgb-mesh border-none text-white font-black shadow-lg shadow-black/20";
 }
 
 export default function UserProfilePage() {

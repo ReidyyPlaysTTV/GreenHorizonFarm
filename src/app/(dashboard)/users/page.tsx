@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -17,28 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const getRoleClass = (role: string) => {
-    switch (role) {
-        case "Administrator":
-            return "animate-rainbow-text bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500 bg-clip-text text-transparent";
-        case "Developer":
-            return "animate-dev-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent";
-        case "CEO":
-            return "bg-primary text-primary-foreground font-black";
-        case "Co-CEO":
-            return "bg-primary/80 text-primary-foreground font-bold";
-        case "Manager":
-            return "text-emerald-400 border-emerald-400/30";
-        case "Book-Keeper":
-            return "text-yellow-400 border-yellow-400/30";
-        case "Business Co-Ordinator":
-            return "text-blue-400 border-blue-400/30";
-        case "Events Planner":
-            return "text-pink-400 border-pink-400/30";
-        case "Security":
-            return "text-red-400 border-red-400/30";
-        default:
-            return "text-muted-foreground";
-    }
+    return "animate-rgb-mesh border-none text-white font-black shadow-lg shadow-black/20";
 }
 
 const UserCard = ({ user, primaryRole }: { user: AppUser, primaryRole: string }) => {
@@ -68,11 +46,11 @@ const UserCard = ({ user, primaryRole }: { user: AppUser, primaryRole: string })
                         Permissions
                     </span>
                     <div className="flex flex-wrap gap-1.5">
-                        <Badge variant="outline" className={cn("font-bold text-[10px] uppercase", getRoleClass(primaryRole))}>
+                        <Badge className={cn("font-bold text-[10px] uppercase", getRoleClass(primaryRole))}>
                             {primaryRole}
                         </Badge>
                         {otherRoles.map(role => (
-                            <Badge key={role} variant="secondary" className={cn("font-bold text-[10px] uppercase bg-muted/50", getRoleClass(role))}>
+                            <Badge key={role} className={cn("font-bold text-[10px] uppercase", getRoleClass(role))}>
                                 {role}
                             </Badge>
                         ))}
