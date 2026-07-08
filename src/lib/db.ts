@@ -40,7 +40,7 @@ async function createFarmTables(connection: any) {
             );
         `);
 
-        // 2. Personnel (Division removed from requirements)
+        // 2. Personnel
         await connection.query(`
             CREATE TABLE IF NOT EXISTS personnel (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
