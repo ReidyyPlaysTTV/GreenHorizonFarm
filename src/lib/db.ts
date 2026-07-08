@@ -9,16 +9,16 @@ const dbUri = 'mysql://zap1311701-1:gFtXgwwIs09GtYtx@mysql-mariadb-20-104.zap-sr
 let pool: Pool;
 let isInitialized = false;
 let dbOfflineUntil = 0;
-const OFFLINE_COOLDOWN = 30000; // 30 seconds circuit breaker
+const OFFLINE_COOLDOWN = 60000; // 60 seconds circuit breaker
 
 try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 5,
+        connectionLimit: 10,
         queueLimit: 0,
-        connectTimeout: 5000,
-        acquireTimeout: 5000,
+        connectTimeout: 2000, // Strict timeout
+        acquireTimeout: 2000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });

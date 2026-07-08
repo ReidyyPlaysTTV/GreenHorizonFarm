@@ -5,19 +5,18 @@ import { getMaintenanceMode } from "@/lib/actions/settings-actions";
 
 /**
  * RouteProtectionProvider handles high-level system states like Maintenance Mode.
- * It is designed to be non-blocking if the database is unreachable.
+ * It is designed to be non-blocking if the database is unreachable or timing out.
  */
 export async function RouteProtectionProvider({ children }: { children: React.ReactNode }) {
-    // In diagnostic mode, we skip heavy blocking server-side DB checks 
-    // to ensure the layout always renders.
-    
     let isMaintenanceMode = false;
+    
     try {
-        // Maintenance mode check should fail-fast
+        // We use a safe wrapper or internal timeout check if necessary, 
+        // but getMaintenanceMode already handles internal try/catch.
         isMaintenanceMode = await getMaintenanceMode();
     } catch (error) {
         // Log but don't crash the layout
-        console.warn("RouteProtectionProvider: Maintenance check bypassed due to timeout.");
+        console.warn("RouteProtectionProvider: Maintenance check failed, defaulting to OFF.");
     }
 
     if (isMaintenanceMode) {
@@ -27,8 +26,9 @@ export async function RouteProtectionProvider({ children }: { children: React.Re
             ? cookieHeader.split('; ').find(row => row.startsWith('loggedInUser='))?.split('=')[1]
             : undefined;
             
-        // If it's not a developer, redirect to maintenance
-        if (loggedInUser !== 'Leon%20Green' && loggedInUser !== 'admin') {
+        // If it's not a developer or admin, redirect to maintenance
+        const decodedUser = loggedInUser ? decodeURIComponent(loggedInUser) : '';
+        if (decodedUser !== 'Leon Green' && decodedUser !== 'admin') {
             redirect('/maintenance');
         }
     }

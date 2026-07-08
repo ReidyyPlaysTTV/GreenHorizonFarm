@@ -53,9 +53,6 @@ async function sendFireWebhook(data: any) {
     } catch (e) { console.error("Discord Fire Webhook Failed", e); }
 }
 
-/**
- * Internal helper to sync user roles with roster rank.
- */
 async function syncUserRoles(connection: any, name: string, rank: string) {
     const [userRows]: any = await connection.query(
         'SELECT id, roles FROM users WHERE UPPER(username) = UPPER(?)', 
@@ -100,7 +97,7 @@ async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'P
 }
 
 export async function promotePersonnel(personnelId: string, user: string) {
-  const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
+  const hasPermission = await checkPermissions(user, 'MANAGE_EMPLOYEES');
   if (!hasPermission) return { success: false, message: 'Unauthorized' };
 
   const connection = await db.getConnection();
@@ -127,7 +124,7 @@ export async function promotePersonnel(personnelId: string, user: string) {
 }
 
 export async function demotePersonnel(personnelId: string, user: string) {
-  const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
+  const hasPermission = await checkPermissions(user, 'MANAGE_EMPLOYEES');
   if (!hasPermission) return { success: false, message: 'Unauthorized' };
 
   const connection = await db.getConnection();
@@ -153,7 +150,7 @@ export async function demotePersonnel(personnelId: string, user: string) {
 }
 
 export async function firePersonnel(personnelId: string, reason: string, user: string) {
-  const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
+  const hasPermission = await checkPermissions(user, 'MANAGE_EMPLOYEES');
   if (!hasPermission) return { success: false, message: 'Unauthorized' };
   
   const connection = await db.getConnection();
@@ -201,7 +198,7 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
   if (!validation.success) return { success: false, message: validation.error.errors[0].message };
   const { name, rank, discordUsername, phoneNumber, bankAccount, hireDate, user } = validation.data;
   
-  const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
+  const hasPermission = await checkPermissions(user, 'MANAGE_EMPLOYEES');
   if (!hasPermission) return { success: false, message: 'Unauthorized' };
 
   const connection = await db.getConnection();
@@ -228,7 +225,6 @@ const addPersonnelSchema = z.object({
   bankAccount: z.string().optional(),
   hireDate: z.date().default(() => new Date()),
   user: z.string(),
-  applicationId: z.string().optional(),
 });
 
 export async function addPersonnel(data: unknown) {
@@ -236,7 +232,7 @@ export async function addPersonnel(data: unknown) {
     if (!validation.success) return { success: false, message: validation.error.errors[0].message };
     const { name, rank, discordUsername, phoneNumber, bankAccount, hireDate, user } = validation.data;
     
-    const hasPermission = await checkPermissions(user, 'HIRE_PERSONNEL');
+    const hasPermission = await checkPermissions(user, 'HIRE_EMPLOYEES');
     if (!hasPermission) return { success: false, message: 'Unauthorized' };
 
     const connection = await db.getConnection();
@@ -246,7 +242,7 @@ export async function addPersonnel(data: unknown) {
         const matchedUserId = await syncUserRoles(connection, name, rank);
         await connection.query(
             'INSERT INTO personnel (id, name, rank, department, discord_username, phone_number, bank_account, hire_date, status, loa_until, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [personnelId, name, rank, 'Management', discordUsername || null, phoneNumber || null, bankAccount || null, hireDate, 'Active', null, matchedUserId]
+            [personnelId, name, rank, 'General', discordUsername || null, phoneNumber || null, bankAccount || null, hireDate, 'Active', null, matchedUserId]
         );
         await logEvent(name, 'Hired', `Hired as ${rank}`, connection);
         await logUserAction(user, "Add Personnel", `Added ${name} to the roster.`, connection);
@@ -260,7 +256,7 @@ export async function addPersonnel(data: unknown) {
 
 export async function rehirePersonnel(data: any) {
     const { archivedId, name, rank, discordUsername, user } = data;
-    const hasPermission = await checkPermissions(user, 'HIRE_PERSONNEL');
+    const hasPermission = await checkPermissions(user, 'HIRE_EMPLOYEES');
     if (!hasPermission) return { success: false, message: 'Unauthorized' };
 
     const connection = await db.getConnection();
@@ -271,7 +267,7 @@ export async function rehirePersonnel(data: any) {
         const personnelId = crypto.randomUUID();
         await connection.query(
             'INSERT INTO personnel (id, name, rank, department, discord_username, hire_date, status, is_rehired, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [personnelId, name, rank, 'Management', discordUsername || null, new Date(), 'Active', true, matchedUserId]
+            [personnelId, name, rank, 'General', discordUsername || null, new Date(), 'Active', true, matchedUserId]
         );
         await logEvent(name, 'Rehired', `Rehired as ${rank}`, connection);
         await logUserAction(user, "Rehire Personnel", `Rehired ${name}.`, connection);
