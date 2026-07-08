@@ -116,10 +116,31 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
             connection.release();
         }
     } catch (error) {
-        // Mock Orders for UI speed
-        return [
-            { id: 'o1', business_name: 'Vanilla Unicorn', total_price: 15000, employee_cut_value: 2250, employee_cut_percentage: 15, completed_by: 'Leon Green', logistics_used: true, created_at: new Date(), items_sold: [] },
-            { id: 'o2', business_name: 'Burger Shot', total_price: 8500, employee_cut_value: 1275, employee_cut_percentage: 15, completed_by: 'John Doe', logistics_used: false, created_at: new Date(Date.now() - 3600000), items_sold: [] }
-        ];
+        return [];
+    }
+}
+
+export async function getOrdersByStaff(name: string): Promise<DetailedFarmOrder[]> {
+    try {
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            const [rows] = await connection.query(
+                'SELECT * FROM detailed_farm_orders WHERE completed_by = ? ORDER BY created_at DESC LIMIT 20',
+                [name]
+            );
+            if (!Array.isArray(rows)) return [];
+            return (rows as any[]).map(row => ({
+                ...row,
+                items_sold: typeof row.items_sold === 'string' ? JSON.parse(row.items_sold) : (row.items_sold || []),
+                logistics_used: !!row.logistics_used,
+                created_at: new Date(row.created_at)
+            }));
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error("Failed to fetch staff orders:", error);
+        return [];
     }
 }

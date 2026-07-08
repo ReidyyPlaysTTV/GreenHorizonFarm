@@ -6,9 +6,9 @@ import { notFound, useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, Shield, Briefcase, Star, Mail, Activity, KeySquare, Image as ImageIcon, FileCheck2, Phone, Calendar, ClipboardCheck } from "lucide-react";
+import { User, Shield, Briefcase, Star, Mail, Activity, KeySquare, Image as ImageIcon, FileCheck2, Phone, Calendar, ClipboardCheck, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getAuditLogs, getUsers, getReviewedApplicationsCount, getPersonnel, getDetailedOrders } from "@/lib/actions";
+import { getAuditLogs, getUserByUsername, getReviewedApplicationsCount, getOrdersByStaff } from "@/lib/actions";
 import type { AppUser, Personnel, AuditLog, DetailedFarmOrder } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ChangePasswordDialog } from "@/components/user/change-password-dialog";
@@ -54,8 +54,7 @@ export default function UserProfilePage() {
       setLoggedInUser(loggedInUserFromStorage);
 
       try {
-        const users = await getUsers();
-        const foundUser = users.find(u => u.username === decodedUsername);
+        const foundUser = await getUserByUsername(decodedUsername);
         
         if (!foundUser) {
           notFound();
@@ -63,24 +62,17 @@ export default function UserProfilePage() {
         }
         
         setUser(foundUser);
-        
-        let pRecord = foundUser.personnel || null;
-        if (!pRecord) {
-            const allPersonnel = await getPersonnel();
-            pRecord = allPersonnel.find(p => p.name === foundUser.username) || null;
-        }
-        
-        setPersonnelRecord(pRecord as Personnel);
+        setPersonnelRecord(foundUser.personnel as Personnel);
 
-        const [logs, reviewedCount, allOrders] = await Promise.all([
+        const [logs, reviewedCount, staffOrders] = await Promise.all([
             getAuditLogs({ username: decodedUsername }),
             getReviewedApplicationsCount(foundUser.id),
-            getDetailedOrders(),
+            getOrdersByStaff(decodedUsername),
         ]);
         
         setActivityLogs(logs);
         setReviewedAppsCount(reviewedCount);
-        setRecentOrders(allOrders.filter(o => o.completed_by === foundUser.username));
+        setRecentOrders(staffOrders);
 
       } catch (error) {
         console.error("Failed to fetch user data:", error);
@@ -258,6 +250,17 @@ export default function UserProfilePage() {
                         <div>
                             <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Leadership Reviews</p>
                             <p className="font-black text-lg">{reviewedAppsCount} Applications</p>
+                        </div>
+                    </div>
+                    
+                    {/* Financial Identity Section */}
+                    <div className="flex items-center gap-4 p-4 bg-primary/5 rounded-2xl border border-primary/10 col-span-full">
+                        <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                            <CreditCard className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Payroll Bank Account</p>
+                            <p className="font-black text-xl tracking-tighter">{personnelRecord.bankAccount || 'ACCOUNT NOT REGISTERED'}</p>
                         </div>
                     </div>
                 </CardContent>

@@ -44,7 +44,7 @@ export async function getUsers(): Promise<AppUser[]> {
             const [users] = await connection.query('SELECT id, username, roles, createdAt, avatarUrl, status FROM users ORDER BY username ASC');
             if (!Array.isArray(users)) return [];
 
-            const [personnel] = await connection.query('SELECT name, rank, department, userId FROM personnel');
+            const [personnel] = await connection.query('SELECT name, rank, department, userId, phone_number as phoneNumber, bank_account as bankAccount FROM personnel');
             const personnelMap = new Map();
             if (Array.isArray(personnel)) {
                 personnel.forEach((p: any) => {
@@ -80,6 +80,54 @@ export async function getUsers(): Promise<AppUser[]> {
             { id: 'leon-id', username: 'Leon Green', roles: ['Developer'], status: 'Active', createdAt: new Date().toISOString(), personnel: { name: 'Leon Green', rank: 'CEO', department: 'Management' } },
             { id: 'admin-id', username: 'admin', roles: ['Administrator'], status: 'Active', createdAt: new Date().toISOString() }
         ];
+    }
+}
+
+export async function getUserByUsername(username: string): Promise<AppUser | null> {
+    try {
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            const [users] = await connection.query(
+                'SELECT id, username, roles, createdAt, avatarUrl, status FROM users WHERE username = ?',
+                [username]
+            );
+            if (!Array.isArray(users) || users.length === 0) return null;
+            const u = (users as any)[0];
+
+            const [personnel] = await connection.query(
+                'SELECT name, rank, department, userId, phone_number as phoneNumber, bank_account as bankAccount, discord_username as discordUsername, hire_date as hireDate FROM personnel WHERE userId = ? OR name = ?',
+                [u.id, u.username]
+            );
+            
+            let pRecord = null;
+            if (Array.isArray(personnel) && personnel.length > 0) {
+                const p = (personnel as any)[0];
+                pRecord = {
+                    ...p,
+                    hireDate: p.hireDate ? new Date(p.hireDate).toISOString() : null,
+                };
+            }
+
+            let userRoles = [];
+            if(typeof u.roles === 'string') {
+                try { userRoles = JSON.parse(u.roles); } catch(e) { userRoles = []; }
+            } else if (Array.isArray(u.roles)) {
+                userRoles = u.roles;
+            }
+
+            return {
+                ...u,
+                roles: userRoles,
+                createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined,
+                personnel: pRecord
+            };
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error("Failed to fetch individual user profile:", error);
+        return null;
     }
 }
 
@@ -231,8 +279,17 @@ export async function deleteUser(userId: string, adminUser: string) {
     }
 }
 
+export async function getReviewedApplicationsCount(userId: string): Promise<number> {
+    try {
+        const [rows] = await db.query('SELECT COUNT(*) as count FROM applications WHERE reviewer_id = ?', [userId]);
+        return (rows as any)[0]?.count || 0;
+    } catch (e) {
+        console.error("Failed to fetch reviewed applications count:", e);
+        return 0;
+    }
+}
+
 export async function changeUserPassword(data: any) { return { success: false, message: 'Not implemented' }; }
 export async function updateProfilePicture(data: any) { return { success: false, message: 'Not implemented' }; }
-export async function getReviewedApplicationsCount(userId: string) { return 0; }
 export async function updateUser(data: any) { return { success: false, message: 'Not implemented' }; }
 export async function resetUserPassword(data: any) { return { success: false, message: 'Not implemented' }; }
