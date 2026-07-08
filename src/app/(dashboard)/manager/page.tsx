@@ -11,6 +11,7 @@ import {
     getPersonnel, 
     getRecentActivity, 
     getSecurityIncidents,
+    getAccessRequests
 } from "@/lib/actions";
 import { getManagerData } from "@/lib/actions/manager-actions";
 import type { 
@@ -22,7 +23,8 @@ import type {
     StaffIncident,
     FarmProduct,
     ManagerPlan,
-    PromotionSuggestion
+    PromotionSuggestion,
+    AccessRequest
 } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -41,7 +43,8 @@ import {
     CheckCircle2,
     XCircle,
     Clock,
-    Pencil
+    Pencil,
+    Key
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -53,6 +56,7 @@ import { AddPlanDialog } from "@/components/manager/add-plan-dialog";
 import { AddPromotionSuggestionDialog } from "@/components/manager/add-promotion-suggestion-dialog";
 import { AddAnnouncementDialog } from "@/components/dashboard/add-announcement-dialog";
 import { BusinessManagement } from "@/components/manager/business-management";
+import { AccessRequestManagement } from "@/components/admin/access-request-management";
 
 const StatusBadge = ({ status, feedback }: { status: string, feedback?: string }) => {
     let icon = <Clock className="h-3 w-3" />;
@@ -83,6 +87,7 @@ export default function ManagerPortal() {
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [activity, setActivity] = useState<PersonnelEvent[]>([]);
   const [securityIncidents, setSecurityIncidents] = useState<SecurityIncident[]>([]);
+  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [managerData, setManagerData] = useState<{
     staffIncidents: StaffIncident[];
     farmProducts: FarmProduct[];
@@ -94,13 +99,14 @@ export default function ManagerPortal() {
   const fetchData = async () => {
     setLoading(true);
     try {
-        const [o, t, p, a, s, m] = await Promise.all([
+        const [o, t, p, a, s, m, ar] = await Promise.all([
             getDetailedOrders(),
             getFarmTransactions(),
             getPersonnel(),
             getRecentActivity(),
             getSecurityIncidents(),
-            getManagerData()
+            getManagerData(),
+            getAccessRequests()
         ]);
         setOrders(o);
         setTransactions(t);
@@ -108,6 +114,7 @@ export default function ManagerPortal() {
         setActivity(a);
         setSecurityIncidents(s);
         setManagerData(m);
+        setAccessRequests(ar);
     } catch (e) {
         console.error(e);
     } finally {
@@ -162,6 +169,16 @@ export default function ManagerPortal() {
           <AddPlanDialog />
           <AddPromotionSuggestionDialog />
       </div>
+
+      {accessRequests.length > 0 && (
+          <div className="space-y-4">
+              <h2 className="text-xl font-black uppercase tracking-widest text-primary flex items-center gap-3">
+                  <Key className="h-5 w-5" />
+                  Account Provisions Required
+              </h2>
+              <AccessRequestManagement requests={accessRequests} />
+          </div>
+      )}
 
       <div className="grid gap-8 lg:grid-cols-2">
            <BusinessManagement />

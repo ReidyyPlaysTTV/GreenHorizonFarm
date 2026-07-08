@@ -11,7 +11,8 @@ import {
     getPersonnel, 
     getRecentActivity, 
     getSecurityIncidents,
-    getBusinesses
+    getBusinesses,
+    getAccessRequests
 } from "@/lib/actions";
 import { 
     getManagerData, 
@@ -31,7 +32,8 @@ import type {
     ManagerPlan,
     PromotionSuggestion,
     CeoChatMessage,
-    Business
+    Business,
+    AccessRequest
 } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -52,7 +54,8 @@ import {
     Star,
     Lightbulb,
     LayoutDashboard,
-    Pencil
+    Pencil,
+    Key
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +69,7 @@ import { AddPlanDialog } from "@/components/manager/add-plan-dialog";
 import { AddPromotionSuggestionDialog } from "@/components/manager/add-promotion-suggestion-dialog";
 import { AddAnnouncementDialog } from "@/components/dashboard/add-announcement-dialog";
 import { BusinessManagement } from "@/components/manager/business-management";
+import { AccessRequestManagement } from "@/components/admin/access-request-management";
 
 export default function CEOPortal() {
   const [orders, setOrders] = useState<DetailedFarmOrder[]>([]);
@@ -81,6 +85,7 @@ export default function CEOPortal() {
   } | null>(null);
   const [chatMessages, setChatMessages] = useState<CeoChatMessage[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState("System");
@@ -89,7 +94,7 @@ export default function CEOPortal() {
   const fetchData = async () => {
     setLoading(true);
     try {
-        const [o, t, p, a, s, m, c, b] = await Promise.all([
+        const [o, t, p, a, s, m, c, b, ar] = await Promise.all([
             getDetailedOrders(),
             getFarmTransactions(),
             getPersonnel(),
@@ -97,7 +102,8 @@ export default function CEOPortal() {
             getSecurityIncidents(),
             getManagerData(),
             getCeoChatMessages(),
-            getBusinesses()
+            getBusinesses(),
+            getAccessRequests()
         ]);
         setOrders(o);
         setTransactions(t);
@@ -107,6 +113,7 @@ export default function CEOPortal() {
         setManagerData(m);
         setChatMessages(c);
         setBusinesses(b);
+        setAccessRequests(ar);
     } catch (e) {
         console.error(e);
     } finally {
@@ -191,6 +198,16 @@ export default function CEOPortal() {
           <AddPlanDialog />
           <AddPromotionSuggestionDialog />
       </div>
+
+      {accessRequests.length > 0 && (
+          <div className="space-y-4">
+              <h2 className="text-xl font-black uppercase tracking-widest text-primary flex items-center gap-3">
+                  <Key className="h-5 w-5" />
+                  System Entry Requests
+              </h2>
+              <AccessRequestManagement requests={accessRequests} />
+          </div>
+      )}
 
       <div className="grid gap-8 lg:grid-cols-3">
           <Card className="border-primary/20 bg-card/60 shadow-xl lg:col-span-1">
