@@ -5,22 +5,22 @@ import { getMaintenanceMode } from "@/lib/actions/settings-actions";
 
 /**
  * RouteProtectionProvider handles high-level system states like Maintenance Mode.
- * Improved resilience for unstable database connectivity with internal timeouts.
+ * Highly resilient fail-fast logic for unstable database environments.
  */
 export async function RouteProtectionProvider({ children }: { children: React.ReactNode }) {
     let isMaintenanceMode = false;
     
     try {
-        // We race the maintenance check against a 2.5-second timeout to prevent layout hangs.
+        // Strict 1.5-second race timeout for the layout check
         const maintenancePromise = getMaintenanceMode();
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('TIMEOUT')), 2500)
+            setTimeout(() => reject(new Error('FAIL_FAST')), 1500)
         );
         
         isMaintenanceMode = await Promise.race([maintenancePromise, timeoutPromise]) as boolean;
     } catch (error) {
-        // If DB fails or times out, we assume maintenance is OFF to allow the app to attempt loading UI
-        console.warn("RouteProtectionProvider: Maintenance check timed out or failed, bypassing protection.");
+        // SILENT FAIL: If DB times out or errors, bypass maintenance to allow UI load.
+        console.warn("RouteProtectionProvider: Database fail-fast triggered, bypassing maintenance.");
     }
 
     if (isMaintenanceMode) {
@@ -39,7 +39,7 @@ export async function RouteProtectionProvider({ children }: { children: React.Re
             }
         }
         
-        // Only Leon Green and admin bypass maintenance
+        // Safety: Master accounts bypass maintenance
         if (decodedUser !== 'Leon Green' && decodedUser !== 'admin') {
             redirect('/maintenance');
         }

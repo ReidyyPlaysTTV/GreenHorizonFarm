@@ -14,27 +14,24 @@ try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 10,
-        maxIdle: 10,
-        idleTimeout: 60000,
+        connectionLimit: 5, // Reduced limit to prevent server-side exhaustion
+        maxIdle: 5,
+        idleTimeout: 30000,
         queueLimit: 0,
-        connectTimeout: 5000, 
-        acquireTimeout: 5000,
+        connectTimeout: 2000, // Fail fast: 2 seconds
+        acquireTimeout: 2000, // Fail fast: 2 seconds
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });
 } catch (err) {
-    console.error("Critical: Failed to create MySQL pool instance:", err);
+    console.error("Critical: Pool creation failed:", err);
     throw err;
 }
 
 async function createFarmTables(connection: any) {
     try {
-        // Quick check to see if we already have the core schema
         const [tables]: any = await connection.query("SHOW TABLES LIKE 'users'");
-        if (tables && tables.length > 0) {
-            return;
-        }
+        if (tables && tables.length > 0) return;
 
         const tableQueries = [
             `CREATE TABLE IF NOT EXISTS users (
@@ -81,7 +78,7 @@ async function createFarmTables(connection: any) {
                 collaborators JSON,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )`,
-            `CREATE TABLE IF NOT EXISTS business_orders (
+             `CREATE TABLE IF NOT EXISTS business_orders (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 business_name VARCHAR(255) NOT NULL,
                 contact_info VARCHAR(255),
@@ -273,7 +270,7 @@ async function createFarmTables(connection: any) {
             await connection.query(query);
         }
     } catch (error) {
-        console.error("Failed to execute SQL schema setup:", error);
+        console.error("SQL Schema execution failed:", error);
     }
 }
 
@@ -294,7 +291,7 @@ export async function ensureDbInitialized(force: boolean = false) {
             }
         } catch (err: any) {
             initPromise = null; 
-            console.error("DB Initialization Failure:", err.message);
+            console.error("DB Readiness Check Failed:", err.message);
             throw err;
         }
     })();
