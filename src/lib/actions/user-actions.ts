@@ -57,38 +57,41 @@ export async function testDatabaseConnection() {
 export async function getUsers(): Promise<AppUser[]> {
     try {
         await ensureDbInitialized();
-        // Use the pool directly to avoid manual release boilerplate for simple queries
-        const [users]: any = await db.query('SELECT `id`, `username`, `roles`, `createdAt`, `avatarUrl`, `status` FROM users ORDER BY username ASC');
         
-        if (!Array.isArray(users)) return [];
+        // Optimized JOIN query to fetch users and personnel details in one round-trip
+        const [rows]: any = await db.query(`
+            SELECT 
+                u.id, u.username, u.roles, u.createdAt, u.avatarUrl, u.status,
+                p.rank, p.phone_number, p.bank_account, p.discord_username, p.hire_date
+            FROM users u
+            LEFT JOIN personnel p ON u.id = p.userId OR UPPER(u.username) = UPPER(p.name)
+            ORDER BY u.username ASC
+        `);
+        
+        if (!Array.isArray(rows)) return [];
 
-        const [personnel]: any = await db.query('SELECT `name`, `rank`, `userId` FROM personnel');
-        const personnelMap = new Map();
-        if (Array.isArray(personnel)) { 
-            personnel.forEach((p: any) => {
-                // Map by both ID and Name to handle different linking states
-                if (p.userId) personnelMap.set(p.userId.toString().toLowerCase(), p);
-                if (p.name) personnelMap.set(p.name.toString().toLowerCase(), p);
-            }); 
-        }
-
-        return users.map((u: any) => {
-            const userIdKey = (u.id || "").toString().toLowerCase();
-            const usernameKey = (u.username || "").toString().toLowerCase();
-            const pRecord = personnelMap.get(userIdKey) || personnelMap.get(usernameKey);
-            
+        return rows.map((row: any) => {
             let userRoles = [];
             try { 
-                userRoles = typeof u.roles === 'string' ? JSON.parse(u.roles) : (Array.isArray(u.roles) ? u.roles : []); 
+                userRoles = typeof row.roles === 'string' ? JSON.parse(row.roles) : (Array.isArray(row.roles) ? row.roles : []); 
             } catch(e) {
                 userRoles = [];
             }
 
             return { 
-                ...u, 
+                id: row.id,
+                username: row.username,
+                status: row.status,
+                avatarUrl: row.avatarUrl,
                 roles: Array.isArray(userRoles) ? userRoles : [], 
-                createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined, 
-                personnel: pRecord ? { ...pRecord } : null 
+                createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : undefined, 
+                personnel: row.rank ? {
+                    rank: row.rank,
+                    phoneNumber: row.phone_number,
+                    bankAccount: row.bank_account,
+                    discordUsername: row.discord_username,
+                    hireDate: row.hire_date ? new Date(row.hire_date).toISOString() : null
+                } : null 
             };
         });
     } catch (error) { 
@@ -100,37 +103,41 @@ export async function getUsers(): Promise<AppUser[]> {
 export async function getUserByUsername(username: string): Promise<AppUser | null> {
     try {
         await ensureDbInitialized();
-        const [users]: any = await db.query('SELECT `id`, `username`, `roles`, `createdAt`, `avatarUrl`, `status` FROM users WHERE username = ?', [username]);
+        // Optimized single user fetch
+        const [rows]: any = await db.query(`
+            SELECT 
+                u.id, u.username, u.roles, u.createdAt, u.avatarUrl, u.status,
+                p.rank, p.phone_number, p.bank_account, p.discord_username, p.hire_date
+            FROM users u
+            LEFT JOIN personnel p ON u.id = p.userId OR UPPER(u.username) = UPPER(p.name)
+            WHERE u.username = ?
+            LIMIT 1
+        `, [username]);
         
-        if (!Array.isArray(users) || users.length === 0) return null;
-        const u = users[0];
-
-        const [personnel]: any = await db.query('SELECT `name`, `rank`, `userId`, `phone_number`, `bank_account`, `discord_username`, `hire_date` FROM personnel WHERE userId = ? OR UPPER(name) = UPPER(?)', [u.id, u.username]);
-        
-        let pRecord = null;
-        if (Array.isArray(personnel) && personnel.length > 0) {
-            const p = personnel[0];
-            pRecord = { 
-                ...p, 
-                phoneNumber: p.phone_number, 
-                bankAccount: p.bank_account, 
-                discordUsername: p.discord_username, 
-                hireDate: p.hire_date ? new Date(p.hire_date).toISOString() : null 
-            };
-        }
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        const row = rows[0];
 
         let userRoles = [];
         try { 
-            userRoles = typeof u.roles === 'string' ? JSON.parse(u.roles) : (Array.isArray(u.roles) ? u.roles : []); 
+            userRoles = typeof row.roles === 'string' ? JSON.parse(row.roles) : (Array.isArray(row.roles) ? row.roles : []); 
         } catch(e) {
             userRoles = [];
         }
 
         return { 
-            ...u, 
+            id: row.id,
+            username: row.username,
+            status: row.status,
+            avatarUrl: row.avatarUrl,
             roles: Array.isArray(userRoles) ? userRoles : [], 
-            createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined, 
-            personnel: pRecord 
+            createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : undefined, 
+            personnel: row.rank ? {
+                rank: row.rank,
+                phoneNumber: row.phone_number,
+                bankAccount: row.bank_account,
+                discordUsername: row.discord_username,
+                hireDate: row.hire_date ? new Date(row.hire_date).toISOString() : null
+            } : null 
         };
     } catch (error) { 
         console.error("Server Action: getUserByUsername failed:", error);

@@ -4,10 +4,20 @@ import type { Role, Permission } from "./types";
 import db from "./db";
 import { initialPermissionsMap } from './data';
 
+// Simple in-memory cache for permissions to avoid repeated DB hits within a short timeframe
+let permissionsCache: Record<Role, Permission[]> | null = null;
+let lastCacheUpdate = 0;
+const CACHE_TTL = 30000; // 30 seconds
+
 /**
  * Internal helper to fetch permissions with resilience for lookups.
  */
 async function getInternalPermissionsMap(): Promise<Record<Role, Permission[]>> {
+    const now = Date.now();
+    if (permissionsCache && (now - lastCacheUpdate < CACHE_TTL)) {
+        return permissionsCache;
+    }
+
     try {
         const fetchPromise = (async () => {
             const [rows] = await db.query('SELECT role, permission FROM role_permissions');
@@ -27,7 +37,7 @@ async function getInternalPermissionsMap(): Promise<Record<Role, Permission[]>> 
         })();
 
         const timeoutPromise = new Promise<Record<Role, Permission[]>>((resolve) => 
-            setTimeout(() => resolve(initialPermissionsMap), 2500)
+            setTimeout(() => resolve(initialPermissionsMap), 2000)
         );
 
         const map = await Promise.race([fetchPromise, timeoutPromise]);
@@ -36,11 +46,13 @@ async function getInternalPermissionsMap(): Promise<Record<Role, Permission[]>> 
         const allPerms = Object.keys(initialPermissionsMap).flatMap(r => initialPermissionsMap[r as Role]);
         const uniquePerms = [...new Set(allPerms)] as Permission[];
         
-        // Use a generic casting to fix TS mapping issues during timeout resolution
         const finalMap = map as Record<Role, Permission[]>;
         finalMap.Developer = uniquePerms;
         finalMap.Administrator = uniquePerms;
         finalMap.CEO = uniquePerms;
+
+        permissionsCache = finalMap;
+        lastCacheUpdate = now;
 
         return finalMap;
     } catch (e) {
@@ -60,7 +72,7 @@ export async function checkPermissions(username: string, permission: Permission)
 
     try {
         const checkPromise = (async () => {
-            const [rows] = await db.query('SELECT roles FROM users WHERE username = ?', [decodedUsername]);
+            const [rows] = await db.query('SELECT roles FROM users WHERE username = ? LIMIT 1', [decodedUsername]);
             if (!Array.isArray(rows) || rows.length === 0) return false;
             
             const user = (rows as any)[0];
@@ -76,7 +88,7 @@ export async function checkPermissions(username: string, permission: Permission)
         })();
 
         const timeoutPromise = new Promise<boolean>((resolve) => 
-            setTimeout(() => resolve(false), 2500)
+            setTimeout(() => resolve(false), 2000)
         );
 
         return await Promise.race([checkPromise, timeoutPromise]);

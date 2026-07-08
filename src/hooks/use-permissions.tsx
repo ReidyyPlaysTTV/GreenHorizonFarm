@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { initialPermissionsMap } from "@/lib/data";
 import type { Role, Permission } from "@/lib/types";
-import { getUsers } from "@/lib/actions";
+import { getUserByUsername } from "@/lib/actions";
 
 type PermissionsContextType = {
     userRoles: string[] | null;
@@ -32,23 +32,14 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
                 }
 
                 try {
-                    // Add a timeout race to the permission fetch
-                    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 3500));
-                    const usersPromise = getUsers();
+                    // Optimized: Fetch ONLY the current user data rather than the entire user list
+                    const user = await getUserByUsername(loggedInUsername);
                     
-                    const users = await Promise.race([usersPromise, timeoutPromise]);
-                    
-                    if (users) {
-                        const user = users.find(u => u.username === loggedInUsername);
-                        if (user) {
-                            setUserRoles(user.roles);
-                        } else {
-                            // Fallback if record is missing but logged in
-                            setUserRoles(["User"]);
-                        }
+                    if (user) {
+                        setUserRoles(user.roles);
                     } else {
-                        // DB timed out, but we need to stop the loading state
-                        setUserRoles(["User"]); 
+                        // Fallback if record is missing but logged in
+                        setUserRoles(["User"]);
                     }
                 } catch (e) {
                     setUserRoles(["User"]);

@@ -14,7 +14,9 @@ try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 15,
+        connectionLimit: 10,
+        maxIdle: 10,
+        idleTimeout: 60000,
         queueLimit: 0,
         connectTimeout: 5000, 
         acquireTimeout: 5000,
@@ -28,6 +30,12 @@ try {
 
 async function createFarmTables(connection: any) {
     try {
+        // Quick check to see if we already have the core schema
+        const [tables]: any = await connection.query("SHOW TABLES LIKE 'users'");
+        if (tables && tables.length > 0) {
+            return;
+        }
+
         const tableQueries = [
             `CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
