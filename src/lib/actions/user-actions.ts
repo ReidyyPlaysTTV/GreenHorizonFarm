@@ -2,8 +2,7 @@
 'use server';
 
 import db, { ensureDbInitialized } from '../db';
-import pool from '../db';
-import type { AppUser, AccessRequest, Personnel } from '../types';
+import type { AppUser, AccessRequest } from '../types';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { logUserAction } from './audit-log-actions';
@@ -16,7 +15,7 @@ export async function testDatabaseConnection() {
     const startTime = Date.now();
     try {
         await ensureDbInitialized(true);
-        const connection = await pool.getConnection();
+        const connection = await db.getConnection();
         try {
             const [rows] = await connection.query('SELECT 1 as ping');
             const latency = Date.now() - startTime;
@@ -172,12 +171,10 @@ export async function approveAccessRequest(data: any) {
     try {
         await connection.beginTransaction();
 
-        // 1. Get the password from the request
         const [reqRows]: any = await connection.query('SELECT password FROM access_requests WHERE id = ?', [requestId]);
         if (reqRows.length === 0) throw new Error('Request not found.');
         const password = reqRows[0].password;
 
-        // 2. Check if this user is on the roster to auto-assign their rank permissions
         const [rosterRows]: any = await connection.query('SELECT rank FROM personnel WHERE name = ?', [username]);
         let finalRoles = requestedRoles || ['User'];
         if (rosterRows.length > 0) {
@@ -185,17 +182,14 @@ export async function approveAccessRequest(data: any) {
             finalRoles = [...new Set([...finalRoles, rosterRank])];
         }
 
-        // 3. Create the user
         const userId = crypto.randomUUID();
         await connection.query(
             'INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)',
             [userId, username, password, JSON.stringify(finalRoles), 'Active']
         );
 
-        // 4. Mark request as approved
         await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Approved', requestId]);
 
-        // 5. Update personnel record with the new userId
         await connection.query('UPDATE personnel SET userId = ? WHERE name = ?', [userId, username]);
 
         await logUserAction(adminUser, 'Approve Access Request', `Approved and created account for: ${username} with roles: ${finalRoles.join(', ')}`, connection);
@@ -296,6 +290,9 @@ const createUserSchema = z.object({
   adminUser: z.string(),
 });
 
+/**
+ * Creates a new user account manually from the admin panel.
+ */
 export async function createUser(data: unknown) {
   const validation = createUserSchema.safeParse(data);
   if (!validation.success) {
@@ -323,7 +320,6 @@ export async function createUser(data: unknown) {
       [userId, username, password, JSON.stringify(roles), 'Active']
     );
 
-    // Sync with roster if name matches
     await connection.query('UPDATE personnel SET userId = ? WHERE name = ?', [userId, username]);
 
     await logUserAction(adminUser, 'Create User', `Manually created user account for: ${username}`, connection);

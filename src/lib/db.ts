@@ -2,8 +2,6 @@
 import mysql from 'mysql2/promise';
 import type { Pool } from 'mysql2/promise';
 import { seedDatabase } from './db-seed';
-import { seedRolePermissions } from './actions/permission-actions';
-import { seedInitialRanks } from './actions/rank-actions';
 
 // Connection URI for ZAP-Hosting MariaDB
 const dbUri = 'mysql://zap1311701-1:gFtXgwwIs09GtYtx@mysql-mariadb-20-104.zap-srv.com:3306/zap1311701-1';
@@ -19,7 +17,6 @@ try {
         waitForConnections: true,
         connectionLimit: 5,
         queueLimit: 0,
-        // Aggressive timeout to keep the app fast
         connectTimeout: 5000,
         acquireTimeout: 5000,
         enableKeepAlive: true,
@@ -133,7 +130,6 @@ async function createFarmTables(connection: any) {
 export async function ensureDbInitialized(force: boolean = false) {
     if (isInitialized && !force) return pool;
     
-    // Circuit Breaker: Don't try if we recently failed
     if (!force && Date.now() < dbOfflineUntil) {
         throw new Error("DATABASE_OFFLINE_COOLDOWN");
     }
@@ -143,8 +139,7 @@ export async function ensureDbInitialized(force: boolean = false) {
         try {
             await createFarmTables(connection);
             await seedDatabase(pool);
-            await seedRolePermissions(pool);
-            await seedInitialRanks(pool);
+            // Permission and Rank seeding moved out of initial core path to break circular loops
             isInitialized = true;
             return pool;
         } finally {
