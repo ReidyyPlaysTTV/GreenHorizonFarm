@@ -40,13 +40,15 @@ import {
     Lightbulb,
     CheckCircle2,
     XCircle,
-    Clock
+    Clock,
+    Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddStaffIncidentDialog } from "@/components/manager/add-staff-incident-dialog";
 import { AddProductDialog } from "@/components/manager/add-product-dialog";
+import { EditProductDialog } from "@/components/manager/edit-product-dialog";
 import { AddPlanDialog } from "@/components/manager/add-plan-dialog";
 import { AddPromotionSuggestionDialog } from "@/components/manager/add-promotion-suggestion-dialog";
 import { AddAnnouncementDialog } from "@/components/dashboard/add-announcement-dialog";
@@ -314,8 +316,41 @@ export default function ManagerPortal() {
           </Card>
       </div>
 
+       <Card className="border-primary/10 bg-black/20">
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle className="flex items-center gap-2 text-primary">
+                        <LayoutDashboard className="h-5 w-5" />
+                        Global Product Catalog
+                    </CardTitle>
+                    <CardDescription>Management view of all network supply items and pricing.</CardDescription>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {managerData?.farmProducts.map(p => (
+                        <div key={p.id} className="p-4 bg-muted/30 rounded-2xl border border-white/5 text-center group relative overflow-hidden transition-all hover:border-primary/30">
+                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{p.category}</p>
+                            <h4 className="font-bold text-sm mt-1">{p.name}</h4>
+                            <p className="text-primary font-black mt-2 text-lg">${Number(p.price).toLocaleString()}</p>
+                            
+                            {/* Management Actions */}
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <EditProductDialog product={p}>
+                                    <Button size="icon" className="h-10 w-10 rounded-full bg-primary hover:bg-primary/90">
+                                        <Pencil className="h-4 w-4" />
+                                    </Button>
+                                </EditProductDialog>
+                            </div>
+                        </div>
+                    ))}
+                    {managerData?.farmProducts.length === 0 && <p className="col-span-full py-10 text-center text-muted-foreground italic">No products listed.</p>}
+                </div>
+            </CardContent>
+        </Card>
+
        {/* Security Incidents */}
-       <Card className="border-destructive/20 bg-destructive/10">
+       <Card className="border-destructive/20 bg-destructive/10 mt-8">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-destructive">
                     <ShieldAlert className="h-5 w-5" />
