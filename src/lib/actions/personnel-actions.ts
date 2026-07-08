@@ -9,12 +9,55 @@ import { logUserAction } from './audit-log-actions';
 import { checkPermissions } from '../permissions';
 import { staffRoles } from '../data';
 
+const HIRE_WEBHOOK_URL = "https://discord.com/api/webhooks/1524266697429745924/nUbmFaFnoQDRhiIYgaQWwH17-ZiVvcB-YQkJEG5_lZSqythcym0Cut7xrIfldlvJLAA_";
+const FIRE_WEBHOOK_URL = "https://discord.com/api/webhooks/1524266890606809120/MObep79VDBE2CMcVvHgPGIRme7pTNtVEZbvgrwvRiNGHzwxCqJ4dZ9kOp3wxOHugTxuY";
+
+async function sendHireWebhook(data: any, isRehire: boolean = false) {
+    try {
+        const payload = {
+            embeds: [{
+                title: isRehire ? "♻️ Personnel Rehired" : "🆕 New Personnel Onboarded",
+                color: 3066993, // Green
+                fields: [
+                    { name: "Name", value: `**${data.name}**`, inline: true },
+                    { name: "Rank", value: data.rank, inline: true },
+                    { name: "Division", value: data.department || "Management", inline: true },
+                    { name: "Discord", value: data.discordUsername || "N/A", inline: true },
+                    { name: "Phone", value: data.phoneNumber || "N/A", inline: true },
+                    { name: "Hire Date", value: new Date().toLocaleDateString(), inline: true }
+                ],
+                footer: { text: "Green Horizon Personnel Management" },
+                timestamp: new Date().toISOString()
+            }]
+        };
+        await fetch(HIRE_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    } catch (e) { console.error("Discord Hire Webhook Failed", e); }
+}
+
+async function sendFireWebhook(data: any) {
+    try {
+        const payload = {
+            embeds: [{
+                title: "🚫 Personnel Contract Terminated",
+                color: 15158332, // Red
+                fields: [
+                    { name: "Name", value: `**${data.name}**`, inline: true },
+                    { name: "Former Rank", value: data.rank, inline: true },
+                    { name: "Reason for Termination", value: data.reason },
+                    { name: "Date", value: new Date().toLocaleDateString(), inline: true }
+                ],
+                footer: { text: "Green Horizon Archive Entry" },
+                timestamp: new Date().toISOString()
+            }]
+        };
+        await fetch(FIRE_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    } catch (e) { console.error("Discord Fire Webhook Failed", e); }
+}
+
 /**
  * Internal helper to sync user roles with roster rank.
- * This is now more robust, checking for users by both ID and case-insensitive username.
  */
 async function syncUserRoles(connection: any, name: string, rank: string) {
-    // 1. Try to find the user
     const [userRows]: any = await connection.query(
         'SELECT id, roles FROM users WHERE UPPER(username) = UPPER(?)', 
         [name.trim()]
@@ -23,32 +66,17 @@ async function syncUserRoles(connection: any, name: string, rank: string) {
     if (userRows.length > 0) {
         const user = userRows[0];
         let currentRoles: string[] = [];
-        
         try {
-            // Handle both string and object/array return types from different drivers
             const rolesRaw = user.roles;
             currentRoles = typeof rolesRaw === 'string' ? JSON.parse(rolesRaw) : (Array.isArray(rolesRaw) ? rolesRaw : []);
-        } catch(e) {
-            currentRoles = [];
-        }
+        } catch(e) { currentRoles = []; }
         
-        // Remove any existing staff ranks, but preserve system roles (Admin, Dev, User)
         const filteredRoles = currentRoles.filter(r => !staffRoles.includes(r as any));
-        
-        // Add the new rank
         const newRoles = [...new Set([...filteredRoles, rank])];
-        
-        // Update user roles
         await connection.query('UPDATE users SET roles = ? WHERE id = ?', [JSON.stringify(newRoles), user.id]);
-        
-        // Ensure personnel record is linked to this userId
         await connection.query('UPDATE personnel SET userId = ? WHERE name = ?', [user.id, name]);
-        
-        console.log(`Sync complete: ${name} assigned role ${rank}`);
         return user.id;
     }
-    
-    console.log(`Sync skipped: No user account found for ${name} yet.`);
     return null;
 }
 
@@ -56,13 +84,9 @@ async function getPersonnelById(id: string, connection?: any): Promise<Personnel
     const conn = connection || await db.getConnection();
     try {
         const [rows] = await conn.query('SELECT * FROM personnel WHERE id = ?', [id]);
-        if (Array.isArray(rows) && rows.length > 0) {
-            return (rows as any)[0] as Personnel;
-        }
+        if (Array.isArray(rows) && rows.length > 0) return (rows as any)[0] as Personnel;
         return null;
-    } finally {
-        if (!connection) conn.release();
-    }
+    } finally { if (!connection) conn.release(); }
 }
 
 async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'Promoted' | 'Demoted' | 'Rehired', description: string, dbConnection?: any) {
@@ -72,124 +96,72 @@ async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'P
             'INSERT INTO personnel_events (id, personnel_name, event_type, description, date) VALUES (?, ?, ?, ?, ?)',
             [crypto.randomUUID(), personnelName, eventType, description, new Date()]
         );
-    } catch (error) {
-        console.error(`Failed to log event: ${eventType} for ${personnelName}`, error);
-    } finally {
-        if (!dbConnection) {
-            connection.release();
-        }
-    }
+    } catch (error) { console.error(`Failed to log event: ${eventType}`, error); }
+    finally { if (!dbConnection) connection.release(); }
 }
 
 export async function promotePersonnel(personnelId: string, user: string) {
   const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
-  if (!hasPermission) {
-    return { success: false, message: 'You do not have permission to perform this action.' };
-  }
+  if (!hasPermission) return { success: false, message: 'Unauthorized' };
 
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
     const personnel = await getPersonnelById(personnelId, connection);
-    if (!personnel) {
-      throw new Error('Personnel not found.');
-    }
+    if (!personnel) throw new Error('Personnel not found.');
     
     const rankOrder = staffRoles;
     const currentRankIndex = rankOrder.indexOf(personnel.rank as any);
-    
-    if (currentRankIndex === -1) {
-      throw new Error('Invalid current rank.');
-    }
-    if (currentRankIndex === 0) {
-      return { success: false, message: 'Cannot promote further.' };
-    }
+    if (currentRankIndex === -1) throw new Error('Invalid rank');
+    if (currentRankIndex === 0) return { success: false, message: 'Max rank' };
 
     const newRank = rankOrder[currentRankIndex - 1];
     await connection.query('UPDATE personnel SET rank = ? WHERE id = ?', [newRank, personnelId]);
-    
-    // Sync User Permissions
     await syncUserRoles(connection, personnel.name, newRank);
-
     await logEvent(personnel.name, 'Promoted', `Promoted from ${personnel.rank} to ${newRank}`, connection);
-    await logUserAction(user, "Promote Personnel", `Promoted ${personnel.name} from ${personnel.rank} to ${newRank}.`, connection);
-    
+    await logUserAction(user, "Promote Personnel", `Promoted ${personnel.name} to ${newRank}.`, connection);
     await connection.commit();
-
     revalidatePath('/roster');
-    revalidatePath('/logs');
-    revalidatePath('/users');
-    return { success: true, message: `${personnel.name} promoted to ${newRank}.` };
-  } catch (error: any) {
-    await connection.rollback();
-    console.error('Promotion failed:', error);
-    return { success: false, message: error.message || 'Database operation failed.' };
-  } finally {
-    connection.release();
-  }
+    return { success: true, message: 'Promoted' };
+  } catch (error: any) { await connection.rollback(); return { success: false, message: error.message }; }
+  finally { connection.release(); }
 }
 
 export async function demotePersonnel(personnelId: string, user: string) {
   const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
-  if (!hasPermission) {
-    return { success: false, message: 'You do not have permission to perform this action.' };
-  }
+  if (!hasPermission) return { success: false, message: 'Unauthorized' };
 
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
     const personnel = await getPersonnelById(personnelId, connection);
-    if (!personnel) {
-      throw new Error('Personnel not found.');
-    }
+    if (!personnel) throw new Error('Personnel not found.');
     
     const rankOrder = staffRoles;
     const currentRankIndex = rankOrder.indexOf(personnel.rank as any);
-    
-    if (currentRankIndex === -1) {
-      throw new Error('Invalid current rank.');
-    }
-    if (currentRankIndex === rankOrder.length - 1) {
-      return { success: false, message: 'Cannot demote further.' };
-    }
+    if (currentRankIndex === -1 || currentRankIndex === rankOrder.length - 1) throw new Error('Cannot demote further');
 
     const newRank = rankOrder[currentRankIndex + 1];
     await connection.query('UPDATE personnel SET rank = ? WHERE id = ?', [newRank, personnelId]);
-    
-    // Sync User Permissions
     await syncUserRoles(connection, personnel.name, newRank);
-
     await logEvent(personnel.name, 'Demoted', `Demoted from ${personnel.rank} to ${newRank}`, connection);
-    await logUserAction(user, "Demote Personnel", `Demoted ${personnel.name} from ${personnel.rank} to ${newRank}.`, connection);
-    
+    await logUserAction(user, "Demote Personnel", `Demoted ${personnel.name} to ${newRank}.`, connection);
     await connection.commit();
-
     revalidatePath('/roster');
-    revalidatePath('/logs');
-    revalidatePath('/users');
-    return { success: true, message: `${personnel.name} demoted to ${newRank}.` };
-  } catch (error: any) {
-    await connection.rollback();
-    console.error('Demotion failed:', error);
-    return { success: false, message: error.message || 'Database operation failed.' };
-  } finally {
-    connection.release();
-  }
+    return { success: true, message: 'Demoted' };
+  } catch (error: any) { await connection.rollback(); return { success: false, message: error.message }; }
+  finally { connection.release(); }
 }
 
 export async function firePersonnel(personnelId: string, reason: string, user: string) {
   const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
-  if (!hasPermission) {
-    return { success: false, message: 'You do not have permission to perform this action.' };
-  }
+  if (!hasPermission) return { success: false, message: 'Unauthorized' };
   
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
     const personnel = await getPersonnelById(personnelId, connection);
-    if (!personnel) {
-      throw new Error('Personnel not found.');
-    }
+    if (!personnel) throw new Error('Personnel not found.');
 
     await connection.query(
         'INSERT INTO archived_personnel (id, name, rank, discord_username, status, date, reason) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -198,34 +170,25 @@ export async function firePersonnel(personnelId: string, reason: string, user: s
 
     await connection.query('DELETE FROM personnel WHERE id = ?', [personnelId]);
     
-    // Downgrade User Permissions back to basic "User"
     const [userRows]: any = await connection.query('SELECT id FROM users WHERE username = ?', [personnel.name]);
     if (userRows.length > 0) {
-        const userId = userRows[0].id;
-        await connection.query('UPDATE users SET roles = ? WHERE id = ?', [JSON.stringify(['User']), userId]);
-        await connection.query('UPDATE personnel SET userId = NULL WHERE id = ?', [personnelId]);
+        await connection.query('UPDATE users SET roles = ? WHERE id = ?', [JSON.stringify(['User']), userRows[0].id]);
     }
 
     await logEvent(personnel.name, 'Fired', `Fired for: ${reason}`, connection);
     await logUserAction(user, "Fire Personnel", `Fired ${personnel.name}. Reason: ${reason}`, connection);
+    await sendFireWebhook({ name: personnel.name, rank: personnel.rank, reason });
 
     await connection.commit();
     revalidatePath('/roster');
     revalidatePath('/archive');
-    revalidatePath('/logs');
-    revalidatePath('/users');
-    return { success: true, message: 'Personnel fired successfully.' };
-  } catch (error: any) {
-    await connection.rollback();
-    console.error('Firing personnel failed:', error);
-    return { success: false, message: error.message || 'Database operation failed.' };
-  } finally {
-    connection.release();
-  }
+    return { success: true, message: 'Fired' };
+  } catch (error: any) { await connection.rollback(); return { success: false, message: error.message }; }
+  finally { connection.release(); }
 }
 
 const updatePersonnelSchema = z.object({
-  name: z.string().min(3).regex(/^[A-Z][a-z]+ [A-Z][a-z]+$/, "Name must be in IC format (e.g., 'Leon Green')."),
+  name: z.string().min(3),
   rank: z.string(),
   department: z.string(),
   discordUsername: z.string().optional(),
@@ -237,53 +200,32 @@ const updatePersonnelSchema = z.object({
 
 export async function updatePersonnel(personnelId: string, data: unknown) {
   const validation = updatePersonnelSchema.safeParse(data);
-  if (!validation.success) {
-    return { success: false, message: validation.error.errors[0].message };
-  }
+  if (!validation.success) return { success: false, message: validation.error.errors[0].message };
   const { name, rank, department, discordUsername, phoneNumber, bankAccount, hireDate, user } = validation.data;
   
   const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
-  if (!hasPermission) {
-    return { success: false, message: 'You do not have permission to perform this action.' };
-  }
+  if (!hasPermission) return { success: false, message: 'Unauthorized' };
 
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
-    const originalPersonnel = await getPersonnelById(personnelId, connection);
-    if (!originalPersonnel) {
-      throw new Error('Personnel not found.');
-    }
-
     await connection.query(
         'UPDATE personnel SET name = ?, rank = ?, department = ?, discord_username = ?, phone_number = ?, bank_account = ?, hire_date = ? WHERE id = ?', 
         [name, rank, department, discordUsername || null, phoneNumber || null, bankAccount || null, hireDate || null, personnelId]
     );
-
-    // Sync User Permissions
     await syncUserRoles(connection, name, rank);
-
-    await logUserAction(user, "Update Personnel", `Updated details for ${name}.`, connection);
-    
+    await logUserAction(user, "Update Personnel", `Updated ${name}.`, connection);
     await connection.commit();
-
     revalidatePath('/roster');
-    revalidatePath('/logs');
-    revalidatePath('/users');
-    return { success: true, message: 'Personnel updated successfully.' };
-  } catch (error: any) {
-    await connection.rollback();
-    console.error('Updating personnel failed:', error);
-    return { success: false, message: error.message || 'Database operation failed.' };
-  } finally {
-    connection.release();
-  }
+    return { success: true, message: 'Updated' };
+  } catch (error: any) { await connection.rollback(); return { success: false, message: 'Update failed' }; }
+  finally { connection.release(); }
 }
 
 const addPersonnelSchema = z.object({
-  name: z.string().min(3).regex(/^[A-Z][a-z]+ [A-Z][a-z]+$/, "Name must be in IC format (e.g., 'Leon Green')."),
-  rank: z.string({ required_error: "Please select a rank." }),
-  department: z.string({ required_error: "Please select a division." }),
+  name: z.string().min(3).regex(/^[A-Z][a-z]+ [A-Z][a-z]+$/, "Name must be IC format"),
+  rank: z.string({ required_error: "Rank required" }),
+  department: z.string({ required_error: "Division required" }),
   discordUsername: z.string().optional(),
   phoneNumber: z.string().optional(),
   bankAccount: z.string().optional(),
@@ -294,92 +236,52 @@ const addPersonnelSchema = z.object({
 
 export async function addPersonnel(data: unknown) {
     const validation = addPersonnelSchema.safeParse(data);
-    if (!validation.success) {
-        return { success: false, message: validation.error.errors[0].message };
-    }
+    if (!validation.success) return { success: false, message: validation.error.errors[0].message };
     const { name, rank, department, discordUsername, phoneNumber, bankAccount, hireDate, user, applicationId } = validation.data;
     
     const hasPermission = await checkPermissions(user, 'HIRE_PERSONNEL');
-    if (!hasPermission) {
-        return { success: false, message: 'You do not have permission to perform this action.' };
-    }
+    if (!hasPermission) return { success: false, message: 'Unauthorized' };
 
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
-        
         const personnelId = crypto.randomUUID();
-
-        // Perform the sync immediately to see if user already exists
         const matchedUserId = await syncUserRoles(connection, name, rank);
-
         await connection.query(
             'INSERT INTO personnel (id, name, rank, department, discord_username, phone_number, bank_account, hire_date, status, loa_until, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [personnelId, name, rank, department, discordUsername || null, phoneNumber || null, bankAccount || null, hireDate, 'Active', null, matchedUserId]
         );
-
-        await logEvent(name, 'Hired', `Hired as ${rank} in ${department}`, connection);
-        
-        let logDescription = `Added ${name} to the roster as ${rank}.`;
-        if (applicationId) {
-            logDescription += ` (Approved from application).`;
-        }
-        
-        await logUserAction(user, "Add Personnel", logDescription, connection);
-
+        await logEvent(name, 'Hired', `Hired as ${rank}`, connection);
+        await logUserAction(user, "Add Personnel", `Added ${name} to the roster.`, connection);
+        await sendHireWebhook(validation.data);
         await connection.commit();
-
         revalidatePath('/roster');
-        revalidatePath('/logs');
-        revalidatePath('/applications');
-        revalidatePath('/users');
-        return { success: true, message: `${name} has been added to the roster.` };
-    } catch (error: any) {
-        await connection.rollback();
-        console.error('Adding personnel failed:', error);
-        return { success: false, message: error.message || 'Database operation failed.' };
-    } finally {
-        connection.release();
-    }
+        return { success: true, message: `${name} added.` };
+    } catch (error: any) { await connection.rollback(); return { success: false, message: 'Database failed' }; }
+    finally { connection.release(); }
 }
 
 export async function rehirePersonnel(data: any) {
     const { archivedId, name, rank, discordUsername, user } = data;
-    
     const hasPermission = await checkPermissions(user, 'HIRE_PERSONNEL');
-    if (!hasPermission) {
-        return { success: false, message: 'You do not have permission.' };
-    }
+    if (!hasPermission) return { success: false, message: 'Unauthorized' };
 
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
-
-        // 1. Remove from archive
         await connection.query('DELETE FROM archived_personnel WHERE id = ?', [archivedId]);
-
-        // 2. Try to sync and get matched user
         const matchedUserId = await syncUserRoles(connection, name, rank);
-        
-        // 3. Add back to active personnel
         const personnelId = crypto.randomUUID();
         await connection.query(
             'INSERT INTO personnel (id, name, rank, department, discord_username, hire_date, status, is_rehired, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [personnelId, name, rank, 'Management', discordUsername || null, new Date(), 'Active', true, matchedUserId]
         );
-
         await logEvent(name, 'Rehired', `Rehired as ${rank}`, connection);
-        await logUserAction(user, "Rehire Personnel", `Rehired ${name} to the active roster.`, connection);
-
+        await logUserAction(user, "Rehire Personnel", `Rehired ${name}.`, connection);
+        await sendHireWebhook({ name, rank, discordUsername }, true);
         await connection.commit();
         revalidatePath('/roster');
-        revalidatePath('/archive');
-        revalidatePath('/users');
-        return { success: true, message: `${name} has been rehired.` };
-    } catch (error: any) {
-        await connection.rollback();
-        return { success: false, message: error.message || 'Rehire failed.' };
-    } finally {
-        connection.release();
-    }
+        return { success: true, message: `${name} rehired.` };
+    } catch (error: any) { await connection.rollback(); return { success: false, message: 'Rehire failed' }; }
+    finally { connection.release(); }
 }

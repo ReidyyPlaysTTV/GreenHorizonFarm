@@ -9,9 +9,27 @@ import { logUserAction } from './audit-log-actions';
 import { checkPermissions } from '../permissions';
 import { staffRoles } from '../data';
 
-/**
- * Tests the connection to the MariaDB database.
- */
+const ACCESS_REQUEST_WEBHOOK = "https://discord.com/api/webhooks/1524267210560897199/dZfn4POVJsuCkscKcfCTlH_CnNUysdLIM-zxI9JebU3NAu3pJyEDBow_P4q1FqtueiNj";
+
+async function sendAccessRequestWebhook(username: string) {
+    try {
+        const payload = {
+            embeds: [{
+                title: "🔐 New System Access Request",
+                color: 16776960, // Yellow
+                description: `A new user has requested access to the management system.`,
+                fields: [
+                    { name: "Requested Username", value: `**${username}**`, inline: true },
+                    { name: "Request Type", value: "New Account", inline: true }
+                ],
+                footer: { text: "Green Horizon Security Hub" },
+                timestamp: new Date().toISOString()
+            }]
+        };
+        await fetch(ACCESS_REQUEST_WEBHOOK, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    } catch (e) { console.error("Access Request Webhook Failed", e); }
+}
+
 export async function testDatabaseConnection() {
     const startTime = Date.now();
     try {
@@ -23,17 +41,9 @@ export async function testDatabaseConnection() {
             if (Array.isArray(rows) && (rows[0] as any).ping === 1) {
                 return { success: true, message: `Database Connected Successfully. Latency: ${latency}ms` };
             }
-            return { success: false, message: 'Ping failed but connection established.' };
-        } finally {
-            connection.release();
-        }
-    } catch (error: any) {
-        let customMessage = `Connection Error: ${error.message || 'Unknown issue'}.`;
-        if (error.code === 'ETIMEDOUT') {
-            customMessage = "Network Timeout: Ensure 'Remote Access' is ENABLED in ZAP-Hosting and IP '%' is whitelisted.";
-        }
-        return { success: false, message: customMessage, code: error.code };
-    }
+            return { success: false, message: 'Ping failed.' };
+        } finally { connection.release(); }
+    } catch (error: any) { return { success: false, message: `Connection Error: ${error.message}` }; }
 }
 
 export async function getUsers(): Promise<AppUser[]> {
@@ -43,44 +53,18 @@ export async function getUsers(): Promise<AppUser[]> {
         try {
             const [users] = await connection.query('SELECT id, username, roles, createdAt, avatarUrl, status FROM users ORDER BY username ASC');
             if (!Array.isArray(users)) return [];
-
-            const [personnel] = await connection.query('SELECT name, rank, department, userId, phone_number as phoneNumber, bank_account as bankAccount FROM personnel');
+            const [personnel] = await connection.query('SELECT name, rank, userId FROM personnel');
             const personnelMap = new Map();
-            if (Array.isArray(personnel)) {
-                personnel.forEach((p: any) => {
-                    personnelMap.set(p.userId || p.name, p);
-                });
-            }
+            if (Array.isArray(personnel)) { personnel.forEach((p: any) => personnelMap.set(p.userId || p.name, p)); }
 
             return (users as any[]).map((u: any) => {
                 const pRecord = personnelMap.get(u.id) || personnelMap.get(u.username);
                 let userRoles = [];
-                if(typeof u.roles === 'string') {
-                    try {
-                        userRoles = JSON.parse(u.roles);
-                    } catch(e) { 
-                        userRoles = [];
-                    }
-                } else if (Array.isArray(u.roles)) {
-                    userRoles = u.roles;
-                }
-
-                return {
-                    ...u,
-                    roles: userRoles,
-                    createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined,
-                    personnel: pRecord || null
-                };
+                try { userRoles = typeof u.roles === 'string' ? JSON.parse(u.roles) : (Array.isArray(u.roles) ? u.roles : []); } catch(e) {}
+                return { ...u, roles: userRoles, createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined, personnel: pRecord || null };
             });
-        } finally {
-            connection.release();
-        }
-    } catch (error) {
-        return [
-            { id: 'leon-id', username: 'Leon Green', roles: ['Developer'], status: 'Active', createdAt: new Date().toISOString(), personnel: { name: 'Leon Green', rank: 'CEO', department: 'Management' } },
-            { id: 'admin-id', username: 'admin', roles: ['Administrator'], status: 'Active', createdAt: new Date().toISOString() }
-        ];
-    }
+        } finally { connection.release(); }
+    } catch (error) { return []; }
 }
 
 export async function getUserByUsername(username: string): Promise<AppUser | null> {
@@ -88,47 +72,20 @@ export async function getUserByUsername(username: string): Promise<AppUser | nul
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
-            const [users] = await connection.query(
-                'SELECT id, username, roles, createdAt, avatarUrl, status FROM users WHERE username = ?',
-                [username]
-            );
+            const [users] = await connection.query('SELECT id, username, roles, createdAt, avatarUrl, status FROM users WHERE username = ?', [username]);
             if (!Array.isArray(users) || users.length === 0) return null;
             const u = (users as any)[0];
-
-            const [personnel] = await connection.query(
-                'SELECT name, rank, department, userId, phone_number as phoneNumber, bank_account as bankAccount, discord_username as discordUsername, hire_date as hireDate FROM personnel WHERE userId = ? OR name = ?',
-                [u.id, u.username]
-            );
-            
+            const [personnel] = await connection.query('SELECT name, rank, userId, phone_number, bank_account, discord_username, hire_date FROM personnel WHERE userId = ? OR name = ?', [u.id, u.username]);
             let pRecord = null;
             if (Array.isArray(personnel) && personnel.length > 0) {
                 const p = (personnel as any)[0];
-                pRecord = {
-                    ...p,
-                    hireDate: p.hireDate ? new Date(p.hireDate).toISOString() : null,
-                };
+                pRecord = { ...p, phoneNumber: p.phone_number, bankAccount: p.bank_account, discordUsername: p.discord_username, hireDate: p.hire_date ? new Date(p.hire_date).toISOString() : null };
             }
-
             let userRoles = [];
-            if(typeof u.roles === 'string') {
-                try { userRoles = JSON.parse(u.roles); } catch(e) { userRoles = []; }
-            } else if (Array.isArray(u.roles)) {
-                userRoles = u.roles;
-            }
-
-            return {
-                ...u,
-                roles: userRoles,
-                createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined,
-                personnel: pRecord
-            };
-        } finally {
-            connection.release();
-        }
-    } catch (error) {
-        console.error("Failed to fetch individual user profile:", error);
-        return null;
-    }
+            try { userRoles = typeof u.roles === 'string' ? JSON.parse(u.roles) : (Array.isArray(u.roles) ? u.roles : []); } catch(e) {}
+            return { ...u, roles: userRoles, createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : undefined, personnel: pRecord };
+        } finally { connection.release(); }
+    } catch (error) { return null; }
 }
 
 export async function loginUser(credentials: any) {
@@ -137,17 +94,12 @@ export async function loginUser(credentials: any) {
         const connection = await db.getConnection();
         try {
             const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', [username]);
-            if (!Array.isArray(rows) || rows.length === 0) return { success: false, message: 'Incorrect username or password.' };
+            if (!Array.isArray(rows) || rows.length === 0) return { success: false, message: 'Incorrect credentials.' };
             const user = (rows as any[])[0];
-            if (user.password !== password) return { success: false, message: 'Incorrect username or password.' };
+            if (user.password !== password) return { success: false, message: 'Incorrect credentials.' };
             return { success: true, user: { username: user.username } };
-        } finally {
-            connection.release();
-        }
-    } catch (e) {
-        if (credentials.username === 'Leon Green' && credentials.password === 'Katarina1997') return { success: true, user: { username: 'Leon Green' } };
-        return { success: false, message: "System Error: Database Unreachable" };
-    }
+        } finally { connection.release(); }
+    } catch (e) { return { success: false, message: "DB Error" }; }
 }
 
 export async function submitAccessRequest(data: any) {
@@ -158,12 +110,10 @@ export async function submitAccessRequest(data: any) {
             'INSERT INTO access_requests (id, requested_username, password, status) VALUES (?, ?, ?, ?)',
             [crypto.randomUUID(), username, password, 'Pending']
         );
+        await sendAccessRequestWebhook(username);
         return { success: true };
-    } catch (e) {
-        return { success: false, message: 'Submission failed.' };
-    } finally {
-        connection.release();
-    }
+    } catch (e) { return { success: false, message: 'Failed' }; }
+    finally { connection.release(); }
 }
 
 export async function approveAccessRequest(data: any) {
@@ -171,62 +121,33 @@ export async function approveAccessRequest(data: any) {
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
-
         const [reqRows]: any = await connection.query('SELECT password FROM access_requests WHERE id = ?', [requestId]);
-        if (reqRows.length === 0) throw new Error('Request not found.');
+        if (reqRows.length === 0) throw new Error('Not found.');
         const password = reqRows[0].password;
-
-        // Auto-detect Roster Rank
         const [rosterRows]: any = await connection.query('SELECT rank FROM personnel WHERE UPPER(name) = UPPER(?)', [username.trim()]);
         let finalRoles = requestedRoles || ['User'];
-        
-        if (rosterRows.length > 0) {
-            const rosterRank = rosterRows[0].rank;
-            // Add the roster rank to roles, keeping 'User' or any other requested roles
-            finalRoles = [...new Set([...finalRoles, rosterRank])];
-        }
-
+        if (rosterRows.length > 0) finalRoles = [...new Set([...finalRoles, rosterRows[0].rank])];
         const userId = crypto.randomUUID();
-        await connection.query(
-            'INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)',
-            [userId, username, password, JSON.stringify(finalRoles), 'Active']
-        );
-
+        await connection.query('INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)', [userId, username, password, JSON.stringify(finalRoles), 'Active']);
         await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Approved', requestId]);
-
-        // Link the roster entry to this new user
         await connection.query('UPDATE personnel SET userId = ? WHERE UPPER(name) = UPPER(?)', [userId, username.trim()]);
-
-        await logUserAction(adminUser, 'Approve Access Request', `Approved and created account for: ${username} with roles: ${finalRoles.join(', ')}`, connection);
-        
+        await logUserAction(adminUser, 'Approve Access Request', `Created account for: ${username}`, connection);
         await connection.commit();
         revalidatePath('/admin');
-        revalidatePath('/users');
-        revalidatePath('/roster');
-        return { success: true, message: 'Account created successfully.' };
-    } catch (e: any) {
-        await connection.rollback();
-        return { success: false, message: e.message || 'Operation failed.' };
-    } finally {
-        connection.release();
-    }
+        return { success: true, message: 'Approved' };
+    } catch (e: any) { await connection.rollback(); return { success: false, message: e.message }; }
+    finally { connection.release(); }
 }
 
 export async function denyAccessRequest(requestId: string, requestedUsername: string, adminUser: string) {
     const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
         await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Denied', requestId]);
-        await logUserAction(adminUser, 'Deny Access Request', `Denied access for user: ${requestedUsername}`, connection);
-        await connection.commit();
+        await logUserAction(adminUser, 'Deny Access Request', `Denied access for: ${requestedUsername}`, connection);
         revalidatePath('/admin');
-        return { success: true, message: 'Access request denied.' };
-    } catch (e) {
-        await connection.rollback();
-        return { success: false, message: 'Operation failed.' };
-    } finally {
-        connection.release();
-    }
+        return { success: true, message: 'Denied' };
+    } catch (e) { return { success: false, message: 'Failed' }; }
+    finally { connection.release(); }
 }
 
 export async function getAccessRequests(): Promise<AccessRequest[]> {
@@ -235,24 +156,18 @@ export async function getAccessRequests(): Promise<AccessRequest[]> {
         try {
             const [rows] = await connection.query("SELECT id, requested_username, status, createdAt FROM access_requests WHERE status = 'Pending' ORDER BY createdAt ASC");
             return (rows as any[]).map(r => ({ ...r, createdAt: new Date(r.createdAt) }));
-        } finally {
-            connection.release();
-        }
-    } catch (error) {
-        return [];
-    }
+        } finally { connection.release(); }
+    } catch (error) { return []; }
 }
 
 export async function setUserStatus(data: { userId: string, status: 'Active' | 'Banned', adminUser: string }) {
     const connection = await db.getConnection();
     try {
         await connection.query('UPDATE users SET status = ? WHERE id = ?', [data.status, data.userId]);
-        await logUserAction(data.adminUser, 'Update User Status', `Set user ${data.userId} status to ${data.status}`, connection);
+        await logUserAction(data.adminUser, 'Update User Status', `Set user ${data.userId} to ${data.status}`, connection);
         revalidatePath('/admin');
         return { success: true };
-    } finally {
-        connection.release();
-    }
+    } finally { connection.release(); }
 }
 
 export async function deleteUser(userId: string, adminUser: string) {
@@ -261,133 +176,65 @@ export async function deleteUser(userId: string, adminUser: string) {
         await connection.beginTransaction();
         const [userRows]: any = await connection.query('SELECT username FROM users WHERE id = ?', [userId]);
         const username = userRows[0]?.username;
-
         await connection.query('DELETE FROM users WHERE id = ?', [userId]);
         await connection.query('UPDATE personnel SET userId = NULL WHERE userId = ?', [userId]);
-
-        await logUserAction(adminUser, 'Delete User', `Deleted user account: ${username}`, connection);
+        await logUserAction(adminUser, 'Delete User', `Deleted account: ${username}`, connection);
         await connection.commit();
         revalidatePath('/admin');
-        revalidatePath('/users');
-        return { success: true, message: 'User deleted.' };
-    } catch (e) {
-        await connection.rollback();
-        return { success: false, message: 'Delete failed.' };
-    } finally {
-        connection.release();
-    }
+        return { success: true, message: 'Deleted' };
+    } catch (e) { await connection.rollback(); return { success: false, message: 'Failed' }; }
+    finally { connection.release(); }
 }
 
 export async function getReviewedApplicationsCount(userId: string): Promise<number> {
     try {
         const [rows] = await db.query('SELECT COUNT(*) as count FROM applications WHERE reviewer_id = ?', [userId]);
         return (rows as any)[0]?.count || 0;
-    } catch (e) {
-        console.error("Failed to fetch reviewed applications count:", e);
-        return 0;
-    }
+    } catch (e) { return 0; }
 }
 
-const createUserSchema = z.object({
-  username: z.string().min(3),
-  password: z.string().min(8),
-  roles: z.array(z.string()),
-  adminUser: z.string(),
-});
-
-/**
- * Creates a new user account manually from the admin panel.
- */
-export async function createUser(data: unknown) {
-  const validation = createUserSchema.safeParse(data);
-  if (!validation.success) {
-    return { success: false, message: validation.error.errors[0].message };
-  }
-  const { username, password, roles: initialRoles, adminUser } = validation.data;
-
-  const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
-  if (!hasPermission) {
-    return { success: false, message: 'Unauthorized.' };
-  }
-
+export async function createUser(data: any) {
+  const { username, password, roles: initialRoles, adminUser } = data;
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
-
-    const [existing] = await connection.query('SELECT id FROM users WHERE username = ?', [username]);
-    if (Array.isArray(existing) && existing.length > 0) {
-      return { success: false, message: 'Username already exists.' };
-    }
-
-    // Auto-detect Roster Rank
     const [rosterRows]: any = await connection.query('SELECT rank FROM personnel WHERE UPPER(name) = UPPER(?)', [username.trim()]);
     let finalRoles = initialRoles;
-    if (rosterRows.length > 0) {
-        finalRoles = [...new Set([...finalRoles, rosterRows[0].rank])];
-    }
-
+    if (rosterRows.length > 0) finalRoles = [...new Set([...finalRoles, rosterRows[0].rank])];
     const userId = crypto.randomUUID();
-    await connection.query(
-      'INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)',
-      [userId, username, password, JSON.stringify(finalRoles), 'Active']
-    );
-
+    await connection.query('INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)', [userId, username, password, JSON.stringify(finalRoles), 'Active']);
     await connection.query('UPDATE personnel SET userId = ? WHERE UPPER(name) = UPPER(?)', [userId, username.trim()]);
-
-    await logUserAction(adminUser, 'Create User', `Manually created user account for: ${username}`, connection);
-    
+    await logUserAction(adminUser, 'Create User', `Manually created user: ${username}`, connection);
     await connection.commit();
     revalidatePath('/admin');
-    revalidatePath('/users');
-    return { success: true, message: 'User created successfully.' };
-  } catch (error) {
-    await connection.rollback();
-    return { success: false, message: 'Database failure.' };
-  } finally {
-    connection.release();
-  }
+    return { success: true, message: 'Created' };
+  } catch (error) { await connection.rollback(); return { success: false, message: 'Failed' }; }
+  finally { connection.release(); }
 }
 
 export async function updateUser(data: any) {
     const { userId, username, roles, adminUser } = data;
-    const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
-    if (!hasPermission) return { success: false, message: 'Unauthorized' };
-
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
         await connection.query('UPDATE users SET username = ?, roles = ? WHERE id = ?', [username, JSON.stringify(roles), userId]);
-        
-        // Also update roster name if matched
         await connection.query('UPDATE personnel SET name = ? WHERE userId = ?', [username, userId]);
-
-        await logUserAction(adminUser, 'Update User', `Updated account for: ${username}`, connection);
+        await logUserAction(adminUser, 'Update User', `Updated account: ${username}`, connection);
         await connection.commit();
         revalidatePath('/admin');
-        revalidatePath('/users');
-        revalidatePath('/roster');
         return { success: true };
-    } catch (e) {
-        await connection.rollback();
-        return { success: false, message: 'Update failed' };
-    } finally {
-        connection.release();
-    }
+    } catch (e) { await connection.rollback(); return { success: false, message: 'Failed' }; }
+    finally { connection.release(); }
 }
 
 export async function resetUserPassword(data: any) {
     const { userId, newPassword, adminUser } = data;
-    const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
-    if (!hasPermission) return { success: false, message: 'Unauthorized' };
-
     const connection = await db.getConnection();
     try {
         await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
         await logUserAction(adminUser, 'Reset Password', `Reset password for user ${userId}`, connection);
-        return { success: true, message: "Password updated successfully." };
-    } finally {
-        connection.release();
-    }
+        return { success: true, message: "Success" };
+    } finally { connection.release(); }
 }
 
 export async function changeUserPassword(data: any) {
@@ -395,15 +242,11 @@ export async function changeUserPassword(data: any) {
     const connection = await db.getConnection();
     try {
         const [rows]: any = await connection.query('SELECT password, username FROM users WHERE id = ?', [userId]);
-        if (rows.length === 0 || rows[0].password !== currentPassword) {
-            return { success: false, message: 'Incorrect current password.' };
-        }
+        if (rows.length === 0 || rows[0].password !== currentPassword) return { success: false, message: 'Incorrect password.' };
         await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
-        await logUserAction(rows[0].username, 'Change Password', 'Changed their own password.');
-        return { success: true, message: 'Password changed successfully.' };
-    } finally {
-        connection.release();
-    }
+        await logUserAction(rows[0].username, 'Change Password', 'Changed password.');
+        return { success: true, message: 'Changed' };
+    } finally { connection.release(); }
 }
 
 export async function updateProfilePicture(data: any) {
@@ -413,8 +256,6 @@ export async function updateProfilePicture(data: any) {
         await connection.query('UPDATE users SET avatarUrl = ? WHERE id = ?', [url, userId]);
         await logUserAction(user, 'Update Avatar', 'Updated profile picture.');
         revalidatePath('/users');
-        return { success: true, message: 'Profile picture updated.' };
-    } finally {
-        connection.release();
-    }
+        return { success: true, message: 'Updated' };
+    } finally { connection.release(); }
 }

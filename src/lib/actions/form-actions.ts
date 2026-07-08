@@ -4,300 +4,136 @@
 import { z } from 'zod';
 import db from '../db';
 import { revalidatePath } from 'next/cache';
-import type { FormFieldData, BlacklistedPersonnel, Application } from '../types';
+import type { FormFieldData, Application } from '../types';
 import { logUserAction } from './audit-log-actions';
 import { checkPermissions } from '../permissions';
+import { DISCORD_ROLES } from '../discord';
 
-// Schema for validating fields from the client
-const formFieldSchema = z.object({
-  id: z.string().optional(),
-  label: z.string().min(1, "Label is required"),
-  type: z.enum(["text", "textarea", "select"]),
-  required: z.boolean(),
-  options: z.array(z.object({ id: z.string().optional(), value: z.string() })).optional(),
-});
-const formFieldsSchema = z.array(formFieldSchema);
+const APPLICATION_WEBHOOK = "https://discord.com/api/webhooks/1524267349790953555/DwBC-uHUqKjTeSMA93auUq6lUNwpz6H_UEsYEd98K2vSEN7PDgnCqhK3K0BEv985AOLC";
+
+async function sendApplicationWebhook(name: string, id: string) {
+    try {
+        const payload = {
+            content: `<@&${DISCORD_ROLES.MANAGER}> <@&${DISCORD_ROLES.CEO}> <@&${DISCORD_ROLES.CO_CEO}>`,
+            embeds: [{
+                title: "🚜 New Employment Application Received",
+                color: 3447003, // Blue
+                description: `A new individual has applied to join Green Horizon Farm.`,
+                fields: [
+                    { name: "Applicant Name", value: `**${name}**`, inline: true },
+                    { name: "Reference ID", value: `\`${id}\``, inline: true },
+                    { name: "Portal Link", value: "[Recruitment Center](https://green-horizon-farm.web.app/applications)" }
+                ],
+                footer: { text: "Green Horizon Recruitment Hub" },
+                timestamp: new Date().toISOString()
+            }]
+        };
+        await fetch(APPLICATION_WEBHOOK, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    } catch (e) { console.error("Application Webhook Failed", e); }
+}
 
 export async function getApplicationFormFields(): Promise<FormFieldData[]> {
     try {
         const [fields] = await db.query('SELECT * FROM application_form_fields ORDER BY `field_order` ASC');
-
         if (!Array.isArray(fields) || fields.length === 0) {
-            // Seed the new Green Horizon questions if table is empty
             return [
-                { id: "seed_name", label: "Name", type: "text", required: true },
+                { id: "seed_name", label: "Full IC Name", type: "text", required: true },
                 { id: "seed_state_id", label: "State ID", type: "text", required: true },
                 { id: "seed_phone", label: "Phone Number", type: "text", required: true },
-                { id: "seed_availability", label: "Availability", type: "select", required: true, options: [{id: "opt_eu", value: "EU"}, {id: "opt_na", value: "NA"}, {id: "opt_au", value: "AU"}] },
-                { id: "seed_about", label: "Tell me a little about yourself and what brought you to Green Horizon.", type: "textarea", required: true },
-                { id: "seed_experience", label: "Have you worked anywhere before? What did you learn from it?", type: "textarea", required: true },
-                { id: "seed_situation", label: "Tell me about a time something went wrong and how you handled it.", type: "textarea", required: true },
-                { id: "seed_friends", label: "How would your friends describe you?", type: "textarea", required: true },
-                { id: "seed_other", label: "Is there anything else you'd like us to know?", type: "textarea", required: false },
+                { id: "seed_about", label: "Tell us about yourself.", type: "textarea", required: true },
             ];
         }
-
-        const fieldsWithOpts = await Promise.all((fields as any[]).map(async (field) => {
+        return await Promise.all((fields as any[]).map(async (field) => {
             if (field.type === 'select') {
                 const [options] = await db.query('SELECT id, value FROM application_field_options WHERE field_id = ?', [field.id]);
                 return { ...field, required: !!field.required, options: Array.isArray(options) ? options : [] };
             }
             return { ...field, required: !!field.required };
         }));
-
-        return fieldsWithOpts;
-    } catch (error) {
-        console.error("Failed to get application form fields:", error);
-        if (error instanceof Error && 'code' in error && (error as any).code === 'ER_NO_SUCH_TABLE') {
-            return [];
-        }
-        throw error;
-    }
+    } catch (error) { return []; }
 }
-
 
 export async function saveApplicationFormFields(fields: FormFieldData[], user: string) {
     const hasPermission = await checkPermissions(user, 'EDIT_APPLICATION_FORM');
-    if (!hasPermission) {
-        throw new Error('You do not have permission to perform this action.');
-    }
-
-    const validatedFields = formFieldsSchema.parse(fields);
-    
+    if (!hasPermission) throw new Error('Unauthorized');
     const connection = await db.getConnection();
     await connection.beginTransaction();
-
     try {
-        const [existingFieldRows] = await connection.query('SELECT id FROM application_form_fields');
-        const existingFieldIds = Array.isArray(existingFieldRows) ? (existingFieldRows as any[]).map(r => r.id) : [];
-        const incomingFieldIds = validatedFields.map(f => f.id).filter(id => id && !id.startsWith('new-'));
-        const fieldsToDelete = existingFieldIds.filter(id => !incomingFieldIds.includes(id));
-        
-        if (fieldsToDelete.length > 0) {
-            const placeholders = fieldsToDelete.map(() => '?').join(',');
-            await connection.query(`DELETE FROM application_field_options WHERE field_id IN (${placeholders})`, fieldsToDelete);
-            await connection.query(`DELETE FROM application_form_fields WHERE id IN (${placeholders})`, fieldsToDelete);
-        }
-
-        for (const [index, field] of validatedFields.entries()) {
-            const isNewField = !field.id || field.id.startsWith('new-');
-            const fieldId = isNewField ? crypto.randomUUID() : field.id;
-
-            await connection.query(
-                `INSERT INTO application_form_fields (id, type, label, \`field_order\`, required) 
-                 VALUES (?, ?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE 
-                 type = VALUES(type), label = VALUES(label), \`field_order\` = VALUES(\`field_order\`), required = VALUES(required)`,
-                [fieldId, field.type, field.label, index, field.required]
-            );
-
+        await connection.query('DELETE FROM application_field_options');
+        await connection.query('DELETE FROM application_form_fields');
+        for (const [index, field] of fields.entries()) {
+            const fieldId = field.id || crypto.randomUUID();
+            await connection.query('INSERT INTO application_form_fields (id, type, label, `field_order`, required) VALUES (?, ?, ?, ?, ?)', [fieldId, field.type, field.label, index, field.required]);
             if (field.type === 'select' && field.options) {
-                const incomingOptionIds = field.options.map(o => o.id).filter(id => id && !id.startsWith('new-'));
-                
-                if (incomingOptionIds.length > 0) {
-                    const deletePlaceholders = incomingOptionIds.map(() => '?').join(',');
-                     await connection.query(`DELETE FROM application_field_options WHERE field_id = ? AND id NOT IN (${deletePlaceholders})`, [fieldId, ...incomingOptionIds]);
-                } else if (!isNewField) {
-                    await connection.query('DELETE FROM application_field_options WHERE field_id = ?', [fieldId]);
-                }
-
-
-                for (const option of field.options) {
-                    if (option.value) {
-                         const isNewOption = !option.id || option.id.startsWith('new-');
-                         const optionId = isNewOption ? crypto.randomUUID() : option.id;
-                        await connection.query(
-                            `INSERT INTO application_field_options (id, field_id, value) 
-                             VALUES (?, ?, ?)
-                             ON DUPLICATE KEY UPDATE value = VALUES(value)`,
-                            [optionId, fieldId, option.value]
-                        );
-                    }
+                for (const opt of field.options) {
+                    await connection.query('INSERT INTO application_field_options (id, field_id, value) VALUES (?, ?, ?)', [crypto.randomUUID(), fieldId, opt.value]);
                 }
             }
         }
-        
-        await logUserAction(user, 'Update Form', 'Updated the application form fields.', connection);
+        await logUserAction(user, 'Update Form', 'Updated application form.', connection);
         await connection.commit();
-    } catch (error) {
-        await connection.rollback();
-        console.error("Failed to save form fields:", error);
-        throw new Error("Database operation failed.");
-    } finally {
-        connection.release();
-    }
-
+    } catch (error) { await connection.rollback(); throw error; }
+    finally { connection.release(); }
     revalidatePath('/apply');
-    revalidatePath('/applications');
-    revalidatePath('/logs');
 }
 
 export async function submitApplication(responses: Record<string, any>) {
     const fields = await getApplicationFormFields();
-    
     const formattedResponses = fields.map((field, index) => ({
-        fieldId: field.id || `field_${index}`,
         label: field.label,
-        type: field.type,
         answer: responses[field.id || `field_${index}`] || ''
     }));
-
-    const nameField = fields.find(f => f.label.toLowerCase().includes('name'));
-    const applicantName = nameField ? responses[nameField.id || `field_${fields.indexOf(nameField)}`] : "Unknown";
-    
-    const applicationId = `GH${Math.floor(10000000 + Math.random() * 90000000)}`;
-
+    const applicantName = formattedResponses.find(r => r.label.toLowerCase().includes('name'))?.answer || "Unknown";
+    const id = `GH${Math.floor(10000000 + Math.random() * 90000000)}`;
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
-
-        await connection.query(
-            'INSERT INTO applications (id, responses, status) VALUES (?, ?, ?)',
-            [applicationId, JSON.stringify(formattedResponses), 'Pending']
-        );
-        
+        await connection.query('INSERT INTO applications (id, responses, status) VALUES (?, ?, ?)', [id, JSON.stringify(formattedResponses), 'Pending']);
+        await sendApplicationWebhook(applicantName, id);
         await connection.commit();
         revalidatePath('/applications');
-        revalidatePath('/logs');
-        return { success: true, applicationId };
-    } catch(error) {
-        await connection.rollback();
-        console.error("Failed to submit application:", error);
-        return { success: false, message: "Could not save application to the database." };
-    } finally {
-        connection.release();
-    }
+        return { success: true, applicationId: id };
+    } catch(error) { await connection.rollback(); return { success: false, message: "DB Error" }; }
+    finally { connection.release(); }
 }
 
-const updateApplicationStatusSchema = z.object({
-  applicationId: z.string(),
-  status: z.enum(['Under Review', 'Approved', 'Rejected', 'Pending']),
-  comment: z.string().optional(),
-  user: z.string(),
-});
-
-export async function updateApplicationStatus(data: unknown) {
-  const validation = updateApplicationStatusSchema.safeParse(data);
-  if (!validation.success) {
-      return { success: false, message: validation.error.errors[0].message };
-  }
-  const { applicationId, status, comment, user } = validation.data;
-
-
+export async function updateApplicationStatus(data: any) {
+  const { applicationId, status, comment, user } = data;
   const hasPermission = await checkPermissions(user, 'MANAGE_APPLICATIONS');
-  if (!hasPermission) {
-    throw new Error('You do not have permission to perform this action.');
-  }
-
+  if (!hasPermission) throw new Error('Unauthorized');
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
-
-    const [userRows] = await connection.query('SELECT id FROM users WHERE username = ?', [user]);
-    const userId = (userRows as any)[0]?.id;
-    if (!userId) {
-        throw new Error('Reviewer user not found.');
-    }
-    
-    const reviewerIdToSet = status === 'Pending' ? null : userId;
-    const reviewedAtToSet = status === 'Pending' ? null : new Date();
-
-    await connection.query(
-      'UPDATE applications SET status = ?, reviewer_comment = ?, reviewer_id = ?, reviewedAt = ? WHERE id = ?',
-      [status, comment || null, reviewerIdToSet, reviewedAtToSet, applicationId]
-    );
-
-    const [appRows]: any[] = await connection.query('SELECT responses FROM applications WHERE id = ?', [applicationId]);
-    const responses = JSON.parse(appRows[0].responses);
-    const applicantName = responses.find((r: any) => r.label.toLowerCase().includes('name'))?.answer || 'Unknown Applicant';
-    
-    await logUserAction(user, 'Update Application Status', `${status} application for ${applicantName}. Reviewer comment: ${comment || 'No comment'}`, connection);
-    
+    const [userRows]: any = await connection.query('SELECT id FROM users WHERE username = ?', [user]);
+    const userId = userRows[0]?.id;
+    await connection.query('UPDATE applications SET status = ?, reviewer_comment = ?, reviewer_id = ?, reviewedAt = ? WHERE id = ?', [status, comment || null, status === 'Pending' ? null : userId, status === 'Pending' ? null : new Date(), applicationId]);
+    await logUserAction(user, 'Update App Status', `${status} application ${applicationId}`, connection);
     await connection.commit();
-
-  } catch (error: any) {
-    await connection.rollback();
-    console.error(`Failed to update application status to ${status}:`, error);
-    throw new Error('Database operation failed.');
-  } finally {
-    connection.release();
-  }
-
-  revalidatePath('/applications');
-  revalidatePath('/logs');
-  revalidatePath('/check-status');
-
-  return { success: true };
+    revalidatePath('/applications');
+    return { success: true };
+  } catch (error) { await connection.rollback(); throw error; }
+  finally { connection.release(); }
 }
 
 export async function getApplicationById(id: string) {
-    if (!id) {
-        return { success: false, message: "Application ID is required." };
-    }
     const connection = await db.getConnection();
     try {
         const [rows] = await connection.query('SELECT * FROM applications WHERE id = ?', [id]);
-        if (!Array.isArray(rows) || rows.length === 0) {
-            return { success: false, message: "Application not found." };
-        }
+        if (!Array.isArray(rows) || rows.length === 0) return { success: false, message: "Not found" };
         const app = (rows as any)[0];
-        const parsedResponses = JSON.parse(app.responses);
-        
-        const nameVal = parsedResponses.find((r: any) => r.label.toLowerCase().includes('name'))?.answer || "Unknown";
-        const phoneVal = parsedResponses.find((r: any) => r.label.toLowerCase().includes('phone'))?.answer;
-        const stateIdVal = parsedResponses.find((r: any) => r.label.toLowerCase().includes('state'))?.answer;
-
-        const result: Application = {
-            id: app.id,
-            status: app.status,
-            submittedAt: new Date(app.submittedAt),
-            name: nameVal,
-            phoneNumber: phoneVal,
-            stateId: stateIdVal,
-            reviewer_comment: app.reviewer_comment,
-            responses: parsedResponses,
-            reasonForApplying: parsedResponses.find((r: any) => r.type === 'textarea')?.answer || 'No reason provided.',
-        };
-        return { success: true, application: result };
-    } catch (error) {
-        console.error("Failed to fetch application by ID:", error);
-        return { success: false, message: "Database operation failed." };
-    } finally {
-        connection.release();
-    }
+        const resp = JSON.parse(app.responses);
+        return { success: true, application: { ...app, submittedAt: new Date(app.submittedAt), responses: resp, name: resp.find((r:any) => r.label.toLowerCase().includes('name'))?.answer || "Unknown" } };
+    } finally { connection.release(); }
 }
 
-export async function deleteApplication(applicationId: string, user: string) {
+export async function deleteApplication(id: string, user: string) {
     const hasPermission = await checkPermissions(user, 'DELETE_APPLICATIONS');
-    if (!hasPermission) {
-        return { success: false, message: 'You do not have permission to perform this action.' };
-    }
-
+    if (!hasPermission) return { success: false, message: 'Unauthorized' };
     const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-
-        const [appRows]: any[] = await connection.query('SELECT responses FROM applications WHERE id = ?', [applicationId]);
-        if (appRows.length === 0) {
-            throw new Error("Application not found.");
-        }
-        const responses = JSON.parse(appRows[0].responses);
-        const applicantName = responses.find((r: any) => r.label.toLowerCase().includes('name'))?.answer || 'Unknown Applicant';
-        
-        await connection.query('DELETE FROM applications WHERE id = ?', [applicationId]);
-
-        await logUserAction(user, 'Delete Application', `Deleted application for '${applicantName}' (ID: ${applicationId}).`, connection);
-
-        await connection.commit();
-    } catch (error) {
-        await connection.rollback();
-        console.error("Failed to delete application:", error);
-        return { success: false, message: 'Database operation failed.' };
-    } finally {
-        connection.release();
-    }
-    
-    revalidatePath('/applications');
-    revalidatePath('/logs');
-    return { success: true };
+        await connection.query('DELETE FROM applications WHERE id = ?', [id]);
+        await logUserAction(user, 'Delete Application', `Deleted application ${id}`, connection);
+        revalidatePath('/applications');
+        return { success: true };
+    } finally { connection.release(); }
 }
