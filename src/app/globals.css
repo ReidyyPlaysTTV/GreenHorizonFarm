@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,7 +11,7 @@
     --card-foreground: 140 10% 98%;
     --popover: 140 20% 5%;
     --popover-foreground: 140 10% 98%;
-    --primary: 142.1 82% 42%; /* Brighter, more vibrant Farm Green */
+    --primary: 142.1 82% 42%; 
     --primary-foreground: 140 20% 98%;
     --secondary: 140 10% 10%;
     --secondary-foreground: 140 10% 98%;
@@ -42,7 +43,6 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    /* Stronger top-down glow */
     background-image: radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.12), transparent 70%);
     background-attachment: fixed;
   }
@@ -64,6 +64,7 @@
         );
         background-size: 400% 400%;
         animation: rgb-mesh-animation 12s ease infinite;
+        will-change: background-position; /* Production Optimization: GPU acceleration */
     }
 
     @keyframes rgb-mesh-animation {
@@ -75,6 +76,7 @@
     .animate-rainbow-text {
         background-size: 200% 200%;
         animation: rainbow-text-animation 5s ease infinite;
+        will-change: background-position;
     }
     @keyframes rainbow-text-animation {
         0%{background-position:0% 50%}
@@ -86,7 +88,6 @@
         @apply bg-card/60 backdrop-blur-xl border border-white/10 shadow-2xl;
     }
 
-    /* Scrollbar Styling */
     .scrollbar-hide::-webkit-scrollbar {
         display: none;
     }

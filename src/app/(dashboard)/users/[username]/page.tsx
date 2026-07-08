@@ -6,7 +6,7 @@ import { notFound, useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, Shield, Briefcase, Star, Mail, Activity, KeySquare, Image as ImageIcon, FileCheck2, Phone, Calendar, ClipboardCheck, CreditCard, Clock } from "lucide-react";
+import { User, Shield, Briefcase, Star, Activity, KeySquare, Image as ImageIcon, FileCheck2, Phone, Calendar, ClipboardCheck, CreditCard, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getAuditLogs, getUserByUsername, getReviewedApplicationsCount, getOrdersByStaff } from "@/lib/actions";
 import type { AppUser, Personnel, AuditLog, DetailedFarmOrder } from "@/lib/types";
@@ -103,7 +103,6 @@ export default function UserProfilePage() {
   }
   
   const isOwnProfile = loggedInUser === user.username;
-  const lastLogin = activityLogs.find(log => log.actionType === 'Login');
   const userRoles = Array.isArray(user.roles) ? user.roles : [];
 
   return (
@@ -174,7 +173,7 @@ export default function UserProfilePage() {
                         <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/10">
                             <Clock className="h-4 w-4 text-primary" />
                             <span className="font-black text-sm text-foreground">
-                                {lastLogin ? format(new Date(lastLogin.timestamp), 'MMM dd, yyyy • HH:mm:ss') : 'NO ACCESS LOGS'}
+                                {user.lastLogin ? format(new Date(user.lastLogin), 'MMM dd, yyyy • HH:mm') : 'NO ACCESS LOGS'}
                             </span>
                         </div>
                     </div>

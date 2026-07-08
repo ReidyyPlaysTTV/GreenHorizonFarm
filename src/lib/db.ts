@@ -13,9 +13,9 @@ try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 15, // Balanced limit for ZAP resources
-        maxIdle: 15,
-        idleTimeout: 30000, // Faster recycle of idle connections
+        connectionLimit: 30, // Increased for concurrent production users
+        maxIdle: 20,
+        idleTimeout: 60000, 
         queueLimit: 0,
         connectTimeout: 5000, 
         enableKeepAlive: true,
@@ -36,6 +36,7 @@ async function createFarmTables(connection: any) {
                 roles JSON NOT NULL,
                 status ENUM('Active', 'Banned') NOT NULL DEFAULT 'Active',
                 avatarUrl VARCHAR(255),
+                lastLogin DATETIME,
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
             )`,
             `CREATE TABLE IF NOT EXISTS personnel (
@@ -285,10 +286,8 @@ export async function ensureDbInitialized(force: boolean = false) {
     initPromise = (async () => {
         let connection;
         try {
-            // High-resilience handshake with timeout
             connection = await pool.getConnection();
             
-            // Check for existence of core table with short timeout
             const [tables]: any = await connection.query({
                 sql: "SHOW TABLES LIKE 'users'",
                 timeout: 3000 
@@ -299,8 +298,9 @@ export async function ensureDbInitialized(force: boolean = false) {
                 await createFarmTables(connection);
                 await seedDatabase(pool);
             } else {
-                // Ensure completed_at column exists in detailed_farm_orders
+                // Production-ready migrations/patches
                 try {
+                    await connection.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS lastLogin DATETIME");
                     await connection.query("ALTER TABLE detailed_farm_orders ADD COLUMN IF NOT EXISTS completed_at DATETIME");
                 } catch (e) {
                     // Ignore if already exists
@@ -312,7 +312,7 @@ export async function ensureDbInitialized(force: boolean = false) {
         } catch (err: any) {
             initPromise = null; 
             console.error("DB Readiness Check Delayed (MariaDB Latency):", err.message);
-            return pool; // Return the pool anyway so callers can try their own queries
+            return pool; 
         } finally {
             if (connection) connection.release();
         }

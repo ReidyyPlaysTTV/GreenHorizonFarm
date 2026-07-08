@@ -56,7 +56,7 @@ export async function getUsers(): Promise<AppUser[]> {
         try {
             const [rows]: any = await connection.query(`
                 SELECT 
-                    u.id, u.username, u.roles, u.createdAt, u.avatarUrl, u.status,
+                    u.id, u.username, u.roles, u.createdAt, u.avatarUrl, u.status, u.lastLogin,
                     p.rank, p.phone_number, p.bank_account, p.discord_username, p.hire_date
                 FROM users u
                 LEFT JOIN personnel p ON u.id = p.userId OR UPPER(u.username) = UPPER(p.name)
@@ -77,6 +77,7 @@ export async function getUsers(): Promise<AppUser[]> {
                     username: row.username,
                     status: row.status,
                     avatarUrl: row.avatarUrl,
+                    lastLogin: row.lastLogin ? new Date(row.lastLogin).toISOString() : undefined,
                     roles: Array.isArray(userRoles) ? userRoles : [], 
                     createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : undefined, 
                     personnel: row.rank ? {
@@ -104,7 +105,7 @@ export async function getUserByUsername(username: string): Promise<AppUser | nul
         try {
             const [rows]: any = await connection.query(`
                 SELECT 
-                    u.id, u.username, u.roles, u.createdAt, u.avatarUrl, u.status,
+                    u.id, u.username, u.roles, u.createdAt, u.avatarUrl, u.status, u.lastLogin,
                     p.rank, p.phone_number, p.bank_account, p.discord_username, p.hire_date
                 FROM users u
                 LEFT JOIN personnel p ON u.id = p.userId OR UPPER(u.username) = UPPER(p.name)
@@ -126,6 +127,7 @@ export async function getUserByUsername(username: string): Promise<AppUser | nul
                 username: row.username,
                 status: row.status,
                 avatarUrl: row.avatarUrl,
+                lastLogin: row.lastLogin ? new Date(row.lastLogin).toISOString() : undefined,
                 roles: Array.isArray(userRoles) ? userRoles : [], 
                 createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : undefined, 
                 personnel: row.rank ? {
@@ -148,16 +150,24 @@ export async function loginUser(credentials: any) {
     try {
         const { username, password } = credentials;
         await ensureDbInitialized();
-        const [rows]: any = await db.query('SELECT * FROM users WHERE username = ?', [username]);
-        
-        if (!Array.isArray(rows) || rows.length === 0) return { success: false, message: 'Incorrect credentials.' };
-        const user = rows[0];
-        if (user.password !== password) return { success: false, message: 'Incorrect credentials.' };
-        
-        // Log the successful login
-        await logUserAction(username, 'Login', 'User accessed the management system.');
-        
-        return { success: true, user: { username: user.username } };
+        const connection = await db.getConnection();
+        try {
+            const [rows]: any = await connection.query('SELECT * FROM users WHERE username = ?', [username]);
+            
+            if (!Array.isArray(rows) || rows.length === 0) return { success: false, message: 'Incorrect credentials.' };
+            const user = rows[0];
+            if (user.password !== password) return { success: false, message: 'Incorrect credentials.' };
+            
+            // Record login timestamp for instant profile retrieval
+            await connection.query('UPDATE users SET lastLogin = ? WHERE id = ?', [new Date(), user.id]);
+            
+            // Log the successful login in audit trail
+            await logUserAction(username, 'Login', 'User accessed the management system.', connection);
+            
+            return { success: true, user: { username: user.username } };
+        } finally {
+            connection.release();
+        }
     } catch (e: any) { 
         return { success: false, message: "Authentication failure (Database Timeout)." }; 
     }
