@@ -10,12 +10,11 @@ import { logUserAction } from './audit-log-actions';
 import { checkPermissions } from '../permissions';
 
 /**
- * Tests the connection to the MariaDB database with specific error handling for timeouts.
+ * Tests the connection to the MariaDB database.
  */
 export async function testDatabaseConnection() {
     const startTime = Date.now();
     try {
-        // Force a handshake check
         await ensureDbInitialized(true);
         const connection = await pool.getConnection();
         try {
@@ -29,23 +28,11 @@ export async function testDatabaseConnection() {
             connection.release();
         }
     } catch (error: any) {
-        console.error("Diagnostic Connection Error:", error);
-        
         let customMessage = `Connection Error: ${error.message || 'Unknown issue'}.`;
-        
         if (error.code === 'ETIMEDOUT') {
-            customMessage = "Network Timeout: The ZAP-Hosting server did not respond. 1. Go to your ZAP-Hosting dashboard. 2. Look for 'MariaDB/MySQL' settings. 3. Ensure 'Remote Access' is ENABLED. 4. Whitelist the IP '%' or your specific local IP.";
-        } else if (error.code === 'ECONNREFUSED') {
-            customMessage = "Connection Refused: Check port 3306 and firewall rules.";
-        } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
-            customMessage = "Access Denied: Check username/password/database name.";
+            customMessage = "Network Timeout: Ensure 'Remote Access' is ENABLED in ZAP-Hosting and IP '%' is whitelisted.";
         }
-
-        return { 
-            success: false, 
-            message: customMessage,
-            code: error.code
-        };
+        return { success: false, message: customMessage, code: error.code };
     }
 }
 
@@ -89,23 +76,9 @@ export async function getUsers(): Promise<AppUser[]> {
             connection.release();
         }
     } catch (error) {
-        // Mock Data Fallback for Development Speed
         return [
-            { 
-                id: 'leon-id', 
-                username: 'Leon Green', 
-                roles: ['Developer'], 
-                status: 'Active', 
-                createdAt: new Date().toISOString(),
-                personnel: { name: 'Leon Green', rank: 'CEO', department: 'Management' }
-            },
-            { 
-                id: 'admin-id', 
-                username: 'admin', 
-                roles: ['Administrator'], 
-                status: 'Active', 
-                createdAt: new Date().toISOString() 
-            }
+            { id: 'leon-id', username: 'Leon Green', roles: ['Developer'], status: 'Active', createdAt: new Date().toISOString(), personnel: { name: 'Leon Green', rank: 'CEO', department: 'Management' } },
+            { id: 'admin-id', username: 'admin', roles: ['Administrator'], status: 'Active', createdAt: new Date().toISOString() }
         ];
     }
 }
@@ -116,69 +89,96 @@ export async function loginUser(credentials: any) {
         const connection = await db.getConnection();
         try {
             const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', [username]);
-            if (!Array.isArray(rows) || rows.length === 0) {
-                return { success: false, message: 'Incorrect username or password.' };
-            }
+            if (!Array.isArray(rows) || rows.length === 0) return { success: false, message: 'Incorrect username or password.' };
             const user = (rows as any[])[0];
             if (user.password !== password) return { success: false, message: 'Incorrect username or password.' };
-            
             return { success: true, user: { username: user.username } };
         } finally {
             connection.release();
         }
     } catch (e) {
-        // Emergency bypass if DB is down but credentials match known seeds
-        if (credentials.username === 'Leon Green' && credentials.password === 'Katarina1997') {
-            return { success: true, user: { username: 'Leon Green' } };
-        }
+        if (credentials.username === 'Leon Green' && credentials.password === 'Katarina1997') return { success: true, user: { username: 'Leon Green' } };
         return { success: false, message: "System Error: Database Unreachable" };
     }
 }
 
-export async function createUser(data: any) {
-    const { username, password, roles, adminUser } = data;
+export async function submitAccessRequest(data: any) {
+    const { username, password } = data;
+    const connection = await db.getConnection();
     try {
-        const connection = await db.getConnection();
-        try {
-            await connection.beginTransaction();
-            const userId = crypto.randomUUID();
-            await connection.query(
-                'INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)',
-                [userId, username, password, JSON.stringify(roles), 'Active']
-            );
-            await logUserAction(adminUser, 'Create User', `Manually created user account: ${username}`, connection);
-            await connection.commit();
-            revalidatePath('/admin');
-            return { success: true, message: `User '${username}' created.` };
-        } catch (e) {
-            await connection.rollback();
-            throw e;
-        } finally {
-            connection.release();
+        await connection.query(
+            'INSERT INTO access_requests (id, requested_username, password, status) VALUES (?, ?, ?, ?)',
+            [crypto.randomUUID(), username, password, 'Pending']
+        );
+        return { success: true };
+    } catch (e) {
+        return { success: false, message: 'Submission failed.' };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function approveAccessRequest(data: any) {
+    const { requestId, username, roles: requestedRoles, adminUser } = data;
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // 1. Get the password from the request
+        const [reqRows]: any = await connection.query('SELECT password FROM access_requests WHERE id = ?', [requestId]);
+        if (reqRows.length === 0) throw new Error('Request not found.');
+        const password = reqRows[0].password;
+
+        // 2. Check if this user is on the roster to auto-assign their rank permissions
+        const [rosterRows]: any = await connection.query('SELECT rank FROM personnel WHERE name = ?', [username]);
+        let finalRoles = requestedRoles || ['User'];
+        if (rosterRows.length > 0) {
+            const rosterRank = rosterRows[0].rank;
+            finalRoles = [...new Set([...finalRoles, rosterRank])];
         }
-    } catch (error) {
-        return { success: false, message: 'Operation failed.' };
+
+        // 3. Create the user
+        const userId = crypto.randomUUID();
+        await connection.query(
+            'INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)',
+            [userId, username, password, JSON.stringify(finalRoles), 'Active']
+        );
+
+        // 4. Mark request as approved
+        await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Approved', requestId]);
+
+        // 5. Update personnel record with the new userId
+        await connection.query('UPDATE personnel SET userId = ? WHERE name = ?', [userId, username]);
+
+        await logUserAction(adminUser, 'Approve Access Request', `Approved and created account for: ${username} with roles: ${finalRoles.join(', ')}`, connection);
+        
+        await connection.commit();
+        revalidatePath('/admin');
+        revalidatePath('/users');
+        revalidatePath('/roster');
+        return { success: true, message: 'Account created successfully.' };
+    } catch (e: any) {
+        await connection.rollback();
+        return { success: false, message: e.message || 'Operation failed.' };
+    } finally {
+        connection.release();
     }
 }
 
 export async function denyAccessRequest(requestId: string, requestedUsername: string, adminUser: string) {
+    const connection = await db.getConnection();
     try {
-        const connection = await db.getConnection();
-        try {
-            await connection.beginTransaction();
-            await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Denied', requestId]);
-            await logUserAction(adminUser, 'Deny Access Request', `Denied access for user: ${requestedUsername}`, connection);
-            await connection.commit();
-            revalidatePath('/admin');
-            return { success: true, message: 'Access request denied.' };
-        } catch (e) {
-            await connection.rollback();
-            throw e;
-        } finally {
-            connection.release();
-        }
-    } catch (error) {
+        await connection.beginTransaction();
+        await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Denied', requestId]);
+        await logUserAction(adminUser, 'Deny Access Request', `Denied access for user: ${requestedUsername}`, connection);
+        await connection.commit();
+        revalidatePath('/admin');
+        return { success: true, message: 'Access request denied.' };
+    } catch (e) {
+        await connection.rollback();
         return { success: false, message: 'Operation failed.' };
+    } finally {
+        connection.release();
     }
 }
 
@@ -196,12 +196,43 @@ export async function getAccessRequests(): Promise<AccessRequest[]> {
     }
 }
 
-export async function changeUserPassword(data: any) { return { success: false }; }
-export async function updateProfilePicture(data: any) { return { success: false }; }
+export async function setUserStatus(data: { userId: string, status: 'Active' | 'Banned', adminUser: string }) {
+    const connection = await db.getConnection();
+    try {
+        await connection.query('UPDATE users SET status = ? WHERE id = ?', [data.status, data.userId]);
+        await logUserAction(data.adminUser, 'Update User Status', `Set user ${data.userId} status to ${data.status}`, connection);
+        revalidatePath('/admin');
+        return { success: true };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function deleteUser(userId: string, adminUser: string) {
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        const [userRows]: any = await connection.query('SELECT username FROM users WHERE id = ?', [userId]);
+        const username = userRows[0]?.username;
+
+        await connection.query('DELETE FROM users WHERE id = ?', [userId]);
+        await connection.query('UPDATE personnel SET userId = NULL WHERE userId = ?', [userId]);
+
+        await logUserAction(adminUser, 'Delete User', `Deleted user account: ${username}`, connection);
+        await connection.commit();
+        revalidatePath('/admin');
+        revalidatePath('/users');
+        return { success: true, message: 'User deleted.' };
+    } catch (e) {
+        await connection.rollback();
+        return { success: false, message: 'Delete failed.' };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function changeUserPassword(data: any) { return { success: false, message: 'Not implemented' }; }
+export async function updateProfilePicture(data: any) { return { success: false, message: 'Not implemented' }; }
 export async function getReviewedApplicationsCount(userId: string) { return 0; }
-export async function updateUser(data: any) { return { success: false }; }
-export async function setUserStatus(data: any) { return { success: false }; }
-export async function resetUserPassword(data: any) { return { success: false }; }
-export async function deleteUser(userId: string, adminUser: string) { return { success: false }; }
-export async function submitAccessRequest(data: any) { return { success: false }; }
-export async function approveAccessRequest(data: any) { return { success: false }; }
+export async function updateUser(data: any) { return { success: false, message: 'Not implemented' }; }
+export async function resetUserPassword(data: any) { return { success: false, message: 'Not implemented' }; }

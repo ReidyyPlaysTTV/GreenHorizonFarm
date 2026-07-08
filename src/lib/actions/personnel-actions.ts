@@ -38,6 +38,30 @@ async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'P
     }
 }
 
+// Helper to sync user roles with roster rank
+async function syncUserRoles(connection: any, name: string, rank: string) {
+    const [userRows]: any = await connection.query('SELECT id, roles FROM users WHERE username = ?', [name]);
+    if (userRows.length > 0) {
+        const user = userRows[0];
+        let currentRoles: string[] = [];
+        try {
+            currentRoles = typeof user.roles === 'string' ? JSON.parse(user.roles) : (user.roles || []);
+        } catch(e) {
+            currentRoles = [];
+        }
+        
+        // Remove any existing staff roles to avoid duplicates, but keep Admin/Dev/User
+        const filteredRoles = currentRoles.filter(r => !staffRoles.includes(r as any));
+        // Add the new rank as a role
+        const newRoles = [...new Set([...filteredRoles, rank])];
+        
+        await connection.query('UPDATE users SET roles = ? WHERE id = ?', [JSON.stringify(newRoles), user.id]);
+        
+        // Also update the personnel record with the userId if it's missing
+        await connection.query('UPDATE personnel SET userId = ? WHERE name = ?', [user.id, name]);
+    }
+}
+
 export async function promotePersonnel(personnelId: string, user: string) {
   const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
   if (!hasPermission) {
@@ -64,12 +88,18 @@ export async function promotePersonnel(personnelId: string, user: string) {
 
     const newRank = rankOrder[currentRankIndex - 1];
     await connection.query('UPDATE personnel SET rank = ? WHERE id = ?', [newRank, personnelId]);
+    
+    // Sync User Permissions
+    await syncUserRoles(connection, personnel.name, newRank);
+
     await logEvent(personnel.name, 'Promoted', `Promoted from ${personnel.rank} to ${newRank}`, connection);
     await logUserAction(user, "Promote Personnel", `Promoted ${personnel.name} from ${personnel.rank} to ${newRank}.`, connection);
+    
     await connection.commit();
 
     revalidatePath('/roster');
     revalidatePath('/logs');
+    revalidatePath('/users');
     return { success: true, message: `${personnel.name} promoted to ${newRank}.` };
   } catch (error: any) {
     await connection.rollback();
@@ -106,12 +136,18 @@ export async function demotePersonnel(personnelId: string, user: string) {
 
     const newRank = rankOrder[currentRankIndex + 1];
     await connection.query('UPDATE personnel SET rank = ? WHERE id = ?', [newRank, personnelId]);
+    
+    // Sync User Permissions
+    await syncUserRoles(connection, personnel.name, newRank);
+
     await logEvent(personnel.name, 'Demoted', `Demoted from ${personnel.rank} to ${newRank}`, connection);
     await logUserAction(user, "Demote Personnel", `Demoted ${personnel.name} from ${personnel.rank} to ${newRank}.`, connection);
+    
     await connection.commit();
 
     revalidatePath('/roster');
     revalidatePath('/logs');
+    revalidatePath('/users');
     return { success: true, message: `${personnel.name} demoted to ${newRank}.` };
   } catch (error: any) {
     await connection.rollback();
@@ -143,6 +179,14 @@ export async function firePersonnel(personnelId: string, reason: string, user: s
 
     await connection.query('DELETE FROM personnel WHERE id = ?', [personnelId]);
     
+    // Downgrade User Permissions back to basic "User"
+    const [userRows]: any = await connection.query('SELECT id FROM users WHERE username = ?', [personnel.name]);
+    if (userRows.length > 0) {
+        const userId = userRows[0].id;
+        await connection.query('UPDATE users SET roles = ? WHERE id = ?', [JSON.stringify(['User']), userId]);
+        await connection.query('UPDATE personnel SET userId = NULL WHERE id = ?', [personnelId]);
+    }
+
     await logEvent(personnel.name, 'Fired', `Fired for: ${reason}`, connection);
     await logUserAction(user, "Fire Personnel", `Fired ${personnel.name}. Reason: ${reason}`, connection);
 
@@ -150,6 +194,7 @@ export async function firePersonnel(personnelId: string, reason: string, user: s
     revalidatePath('/roster');
     revalidatePath('/archive');
     revalidatePath('/logs');
+    revalidatePath('/users');
     return { success: true, message: 'Personnel fired successfully.' };
   } catch (error: any) {
     await connection.rollback();
@@ -196,12 +241,16 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
         [name, rank, department, discordUsername || null, phoneNumber || null, bankAccount || null, hireDate || null, personnelId]
     );
 
+    // Sync User Permissions if rank changed or name changed
+    await syncUserRoles(connection, name, rank);
+
     await logUserAction(user, "Update Personnel", `Updated details for ${name}.`, connection);
     
     await connection.commit();
 
     revalidatePath('/roster');
     revalidatePath('/logs');
+    revalidatePath('/users');
     return { success: true, message: 'Personnel updated successfully.' };
   } catch (error: any) {
     await connection.rollback();
@@ -240,16 +289,19 @@ export async function addPersonnel(data: unknown) {
     try {
         await connection.beginTransaction();
         
-        const [userRows] = await connection.query('SELECT id FROM users WHERE username = ?', [name]);
-        const userId = (userRows as any)[0]?.id || null;
+        const [userRows]: any = await connection.query('SELECT id FROM users WHERE username = ?', [name]);
+        const userId = userRows[0]?.id || null;
 
         const personnelId = crypto.randomUUID();
-        const dummyBadge = Math.floor(1000 + Math.random() * 9000).toString();
 
         await connection.query(
-            'INSERT INTO personnel (id, name, rank, department, badgeNumber, discord_username, phone_number, bank_account, hire_date, status, loa_until, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [personnelId, name, rank, department, dummyBadge, discordUsername || null, phoneNumber || null, bankAccount || null, hireDate, 'Active', null, userId]
+            'INSERT INTO personnel (id, name, rank, department, discord_username, phone_number, bank_account, hire_date, status, loa_until, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [personnelId, name, rank, department, discordUsername || null, phoneNumber || null, bankAccount || null, hireDate, 'Active', null, userId]
         );
+        
+        // Sync User Permissions
+        await syncUserRoles(connection, name, rank);
+
         await logEvent(name, 'Hired', `Hired as ${rank} in ${department}`, connection);
         
         let logDescription = `Added ${name} to the roster as ${rank}.`;
@@ -264,11 +316,56 @@ export async function addPersonnel(data: unknown) {
         revalidatePath('/roster');
         revalidatePath('/logs');
         revalidatePath('/applications');
+        revalidatePath('/users');
         return { success: true, message: `${name} has been added to the roster.` };
     } catch (error: any) {
         await connection.rollback();
         console.error('Adding personnel failed:', error);
         return { success: false, message: error.message || 'Database operation failed.' };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function rehirePersonnel(data: any) {
+    const { archivedId, name, rank, discordUsername, user } = data;
+    
+    const hasPermission = await checkPermissions(user, 'HIRE_PERSONNEL');
+    if (!hasPermission) {
+        return { success: false, message: 'You do not have permission.' };
+    }
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // 1. Remove from archive
+        await connection.query('DELETE FROM archived_personnel WHERE id = ?', [archivedId]);
+
+        // 2. Add back to active personnel
+        const [userRows]: any = await connection.query('SELECT id FROM users WHERE username = ?', [name]);
+        const userId = userRows[0]?.id || null;
+        
+        const personnelId = crypto.randomUUID();
+        await connection.query(
+            'INSERT INTO personnel (id, name, rank, department, discord_username, hire_date, status, is_rehired, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [personnelId, name, rank, 'Management', discordUsername || null, new Date(), 'Active', true, userId]
+        );
+
+        // 3. Sync permissions
+        await syncUserRoles(connection, name, rank);
+
+        await logEvent(name, 'Rehired', `Rehired as ${rank}`, connection);
+        await logUserAction(user, "Rehire Personnel", `Rehired ${name} to the active roster.`, connection);
+
+        await connection.commit();
+        revalidatePath('/roster');
+        revalidatePath('/archive');
+        revalidatePath('/users');
+        return { success: true, message: `${name} has been rehired.` };
+    } catch (error: any) {
+        await connection.rollback();
+        return { success: false, message: error.message || 'Rehire failed.' };
     } finally {
         connection.release();
     }
