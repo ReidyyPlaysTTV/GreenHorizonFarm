@@ -87,6 +87,7 @@ export interface DetailedFarmOrder {
     collaborators: string[]; 
     status: 'Active' | 'Completed' | 'Cancelled';
     created_at: Date;
+    completed_at?: Date | null;
 }
 
 export interface BusinessOrder {

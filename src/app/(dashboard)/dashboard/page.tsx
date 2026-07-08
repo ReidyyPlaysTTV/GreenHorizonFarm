@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { getDetailedOrders, getRecentActivity, getAnnouncements } from "@/lib/actions";
 import type { DetailedFarmOrder, PersonnelEvent, Announcement } from "@/lib/types";
-import { subDays, isAfter, startOfWeek } from "date-fns";
+import { subDays, isAfter, startOfWeek, format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Announcements } from "@/components/dashboard/announcements";
 
@@ -146,7 +146,7 @@ export default function FarmDashboard() {
                                 <div className="text-right">
                                     <p className="font-black text-emerald-500 tracking-tighter">${Number(order.total_price).toLocaleString()}</p>
                                     <p className="text-[8px] text-muted-foreground mt-1 uppercase font-black">
-                                        {new Date(order.created_at).toLocaleDateString()}
+                                        {format(new Date(order.created_at), 'MMM dd • HH:mm')}
                                     </p>
                                 </div>
                             </div>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -214,7 +215,7 @@ export default function FarmersPortal() {
                                 <TableHead>Business (40%)</TableHead>
                                 <TableHead>Staff Pool (60%)</TableHead>
                                 <TableHead>Team</TableHead>
-                                <TableHead className="text-right">Date</TableHead>
+                                <TableHead className="text-right">Timeline</TableHead>
                             </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -246,8 +247,12 @@ export default function FarmersPortal() {
                                         </div>
                                     </div>
                                 </TableCell>
-                                <TableCell className="text-right text-[10px] font-black uppercase opacity-60">
-                                    {formatDistanceToNow(new Date(o.created_at), { addSuffix: true })}
+                                <TableCell className="text-right whitespace-nowrap">
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[10px] font-black uppercase text-primary">Start: {format(new Date(o.created_at), 'HH:mm')}</span>
+                                        <span className="text-[10px] font-black uppercase text-emerald-500">Done: {o.completed_at ? format(new Date(o.completed_at), 'HH:mm') : '---'}</span>
+                                        <span className="text-[8px] text-muted-foreground font-bold">{format(new Date(o.created_at), 'MMM dd')}</span>
+                                    </div>
                                 </TableCell>
                                 </TableRow>
                             ))}

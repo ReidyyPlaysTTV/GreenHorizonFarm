@@ -328,13 +328,18 @@ export default function CEOPortal() {
               <CardContent>
                   <ScrollArea className="h-[300px]">
                       <Table>
-                          <TableHeader><TableRow><TableHead>Staff</TableHead><TableHead>Value</TableHead><TableHead className="text-right">Time</TableHead></TableRow></TableHeader>
+                          <TableHeader><TableRow><TableHead>Staff</TableHead><TableHead>Value</TableHead><TableHead className="text-right">Completion Time</TableHead></TableRow></TableHeader>
                           <TableBody>
                               {orders.slice(0, 10).map(o => (
                                   <TableRow key={o.id}>
                                       <TableCell className="font-bold">{o.completed_by}</TableCell>
                                       <TableCell className="text-emerald-500 font-black">${Number(o.total_price).toLocaleString()}</TableCell>
-                                      <TableCell className="text-right text-[10px] text-muted-foreground">{format(new Date(o.created_at), 'MMM dd HH:mm')}</TableCell>
+                                      <TableCell className="text-right">
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-[10px] font-black uppercase text-emerald-500">{o.completed_at ? format(new Date(o.completed_at), 'HH:mm') : '---'}</span>
+                                            <span className="text-[8px] text-muted-foreground font-bold uppercase">{format(new Date(o.created_at), 'MMM dd')}</span>
+                                        </div>
+                                      </TableCell>
                                   </TableRow>
                               ))}
                           </TableBody>

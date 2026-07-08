@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Package, Clock, CheckCircle2, ChevronRight, Loader2, XCircle, Truck } from "lucide-react";
 import { getPendingBusinessOrders, cancelBusinessOrder } from "@/lib/actions/order-actions";
 import type { BusinessOrder } from "@/lib/types";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, differenceInMinutes } from "date-fns";
 import { Button } from "../ui/button";
 import { AddOrderForm } from "./add-order-form";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +55,18 @@ export function PendingOrders({ onAccept }: PendingOrdersProps) {
         }
     };
 
+    const getTimeRemaining = (createdAt: Date) => {
+        const limitInMinutes = 5 * 60; // 5 hours
+        const elapsed = differenceInMinutes(new Date(), new Date(createdAt));
+        const remaining = limitInMinutes - elapsed;
+        
+        if (remaining <= 0) return "Expired";
+        
+        const hours = Math.floor(remaining / 60);
+        const mins = remaining % 60;
+        return `${hours}h ${mins}m remaining`;
+    };
+
     if (loading) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin opacity-20" /></div>;
 
     return (
@@ -73,9 +85,14 @@ export function PendingOrders({ onAccept }: PendingOrdersProps) {
                         <Card key={order.id} className="border-primary/10 bg-card/40 backdrop-blur-sm group hover:border-primary/40 transition-all">
                             <CardHeader className="pb-3">
                                 <div className="flex justify-between items-start mb-2">
-                                    <div className="flex items-center gap-2 text-[10px] font-black text-muted-foreground uppercase tracking-tighter">
-                                        <Clock className="h-3 w-3" />
-                                        {formatDistanceToNow(order.created_at, { addSuffix: true })}
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2 text-[10px] font-black text-muted-foreground uppercase tracking-tighter">
+                                            <Clock className="h-3 w-3" />
+                                            Received: {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                        <div className="text-[10px] font-black text-orange-400 uppercase tracking-widest">
+                                            {getTimeRemaining(order.created_at)}
+                                        </div>
                                     </div>
                                     <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[9px]">PENDING</Badge>
                                 </div>

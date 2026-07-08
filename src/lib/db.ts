@@ -78,7 +78,8 @@ async function createFarmTables(connection: any) {
                 completed_by VARCHAR(255) NOT NULL,
                 collaborators JSON,
                 status ENUM('Active', 'Completed', 'Cancelled') DEFAULT 'Completed',
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                completed_at DATETIME
             )`,
             `CREATE TABLE IF NOT EXISTS business_orders (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -297,6 +298,13 @@ export async function ensureDbInitialized(force: boolean = false) {
                 console.log("Database empty. Seeding initial schema...");
                 await createFarmTables(connection);
                 await seedDatabase(pool);
+            } else {
+                // Ensure completed_at column exists in detailed_farm_orders
+                try {
+                    await connection.query("ALTER TABLE detailed_farm_orders ADD COLUMN IF NOT EXISTS completed_at DATETIME");
+                } catch (e) {
+                    // Ignore if already exists
+                }
             }
             
             isInitialized = true;

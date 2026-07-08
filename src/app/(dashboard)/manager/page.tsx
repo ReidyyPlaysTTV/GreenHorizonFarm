@@ -219,14 +219,19 @@ export default function ManagerPortal() {
             <CardContent>
                 <ScrollArea className="h-[350px]">
                     <Table>
-                        <TableHeader><TableRow><TableHead>Staff</TableHead><TableHead>Business</TableHead><TableHead>Value</TableHead><TableHead className="text-right">Time</TableHead></TableRow></TableHeader>
+                        <TableHeader><TableRow><TableHead>Staff</TableHead><TableHead>Business</TableHead><TableHead>Value</TableHead><TableHead className="text-right">Timeline</TableHead></TableRow></TableHeader>
                         <TableBody>
                             {orders.slice(0, 10).map(o => (
                                 <TableRow key={o.id}>
                                     <TableCell className="font-bold">{o.completed_by}</TableCell>
                                     <TableCell className="text-xs">{o.business_name}</TableCell>
                                     <TableCell className="text-emerald-500 font-bold">${Number(o.total_price).toLocaleString()}</TableCell>
-                                    <TableCell className="text-right text-[10px] text-muted-foreground">{format(new Date(o.created_at), 'HH:mm')}</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-[9px] font-black uppercase text-primary">Start: {format(new Date(o.created_at), 'HH:mm')}</span>
+                                            <span className="text-[9px] font-black uppercase text-emerald-500">Done: {o.completed_at ? format(new Date(o.completed_at), 'HH:mm') : '---'}</span>
+                                        </div>
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>

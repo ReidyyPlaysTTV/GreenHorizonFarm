@@ -1,3 +1,4 @@
+
 'use server';
 
 import { z } from 'zod';
@@ -144,7 +145,7 @@ export async function completeDetailedOrder(orderId: string, user: string) {
         if (rows.length === 0) throw new Error("Order not found.");
         const order = rows[0];
 
-        await connection.query("UPDATE detailed_farm_orders SET status = 'Completed' WHERE id = ?", [orderId]);
+        await connection.query("UPDATE detailed_farm_orders SET status = 'Completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?", [orderId]);
         
         await logUserAction(user, "Complete Operation", `Finalized supply run for ${order.business_name}. Billing recorded.`, connection);
         
@@ -198,7 +199,8 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
                 items_sold: typeof row.items_sold === 'string' ? JSON.parse(row.items_sold) : (row.items_sold || []),
                 collaborators: typeof row.collaborators === 'string' ? JSON.parse(row.collaborators) : (row.collaborators || []),
                 logistics_used: !!row.logistics_used,
-                created_at: new Date(row.created_at)
+                created_at: new Date(row.created_at),
+                completed_at: row.completed_at ? new Date(row.completed_at) : null
             }));
         } finally {
             connection.release();
@@ -356,7 +358,8 @@ export async function getOrdersByStaff(name: string): Promise<DetailedFarmOrder[
                 items_sold: typeof row.items_sold === 'string' ? JSON.parse(row.items_sold) : (row.items_sold || []),
                 collaborators: typeof row.collaborators === 'string' ? JSON.parse(row.collaborators) : (row.collaborators || []),
                 logistics_used: !!row.logistics_used,
-                created_at: new Date(row.created_at)
+                created_at: new Date(row.created_at),
+                completed_at: row.completed_at ? new Date(row.completed_at) : null
             }));
         } finally {
             connection.release();
