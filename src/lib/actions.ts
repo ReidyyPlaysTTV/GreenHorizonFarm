@@ -1,4 +1,3 @@
-
 export {
     promotePersonnel,
     demotePersonnel,
@@ -150,6 +149,8 @@ export {
 export {
     addStaffIncident,
     addFarmProduct,
+    updateFarmProduct,
+    deleteFarmProduct,
     addManagerPlan,
     addPromotionSuggestion,
     getManagerData,

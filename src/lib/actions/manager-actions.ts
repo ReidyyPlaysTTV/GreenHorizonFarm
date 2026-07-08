@@ -1,4 +1,3 @@
-
 'use server';
 
 import { z } from 'zod';
@@ -63,6 +62,54 @@ export async function addFarmProduct(data: unknown, user: string) {
         revalidatePath('/manager');
         revalidatePath('/ceo');
         revalidatePath('/farmers');
+        revalidatePath('/order');
+        return { success: true };
+    } catch (error) {
+        await connection.rollback();
+        return { success: false, message: 'Database failure.' };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function updateFarmProduct(id: string, data: unknown, user: string) {
+    const validation = productSchema.safeParse(data);
+    if (!validation.success) return { success: false, message: validation.error.errors[0].message };
+    const { name, category, price } = validation.data;
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        await connection.query(
+            'UPDATE farm_products SET name = ?, category = ?, price = ? WHERE id = ?',
+            [name, category, price, id]
+        );
+        await logUserAction(user, "Manage Products", `Updated product: ${name} (Price: $${price})`, connection);
+        await connection.commit();
+        revalidatePath('/manager');
+        revalidatePath('/ceo');
+        revalidatePath('/farmers');
+        revalidatePath('/order');
+        return { success: true };
+    } catch (error) {
+        await connection.rollback();
+        return { success: false, message: 'Database failure.' };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function deleteFarmProduct(id: string, user: string) {
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        await connection.query('DELETE FROM farm_products WHERE id = ?', [id]);
+        await logUserAction(user, "Manage Products", `Deleted product with ID: ${id}`, connection);
+        await connection.commit();
+        revalidatePath('/manager');
+        revalidatePath('/ceo');
+        revalidatePath('/farmers');
+        revalidatePath('/order');
         return { success: true };
     } catch (error) {
         await connection.rollback();
