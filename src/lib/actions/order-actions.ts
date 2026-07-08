@@ -27,29 +27,84 @@ const orderSchema = z.object({
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_ORDER_LEDGER_WEBHOOK;
 const BUSINESS_ORDER_WEBHOOK = process.env.DISCORD_BUSINESS_ORDER_WEBHOOK;
 
+const PRODUCT_EMOJIS: Record<string, string> = {
+    'milk': '🥛',
+    'egg': '🥚',
+    'bread': '🍞',
+    'carrot': '🥕',
+    'tomato': '🍅',
+    'lettuce': '🥬',
+    'potato': '🥔',
+    'wheat': '🌾',
+    'meat': '🥩',
+    'chicken': '🍗',
+    'beef': '🥩',
+    'pork': '🥓',
+    'seed': '🌱',
+    'flower': '🌸',
+    'water': '💧',
+    'fertilizer': '🧪',
+    'logistics': '🚚',
+    'delivery': '📦',
+    'hay': '🌾',
+    'orange': '🍊',
+    'lemon': '🍋',
+    'honey': '🍯',
+};
+
+function getProductEmoji(name: string) {
+    const n = name.toLowerCase();
+    for (const [key, emoji] of Object.entries(PRODUCT_EMOJIS)) {
+        if (n.includes(key)) return emoji;
+    }
+    return '📦';
+}
+
 async function sendOrderWebhook(order: any) {
     if (!DISCORD_WEBHOOK_URL) {
         console.warn("Order Ledger Webhook URL not configured.");
         return;
     }
     try {
-        const itemsList = order.items_sold.map((i: any) => `- ${i.quantity}x ${i.product_name}`).join('\n');
-        const staffList = [order.user, ...order.collaborators].join(', ');
+        const total = Number(order.total_price);
+        const staffCut = Number(order.employee_cut_value);
+        const businessProfit = total - staffCut;
+        
+        const itemsList = order.items_sold.map((i: any) => 
+            `${getProductEmoji(i.product_name)} **${i.quantity}x** ${i.product_name}`
+        ).join('\n');
+        
+        const teamList = [order.user, ...order.collaborators].join(', ');
         
         const payload = {
             embeds: [{
-                title: "🚜 New Farm Order Completed",
-                color: 3066993, // Green Horizon Green
+                title: "🚜 Farm Operation Finalized",
+                description: `A supply requisition has been successfully fulfilled for **${order.business_name}**.`,
+                color: 3066993, // Green Horizon Emerald
                 fields: [
-                    { name: "Client / Business", value: `**${order.business_name}**`, inline: true },
-                    { name: "Total Paid", value: `\`$${order.total_price.toLocaleString()}\``, inline: true },
-                    { name: "Staff Involved", value: staffList, inline: true },
-                    { name: "Yield Details", value: itemsList || "No items listed" },
-                    { name: "Logistics Used", value: order.logistics_used ? "✅ Yes" : "❌ No", inline: true },
-                    { name: "Shared Commission", value: `$${order.employee_cut_value.toLocaleString()} (${order.employee_cut_percentage}%)`, inline: true },
+                    { 
+                        name: "💰 Financial Breakdown", 
+                        value: `**Order Total:** \`$${total.toLocaleString()}\`\n**Business Profit (40%):** \`$${businessProfit.toLocaleString()}\`\n**Staff Pool (60%):** \`$${staffCut.toLocaleString()}\``,
+                        inline: false 
+                    },
+                    { 
+                        name: "📦 Supply Manifest", 
+                        value: itemsList || "No items recorded.", 
+                        inline: true 
+                    },
+                    { 
+                        name: "👥 Field Team", 
+                        value: `**Lead:** ${order.user}\n**Support:** ${order.collaborators.length > 0 ? order.collaborators.join(', ') : 'Solo Operation'}`, 
+                        inline: true 
+                    },
+                    {
+                        name: "🕒 Timeline",
+                        value: `**Started:** ${new Date(order.created_at).toLocaleTimeString()}\n**Finished:** ${new Date().toLocaleTimeString()}`,
+                        inline: false
+                    }
                 ],
-                timestamp: new Date().toISOString(),
-                footer: { text: "Green Horizon Management System • Ledger Update" }
+                footer: { text: "Green Horizon Logistics Engine • Ledger Update" },
+                timestamp: new Date().toISOString()
             }]
         };
 
@@ -69,19 +124,22 @@ async function sendBusinessOrderWebhook(order: any) {
         return;
     }
     try {
-        const itemsList = order.items.map((i: any) => `- ${i.quantity}x ${i.product_name}`).join('\n');
+        const itemsList = order.items.map((i: any) => 
+            `${getProductEmoji(i.product_name)} **${i.quantity}x** ${i.product_name}`
+        ).join('\n');
         
         const payload = {
             embeds: [{
-                title: "🚜 New Business Requisition Received",
-                color: 3447003, // Blue-ish for awareness
-                description: `A new supply request has been submitted to the logistics network.`,
+                title: "📩 New Business Requisition",
+                color: 3447003, // Logistics Blue
+                description: `A new client has requested supplies via the portal.`,
                 fields: [
-                    { name: "Business Name", value: `**${order.business_name}**`, inline: true },
-                    { name: "Items Requested", value: itemsList || "No items listed" },
-                    { name: "Portal Link", value: "[Farmers Portal](https://green-horizon-farm.web.app/farmers)" }
+                    { name: "Client", value: `**${order.business_name}**`, inline: true },
+                    { name: "Required Yield", value: itemsList || "No items listed" },
+                    { name: "Status", value: "🔴 Awaiting Acceptance", inline: true },
+                    { name: "Portal Link", value: "[Process Requisition](https://green-horizon-farm.web.app/farmers)" }
                 ],
-                footer: { text: "Green Horizon Logistics Engine" },
+                footer: { text: "Green Horizon Logistics Hub" },
                 timestamp: new Date().toISOString()
             }]
         };
@@ -161,8 +219,8 @@ export async function completeDetailedOrder(orderId: string, user: string) {
         // Notify Discord only on completion
         const formattedOrder = {
             ...order,
-            items_sold: JSON.parse(order.items_sold),
-            collaborators: JSON.parse(order.collaborators),
+            items_sold: typeof order.items_sold === 'string' ? JSON.parse(order.items_sold) : order.items_sold,
+            collaborators: typeof order.collaborators === 'string' ? JSON.parse(order.collaborators) : order.collaborators,
             user: order.completed_by
         };
         await sendOrderWebhook(formattedOrder);
@@ -170,6 +228,8 @@ export async function completeDetailedOrder(orderId: string, user: string) {
         revalidatePath('/farmers');
         revalidatePath('/security');
         revalidatePath('/finances');
+        revalidatePath('/ceo');
+        revalidatePath('/manager');
         return { success: true, message: 'Operation completed and billed.' };
     } catch (e) {
         await connection.rollback();
