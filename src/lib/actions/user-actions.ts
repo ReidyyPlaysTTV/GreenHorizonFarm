@@ -175,7 +175,7 @@ export async function submitAccessRequest(data: any) {
 
 export async function approveAccessRequest(data: any) {
     try {
-        const { requestId, username, roles: requestedRoles, adminUser, rank, callsign } = data;
+        const { requestId, username, roles: requestedRoles, adminUser, rank } = data;
         const pool = await ensureDbInitialized();
         const connection = await pool.getConnection();
         try {
@@ -204,8 +204,8 @@ export async function approveAccessRequest(data: any) {
                 await connection.query('UPDATE personnel SET userId = ?, rank = ?, status = "Active" WHERE id = ?', [userId, rank, rosterRows[0].id]);
             } else {
                 await connection.query(
-                    'INSERT INTO personnel (id, name, rank, badgeNumber, status, hire_date, userId) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    [crypto.randomUUID(), username, rank, callsign, 'Active', new Date(), userId]
+                    'INSERT INTO personnel (id, name, rank, status, hire_date, userId) VALUES (?, ?, ?, ?, ?, ?)',
+                    [crypto.randomUUID(), username, rank, 'Active', new Date(), userId]
                 );
             }
 

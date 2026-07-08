@@ -40,7 +40,6 @@ const formSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters."),
   roles: z.array(z.string()).min(1, "At least one role must be selected."),
   rank: z.string({ required_error: "Please assign a starting rank." }),
-  callsign: z.coerce.number().min(1000).max(9999),
 });
 
 interface ApproveRequestDialogProps {
@@ -65,7 +64,6 @@ export function ApproveRequestDialog({ request }: ApproveRequestDialogProps) {
       username: request.requested_username,
       roles: ["User"],
       rank: "Trainee Farm Hand",
-      callsign: 1000 as any,
     },
   });
   
@@ -78,7 +76,6 @@ export function ApproveRequestDialog({ request }: ApproveRequestDialogProps) {
         username: values.username,
         roles: values.roles,
         rank: values.rank,
-        callsign: values.callsign,
         adminUser: currentUser,
     });
     
@@ -133,7 +130,7 @@ export function ApproveRequestDialog({ request }: ApproveRequestDialogProps) {
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
                 <FormField
                     control={form.control}
                     name="rank"
@@ -154,19 +151,6 @@ export function ApproveRequestDialog({ request }: ApproveRequestDialogProps) {
                             ))}
                             </SelectContent>
                         </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="callsign"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Initial Callsign</FormLabel>
-                        <FormControl>
-                            <Input type="number" placeholder="1000" {...field} />
-                        </FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
