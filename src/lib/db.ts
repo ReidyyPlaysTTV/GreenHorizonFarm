@@ -15,8 +15,8 @@ try {
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
-        connectTimeout: 10000, 
-        acquireTimeout: 10000,
+        connectTimeout: 3000, // Reduced to 3s to fail fast
+        acquireTimeout: 3000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });

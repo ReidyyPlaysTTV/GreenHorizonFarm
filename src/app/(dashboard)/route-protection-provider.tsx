@@ -11,10 +11,10 @@ export async function RouteProtectionProvider({ children }: { children: React.Re
     let isMaintenanceMode = false;
     
     try {
-        // We race the maintenance check against a 3-second timeout to prevent layout hangs.
+        // We race the maintenance check against a 2-second timeout to prevent layout hangs.
         const maintenancePromise = getMaintenanceMode();
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('TIMEOUT')), 3000)
+            setTimeout(() => reject(new Error('TIMEOUT')), 2000)
         );
         
         isMaintenanceMode = await Promise.race([maintenancePromise, timeoutPromise]) as boolean;

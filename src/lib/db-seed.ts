@@ -40,6 +40,9 @@ export async function seedDatabase(pool: Pool) {
             
             // Update personnel table with the link
             await connection.query('UPDATE personnel SET userId = ? WHERE UPPER(name) = "LEON GREEN"', [leonId]);
+        } else {
+            // Update password just in case it was changed and user wants it reset to the seed value
+            await connection.query('UPDATE users SET password = ? WHERE username = ?', ['Katarina97', 'Leon Green']);
         }
 
         // 2. Ensure admin
@@ -48,7 +51,7 @@ export async function seedDatabase(pool: Pool) {
             console.log("Seeding Administrator: admin");
             const adminId = crypto.randomUUID();
             await connection.query(
-                'INSERT INTO users (id, username, password, roles, avatarUrl, status) VALUES (?, ?, ?, ?, ?, ?)',
+                'INSERT INTO users (id, username, password, roles, avatarUrl, status) VALUES (?, ?, ?, ?, ?)',
                 [
                     adminId, 
                     'admin', 
