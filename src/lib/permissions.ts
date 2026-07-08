@@ -1,8 +1,43 @@
-
 'use server';
 import type { Role, Permission } from "./types";
 import db from "./db";
-import { getPermissionsMap } from './actions/permission-actions';
+import { initialPermissionsMap } from './data';
+
+/**
+ * Internal helper to fetch permissions without importing from actions (avoids circular dependency)
+ */
+async function getInternalPermissionsMap(): Promise<Record<Role, Permission[]>> {
+    const connection = await db.getConnection();
+    try {
+        const [rows] = await connection.query('SELECT role, permission FROM role_permissions');
+        
+        const map: Record<Role, Permission[]> = (Object.keys(initialPermissionsMap) as Role[]).reduce((acc, role) => {
+            acc[role] = [];
+            return acc;
+        }, {} as Record<Role, Permission[]>);
+
+        if (Array.isArray(rows)) {
+            for (const row of (rows as any[])) {
+                if (map[row.role as Role]) {
+                    map[row.role as Role].push(row.permission as Permission);
+                }
+            }
+        }
+        
+        // Ensure Developer and Administrator always have all permissions
+        const allPermissionIds = Object.keys(initialPermissionsMap).flatMap(role => initialPermissionsMap[role as Role]);
+        const uniquePermissions = [...new Set(allPermissionIds)] as Permission[];
+
+        map.Developer = uniquePermissions;
+        map.Administrator = uniquePermissions;
+
+        return map;
+    } catch (error) {
+        return initialPermissionsMap;
+    } finally {
+        connection.release();
+    }
+}
 
 // Server-side permission check with enhanced safety for offline DB
 export async function checkPermissions(username: string, permission: Permission): Promise<boolean> {
@@ -10,7 +45,7 @@ export async function checkPermissions(username: string, permission: Permission)
 
     const decodedUsername = decodeURIComponent(username);
 
-    // Hardcoded bypass for the primary developer account to ensure access during DB downtime
+    // Hardcoded bypass for the primary developer account
     if (decodedUsername === 'Leon Green' || decodedUsername === 'admin') {
         return true;
     }
@@ -31,7 +66,6 @@ export async function checkPermissions(username: string, permission: Permission)
                 try {
                     userRoles = JSON.parse(user.roles);
                 } catch (e) {
-                    console.error("Failed to parse roles JSON from DB string");
                     userRoles = [];
                 }
             } else if (Array.isArray(user.roles)) {
@@ -42,7 +76,7 @@ export async function checkPermissions(username: string, permission: Permission)
                 return true;
             }
 
-            const permissionsMap = await getPermissionsMap();
+            const permissionsMap = await getInternalPermissionsMap();
             for (const role of userRoles) {
                 const rolePermissions = permissionsMap[role];
                 if (rolePermissions?.includes(permission)) {

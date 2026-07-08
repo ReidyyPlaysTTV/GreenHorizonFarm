@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -119,13 +118,13 @@ export default function ManagerPortal() {
   , [personnel]);
 
   const recentIncome = useMemo(() => {
-    const fromOrders = orders.map(o => ({ date: o.created_at, desc: `Order: ${o.business_name}`, amt: Number(o.total_price), type: 'Income' }));
-    const fromManual = transactions.filter(t => t.category === 'Income').map(t => ({ date: t.transaction_date, desc: t.description, amt: Number(t.amount), type: 'Income' }));
+    const fromOrders = orders.map(o => ({ date: new Date(o.created_at), desc: `Order: ${o.business_name}`, amt: Number(o.total_price), type: 'Income' }));
+    const fromManual = transactions.filter(t => t.category === 'Income').map(t => ({ date: new Date(t.transaction_date), desc: t.description, amt: Number(t.amount), type: 'Income' }));
     return [...fromOrders, ...fromManual].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 10);
   }, [orders, transactions]);
 
   const recentExpenses = useMemo(() => {
-    const fromManual = transactions.filter(t => t.category !== 'Income').map(t => ({ date: t.transaction_date, desc: t.description, amt: Number(t.amount), type: 'Expense' }));
+    const fromManual = transactions.filter(t => t.category !== 'Income').map(t => ({ date: new Date(t.transaction_date), desc: t.description, amt: Number(t.amount), type: 'Expense' }));
     return fromManual.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 10);
   }, [transactions]);
 
@@ -180,7 +179,7 @@ export default function ManagerPortal() {
                                     <TableCell className="font-bold">{o.completed_by}</TableCell>
                                     <TableCell className="text-xs">{o.business_name}</TableCell>
                                     <TableCell className="text-emerald-500 font-bold">${Number(o.total_price).toLocaleString()}</TableCell>
-                                    <TableCell className="text-right text-[10px] text-muted-foreground">{format(o.created_at, 'HH:mm')}</TableCell>
+                                    <TableCell className="text-right text-[10px] text-muted-foreground">{format(new Date(o.created_at), 'HH:mm')}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -330,7 +329,7 @@ export default function ManagerPortal() {
                                 <TableCell className="font-bold text-destructive text-xs">{si.title}</TableCell>
                                 <TableCell className="text-xs">{si.location}</TableCell>
                                 <TableCell className="text-xs">{si.reported_by}</TableCell>
-                                <TableCell className="text-right text-[10px] text-muted-foreground">{format(si.created_at, 'MM/dd')}</TableCell>
+                                <TableCell className="text-right text-[10px] text-muted-foreground">{format(new Date(si.created_at), 'MM/dd')}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
