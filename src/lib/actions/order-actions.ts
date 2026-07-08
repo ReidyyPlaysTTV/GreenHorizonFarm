@@ -160,11 +160,38 @@ export async function submitBusinessOrder(data: unknown) {
     }
 }
 
+/**
+ * Checks for and marks business orders as 'Expired' if pending for > 3 hours.
+ */
+async function cleanupExpiredOrders(connection: any) {
+    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    await connection.query(
+        "UPDATE business_orders SET status = 'Expired' WHERE status = 'Pending' AND created_at < ?",
+        [threeHoursAgo]
+    );
+}
+
 export async function getPendingBusinessOrders(): Promise<BusinessOrder[]> {
     await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
+        await cleanupExpiredOrders(connection);
         const [rows] = await connection.query("SELECT * FROM business_orders WHERE status = 'Pending' ORDER BY created_at DESC");
+        return (rows as any[]).map(r => ({
+            ...r,
+            items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items,
+            created_at: new Date(r.created_at)
+        }));
+    } finally {
+        connection.release();
+    }
+}
+
+export async function getExpiredBusinessOrders(): Promise<BusinessOrder[]> {
+    await ensureDbInitialized();
+    const connection = await db.getConnection();
+    try {
+        const [rows] = await connection.query("SELECT * FROM business_orders WHERE status = 'Expired' ORDER BY created_at DESC LIMIT 50");
         return (rows as any[]).map(r => ({
             ...r,
             items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items,

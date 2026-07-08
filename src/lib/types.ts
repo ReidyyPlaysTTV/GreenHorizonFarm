@@ -85,7 +85,7 @@ export interface BusinessOrder {
     business_name: string;
     contact_info: string;
     items: OrderItem[];
-    status: 'Pending' | 'Accepted' | 'Completed' | 'Cancelled';
+    status: 'Pending' | 'Accepted' | 'Completed' | 'Cancelled' | 'Expired';
     created_at: Date;
 }
 

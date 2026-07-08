@@ -5,11 +5,11 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Sprout, Truck, DollarSign, Clock, Tag, Users } from "lucide-react";
+import { Sprout, Truck, DollarSign, Clock, Tag, Users, AlertTriangle } from "lucide-react";
 import { AddOrderForm } from "@/components/farmers/add-order-form";
-import { getDetailedOrders } from "@/lib/actions";
-import type { DetailedFarmOrder } from "@/lib/types";
-import { formatDistanceToNow, subDays, isAfter } from "date-fns";
+import { getDetailedOrders, getExpiredBusinessOrders } from "@/lib/actions";
+import type { DetailedFarmOrder, BusinessOrder } from "@/lib/types";
+import { formatDistanceToNow, subDays, isAfter, format } from "date-fns";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -18,17 +18,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function FarmersPortal() {
   const [orders, setOrders] = useState<DetailedFarmOrder[]>([]);
+  const [expiredOrders, setExpiredOrders] = useState<BusinessOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchOrders = async () => {
+  const fetchData = async () => {
     setLoading(true);
-    const data = await getDetailedOrders();
-    setOrders(data);
+    const [ordersData, expiredData] = await Promise.all([
+        getDetailedOrders(),
+        getExpiredBusinessOrders()
+    ]);
+    setOrders(ordersData);
+    setExpiredOrders(expiredData);
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchOrders();
+    fetchData();
   }, []);
 
   const stats = useMemo(() => {
@@ -58,7 +63,7 @@ export default function FarmersPortal() {
         </div>
         <div className="flex items-center gap-3">
             <AddOrderForm />
-            <RefreshButton onRefresh={fetchOrders} />
+            <RefreshButton onRefresh={fetchData} />
         </div>
       </div>
 
@@ -104,22 +109,24 @@ export default function FarmersPortal() {
               <PendingOrders />
           </TabsContent>
 
-          <TabsContent value="history">
+          <TabsContent value="history" className="space-y-8">
             <Card className="border-primary/10 bg-card/30 backdrop-blur-sm">
                 <CardHeader>
-                <CardTitle>Recent Operations Ledger</CardTitle>
-                <CardDescription>A list of recently fulfilled orders and staff splits.</CardDescription>
+                    <CardTitle className="flex items-center gap-2">
+                        <Sprout className="h-5 w-5 text-primary" />
+                        Successful Operations Ledger
+                    </CardTitle>
+                    <CardDescription>A list of recently fulfilled orders and staff splits.</CardDescription>
                 </CardHeader>
                 <CardContent>
                 {loading ? (
                     <div className="space-y-4">
                         {Array.from({length: 5}).map((_, i) => (
-                            <Skeleton key={i} className="h-12 w-full rounded-lg" />
+                            <Skeleton className="h-12 w-full rounded-lg" key={i} />
                         ))}
                     </div>
                 ) : orders.length > 0 ? (
-                    <TooltipProvider>
-                        <div className="overflow-x-auto">
+                    <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
                             <TableRow>
@@ -168,13 +175,67 @@ export default function FarmersPortal() {
                             ))}
                             </TableBody>
                         </Table>
-                        </div>
-                    </TooltipProvider>
+                    </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center h-40 border border-dashed rounded-lg text-center p-8">
-                    <p className="text-muted-foreground font-medium">No historical orders found.</p>
+                        <p className="text-muted-foreground font-medium">No historical orders found.</p>
                     </div>
                 )}
+                </CardContent>
+            </Card>
+
+            <Card className="border-destructive/20 bg-destructive/5">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-destructive">
+                        <AlertTriangle className="h-5 w-5" />
+                        Lost Opportunities (Timed Out)
+                    </CardTitle>
+                    <CardDescription>Business orders that were not fulfilled within the 3-hour requirement.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {expiredOrders.length > 0 ? (
+                         <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Business Name</TableHead>
+                                    <TableHead>Requested Items</TableHead>
+                                    <TableHead>Estimated Loss</TableHead>
+                                    <TableHead>Reason</TableHead>
+                                    <TableHead className="text-right">Original Request</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {expiredOrders.map((eo) => {
+                                    const loss = eo.items.reduce((acc, i) => acc + (i.quantity * i.price_at_sale), 0);
+                                    return (
+                                        <TableRow key={eo.id}>
+                                            <TableCell className="font-bold text-destructive/80">{eo.business_name}</TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {eo.items.map((item, idx) => (
+                                                        <Badge key={idx} variant="outline" className="text-[8px] opacity-60">
+                                                            {item.quantity}x {item.product_name}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="font-black text-destructive">-${loss.toLocaleString()}</TableCell>
+                                            <TableCell className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground italic">
+                                                not completed in required time
+                                            </TableCell>
+                                            <TableCell className="text-right text-[10px] text-muted-foreground">
+                                                {format(new Date(eo.created_at), 'MM/dd HH:mm')}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                         </Table>
+                    ) : (
+                        <div className="text-center py-10 opacity-20">
+                            <p className="font-black text-xs uppercase tracking-widest">No recently failed orders</p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
           </TabsContent>

@@ -114,7 +114,8 @@ export {
     getDetailedOrders,
     getOrdersByStaff,
     submitBusinessOrder,
-    getPendingBusinessOrders
+    getPendingBusinessOrders,
+    getExpiredBusinessOrders
 } from './actions/order-actions';
 
 export {

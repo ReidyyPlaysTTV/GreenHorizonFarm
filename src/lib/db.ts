@@ -81,7 +81,7 @@ async function createFarmTables(connection: any) {
                 business_name VARCHAR(255) NOT NULL,
                 contact_info VARCHAR(255),
                 items JSON NOT NULL,
-                status ENUM('Pending', 'Accepted', 'Completed', 'Cancelled') NOT NULL DEFAULT 'Pending',
+                status ENUM('Pending', 'Accepted', 'Completed', 'Cancelled', 'Expired') NOT NULL DEFAULT 'Pending',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
