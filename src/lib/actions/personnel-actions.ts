@@ -21,7 +21,6 @@ async function sendHireWebhook(data: any, isRehire: boolean = false) {
                 fields: [
                     { name: "Name", value: `**${data.name}**`, inline: true },
                     { name: "Rank", value: data.rank, inline: true },
-                    { name: "Division", value: data.department || "Management", inline: true },
                     { name: "Discord", value: data.discordUsername || "N/A", inline: true },
                     { name: "Phone", value: data.phoneNumber || "N/A", inline: true },
                     { name: "Hire Date", value: new Date().toLocaleDateString(), inline: true }
@@ -190,7 +189,6 @@ export async function firePersonnel(personnelId: string, reason: string, user: s
 const updatePersonnelSchema = z.object({
   name: z.string().min(3),
   rank: z.string(),
-  department: z.string(),
   discordUsername: z.string().optional(),
   phoneNumber: z.string().optional(),
   bankAccount: z.string().optional(),
@@ -201,7 +199,7 @@ const updatePersonnelSchema = z.object({
 export async function updatePersonnel(personnelId: string, data: unknown) {
   const validation = updatePersonnelSchema.safeParse(data);
   if (!validation.success) return { success: false, message: validation.error.errors[0].message };
-  const { name, rank, department, discordUsername, phoneNumber, bankAccount, hireDate, user } = validation.data;
+  const { name, rank, discordUsername, phoneNumber, bankAccount, hireDate, user } = validation.data;
   
   const hasPermission = await checkPermissions(user, 'MANAGE_PERSONNEL');
   if (!hasPermission) return { success: false, message: 'Unauthorized' };
@@ -210,8 +208,8 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
   try {
     await connection.beginTransaction();
     await connection.query(
-        'UPDATE personnel SET name = ?, rank = ?, department = ?, discord_username = ?, phone_number = ?, bank_account = ?, hire_date = ? WHERE id = ?', 
-        [name, rank, department, discordUsername || null, phoneNumber || null, bankAccount || null, hireDate || null, personnelId]
+        'UPDATE personnel SET name = ?, rank = ?, discord_username = ?, phone_number = ?, bank_account = ?, hire_date = ? WHERE id = ?', 
+        [name, rank, discordUsername || null, phoneNumber || null, bankAccount || null, hireDate || null, personnelId]
     );
     await syncUserRoles(connection, name, rank);
     await logUserAction(user, "Update Personnel", `Updated ${name}.`, connection);
@@ -225,7 +223,6 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
 const addPersonnelSchema = z.object({
   name: z.string().min(3).regex(/^[A-Z][a-z]+ [A-Z][a-z]+$/, "Name must be IC format"),
   rank: z.string({ required_error: "Rank required" }),
-  department: z.string({ required_error: "Division required" }),
   discordUsername: z.string().optional(),
   phoneNumber: z.string().optional(),
   bankAccount: z.string().optional(),
@@ -237,7 +234,7 @@ const addPersonnelSchema = z.object({
 export async function addPersonnel(data: unknown) {
     const validation = addPersonnelSchema.safeParse(data);
     if (!validation.success) return { success: false, message: validation.error.errors[0].message };
-    const { name, rank, department, discordUsername, phoneNumber, bankAccount, hireDate, user, applicationId } = validation.data;
+    const { name, rank, discordUsername, phoneNumber, bankAccount, hireDate, user } = validation.data;
     
     const hasPermission = await checkPermissions(user, 'HIRE_PERSONNEL');
     if (!hasPermission) return { success: false, message: 'Unauthorized' };
@@ -249,7 +246,7 @@ export async function addPersonnel(data: unknown) {
         const matchedUserId = await syncUserRoles(connection, name, rank);
         await connection.query(
             'INSERT INTO personnel (id, name, rank, department, discord_username, phone_number, bank_account, hire_date, status, loa_until, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [personnelId, name, rank, department, discordUsername || null, phoneNumber || null, bankAccount || null, hireDate, 'Active', null, matchedUserId]
+            [personnelId, name, rank, 'Management', discordUsername || null, phoneNumber || null, bankAccount || null, hireDate, 'Active', null, matchedUserId]
         );
         await logEvent(name, 'Hired', `Hired as ${rank}`, connection);
         await logUserAction(user, "Add Personnel", `Added ${name} to the roster.`, connection);

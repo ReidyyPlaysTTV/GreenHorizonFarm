@@ -78,8 +78,7 @@ export function AddPersonnelForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    // Explicitly set department to 'Management' as default since it's removed from UI
-    const result = await addPersonnel({ ...values, department: 'Management', user: currentUser });
+    const result = await addPersonnel({ ...values, user: currentUser });
     if (result.success) {
       toast({
         title: "Personnel Added",
@@ -97,7 +96,7 @@ export function AddPersonnelForm() {
     setIsLoading(false);
   }
 
-  if (!hasPermission('HIRE_PERSONNEL')) {
+  if (!hasPermission('HIRE_EMPLOYEES')) {
     return null;
   }
 

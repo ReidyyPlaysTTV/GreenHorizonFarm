@@ -163,8 +163,7 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
 
   const handleEditSubmit = async (values: z.infer<typeof editFormSchema>) => {
     setIsEditing(true);
-    // Maintain the existing department or default to Management
-    const result = await updatePersonnel(personnel.id, { ...values, department: personnel.department || 'Management', user: currentUser });
+    const result = await updatePersonnel(personnel.id, { ...values, user: currentUser });
      if (result.success) {
       toast({ title: "Success", description: result.message });
       setEditDialogOpen(false);
@@ -196,7 +195,7 @@ export function PersonnelActions({ personnel }: PersonnelActionsProps) {
   const canPromote = currentRankIndex > 0;
   const canDemote = currentRankIndex !== -1 && currentRankIndex < staffRoles.length - 1;
 
-  const canManagePersonnel = hasPermission('MANAGE_PERSONNEL');
+  const canManagePersonnel = hasPermission('MANAGE_EMPLOYEES');
 
   const watchedStatus = statusForm.watch('status');
 
