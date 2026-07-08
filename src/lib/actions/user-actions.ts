@@ -117,6 +117,7 @@ export async function getUserByUsername(username: string): Promise<AppUser | nul
             let userRoles = [];
             try { 
                 userRoles = typeof row.roles === 'string' ? JSON.parse(row.roles) : (Array.isArray(row.roles) ? row.roles : []); 
+                if (typeof userRoles === 'string') userRoles = JSON.parse(userRoles);
             } catch(e) { userRoles = []; }
 
             return { 

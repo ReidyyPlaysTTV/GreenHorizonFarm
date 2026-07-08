@@ -5,7 +5,8 @@ export {
     firePersonnel,
     updatePersonnel,
     addPersonnel,
-    rehirePersonnel
+    rehirePersonnel,
+    updateSelfPersonnelInfo
 } from './actions/personnel-actions';
 
 export {

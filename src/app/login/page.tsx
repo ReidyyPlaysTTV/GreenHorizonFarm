@@ -2,9 +2,11 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Key } from "lucide-react";
 import Image from "next/image";
 import { LoginForm } from "@/components/auth/login-form";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   return (
@@ -40,13 +42,20 @@ export default function LoginPage() {
             <div className="h-px flex-1 bg-border" />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
              <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border border-white/5">
                 <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Access is restricted to authorized personnel. Role-based access is determined by your system credentials.
                 </p>
              </div>
+             
+             <Button variant="outline" className="w-full h-12 border-primary/20 hover:bg-primary/10 font-bold gap-2" asChild>
+                <Link href="/request-access">
+                    <Key className="h-4 w-4" />
+                    Request Access Account
+                </Link>
+             </Button>
           </div>
         </CardContent>
       </Card>

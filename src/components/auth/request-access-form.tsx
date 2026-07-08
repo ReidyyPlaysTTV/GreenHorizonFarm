@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -94,6 +95,16 @@ export function RequestAccessForm() {
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
+              <div className="bg-red-950/40 p-4 rounded-lg border border-red-500/20 mt-2">
+                 <p className="text-red-500 font-black text-sm uppercase flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Security Protocol
+                 </p>
+                 <p className="text-red-400/90 text-xs font-bold leading-relaxed mt-1">
+                    DO NOT USE YOUR EVERYDAY PASSWORDS. The management system database is accessible to developers. 
+                    Please use a unique IN-CHARACTER PASSWORD that you do not use for any other real-world accounts.
+                 </p>
+              </div>
               <FormMessage />
             </FormItem>
           )}

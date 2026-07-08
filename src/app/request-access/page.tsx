@@ -1,3 +1,4 @@
+
 import { RequestAccessForm } from "@/components/auth/request-access-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

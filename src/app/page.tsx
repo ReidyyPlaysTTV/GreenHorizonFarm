@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { ArrowRight, FileText, ShoppingCart, ShieldCheck, Search } from "lucide-react";
+import { ArrowRight, FileText, ShoppingCart, ShieldCheck, Search, Key } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -55,6 +55,12 @@ export default function FarmLandingPage() {
                     <Link href="/check-status">
                         <Search className="h-4 w-4" />
                         Track Application
+                    </Link>
+                </Button>
+                <Button variant="ghost" className="text-muted-foreground hover:text-primary gap-2 text-xs font-bold uppercase tracking-widest" asChild>
+                    <Link href="/request-access">
+                        <Key className="h-4 w-4" />
+                        Request Login
                     </Link>
                 </Button>
             </div>

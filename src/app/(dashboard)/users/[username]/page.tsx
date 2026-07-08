@@ -13,6 +13,7 @@ import type { AppUser, Personnel, AuditLog, DetailedFarmOrder } from "@/lib/type
 import { Button } from "@/components/ui/button";
 import { ChangePasswordDialog } from "@/components/user/change-password-dialog";
 import { ChangeProfilePictureDialog } from "@/components/user/change-profile-picture-dialog";
+import { EditProfileDialog } from "@/components/user/edit-profile-dialog";
 import { formatDistanceToNow, format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -184,6 +185,9 @@ export default function UserProfilePage() {
                 </CardContent>
                 {isOwnProfile && (
                     <CardContent className="border-t border-white/5 pt-4 mt-4 space-y-2">
+                          {personnelRecord && (
+                              <EditProfileDialog personnel={personnelRecord as Personnel} username={user.username} />
+                          )}
                           <ChangeProfilePictureDialog user={user}>
                              <Button variant="outline" className="w-full justify-start gap-2 border-primary/20 hover:bg-primary/10">
                                 <ImageIcon className="h-4 w-4" /> Change Profile Picture
@@ -316,7 +320,7 @@ export default function UserProfilePage() {
                     <CardDescription>Recent actions performed within the application.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <scrollArea className="h-64">
+                    <ScrollArea className="h-64">
                         {activityLogs.length > 0 ? (
                             <ul className="space-y-4 pr-4">
                                 {activityLogs.map(log => (
@@ -341,7 +345,7 @@ export default function UserProfilePage() {
                                 <p className="italic">No digital footprint found for this user.</p>
                             </div>
                         )}
-                    </scrollArea>
+                    </ScrollArea>
                 </CardContent>
             </Card>
 

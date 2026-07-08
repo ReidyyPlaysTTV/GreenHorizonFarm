@@ -278,3 +278,35 @@ export async function rehirePersonnel(data: any) {
     } catch (error: any) { await connection.rollback(); return { success: false, message: 'Rehire failed' }; }
     finally { connection.release(); }
 }
+
+const updateSelfSchema = z.object({
+    discordUsername: z.string().optional(),
+    phoneNumber: z.string().optional(),
+    bankAccount: z.string().optional(),
+    username: z.string(),
+});
+
+export async function updateSelfPersonnelInfo(data: unknown) {
+    const validation = updateSelfSchema.safeParse(data);
+    if (!validation.success) return { success: false, message: validation.error.errors[0].message };
+    const { discordUsername, phoneNumber, bankAccount, username } = validation.data;
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        await connection.query(
+            'UPDATE personnel SET discord_username = ?, phone_number = ?, bank_account = ? WHERE UPPER(name) = UPPER(?)',
+            [discordUsername || null, phoneNumber || null, bankAccount || null, username.trim()]
+        );
+        await logUserAction(username, 'Update Profile', 'Updated personal contact and bank information.', connection);
+        await connection.commit();
+        revalidatePath(`/users/${encodeURIComponent(username)}`);
+        revalidatePath('/roster');
+        return { success: true, message: 'Profile updated successfully.' };
+    } catch (error) {
+        await connection.rollback();
+        return { success: false, message: 'Database operation failed.' };
+    } finally {
+        connection.release();
+    }
+}

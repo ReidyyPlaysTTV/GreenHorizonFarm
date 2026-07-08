@@ -55,6 +55,7 @@ export const permissionDescriptions: Record<Permission, string> = {
     MANAGE_GALLERY: "Update Farm Photo Gallery",
     MANAGE_PROCEDURES: "Manage Farm Guidelines",
     BYPASS_MAINTENANCE_MODE: "Access during maintenance",
+    MANAGE_ACCESS_REQUESTS: "Review Access Requests",
 };
 
 const staffCore: Permission[] = [
@@ -76,7 +77,8 @@ export const initialPermissionsMap: Record<Role, Permission[]> = {
         'ACCESS_FINANCES',
         'VIEW_APPLICATIONS',
         'MANAGE_APPLICATIONS',
-        'HIRE_EMPLOYEES'
+        'HIRE_EMPLOYEES',
+        'MANAGE_ACCESS_REQUESTS'
     ],
     "Book-Keeper": [
         ...staffCore,
