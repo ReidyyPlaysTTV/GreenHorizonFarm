@@ -131,31 +131,38 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
 
 // Business Order Actions
 const businessOrderSchema = z.object({
-    business_name: z.string().min(1),
+    business_name: z.string().min(1, "Company name is required."),
     items: z.array(z.object({
         product_id: z.string(),
         product_name: z.string(),
         quantity: z.number().min(1),
         price_at_sale: z.number()
-    }))
+    })).min(1, "Items are required.")
 });
 
 export async function submitBusinessOrder(data: unknown) {
     const validation = businessOrderSchema.safeParse(data);
-    if (!validation.success) return { success: false, message: "Invalid order data" };
+    if (!validation.success) {
+        return { success: false, message: validation.error.errors[0].message };
+    }
     
-    const connection = await db.getConnection();
     try {
-        const id = crypto.randomUUID();
-        await connection.query(
-            "INSERT INTO business_orders (id, business_name, items, status) VALUES (?, ?, ?, ?)",
-            [id, validation.data.business_name, JSON.stringify(validation.data.items), 'Pending']
-        );
-        return { success: true, orderId: id };
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            const id = crypto.randomUUID();
+            await connection.query(
+                "INSERT INTO business_orders (id, business_name, items, status) VALUES (?, ?, ?, ?)",
+                [id, validation.data.business_name, JSON.stringify(validation.data.items), 'Pending']
+            );
+            revalidatePath('/farmers');
+            return { success: true, orderId: id };
+        } finally {
+            connection.release();
+        }
     } catch (e) {
-        return { success: false, message: "Database error" };
-    } finally {
-        connection.release();
+        console.error("Transmission Error (submitBusinessOrder):", e);
+        return { success: false, message: "Could not establish secure link to database." };
     }
 }
 
