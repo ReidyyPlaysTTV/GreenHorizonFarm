@@ -5,29 +5,37 @@ import { getMaintenanceMode } from "@/lib/actions/settings-actions";
 
 /**
  * RouteProtectionProvider handles high-level system states like Maintenance Mode.
- * It is designed to be non-blocking if the database is unreachable or timing out.
+ * Improved resilience for unstable database connectivity.
  */
 export async function RouteProtectionProvider({ children }: { children: React.ReactNode }) {
     let isMaintenanceMode = false;
     
     try {
-        // We use a safe wrapper or internal timeout check if necessary, 
-        // but getMaintenanceMode already handles internal try/catch.
+        // Fetch maintenance status with a safe fallback
         isMaintenanceMode = await getMaintenanceMode();
     } catch (error) {
-        // Log but don't crash the layout
-        console.warn("RouteProtectionProvider: Maintenance check failed, defaulting to OFF.");
+        // If DB fails, we assume maintenance is OFF to allow the app to attempt loading
+        console.warn("RouteProtectionProvider: Maintenance check failed, bypassing protection.");
     }
 
     if (isMaintenanceMode) {
         const headersList = await headers();
         const cookieHeader = headersList.get('cookie');
-        const loggedInUser = cookieHeader
+        const loggedInUserCookie = cookieHeader
             ? cookieHeader.split('; ').find(row => row.startsWith('loggedInUser='))?.split('=')[1]
             : undefined;
             
-        // If it's not a developer or admin, redirect to maintenance
-        const decodedUser = loggedInUser ? decodeURIComponent(loggedInUser) : '';
+        // Decode user with safety check
+        let decodedUser = '';
+        if (loggedInUserCookie) {
+            try {
+                decodedUser = decodeURIComponent(loggedInUserCookie);
+            } catch (e) {
+                decodedUser = '';
+            }
+        }
+        
+        // Only Leon Green and admin bypass maintenance
         if (decodedUser !== 'Leon Green' && decodedUser !== 'admin') {
             redirect('/maintenance');
         }

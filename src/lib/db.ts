@@ -8,8 +8,6 @@ const dbUri = 'mysql://zap1311701-1:gFtXgwwIs09GtYtx@mysql-mariadb-20-104.zap-sr
 
 let pool: Pool;
 let isInitialized = false;
-let dbOfflineUntil = 0;
-const OFFLINE_COOLDOWN = 60000; // 60 seconds circuit breaker
 
 try {
     pool = mysql.createPool({
@@ -17,8 +15,8 @@ try {
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
-        connectTimeout: 2000, // Strict timeout for connection
-        acquireTimeout: 2000,
+        connectTimeout: 10000, // Increased to 10s for more stability
+        acquireTimeout: 10000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });
@@ -313,12 +311,6 @@ async function createFarmTables(connection: any) {
 
 export async function ensureDbInitialized(force: boolean = false) {
     if (isInitialized && !force) return pool;
-    
-    // Check circuit breaker
-    if (!force && Date.now() < dbOfflineUntil) {
-        console.warn("DB offline (circuit breaker active). Skipping connection attempt.");
-        throw new Error("DATABASE_OFFLINE_COOLDOWN");
-    }
 
     try {
         const connection = await pool.getConnection();
@@ -331,9 +323,7 @@ export async function ensureDbInitialized(force: boolean = false) {
             connection.release();
         }
     } catch (err: any) {
-        // Activate circuit breaker if connection fails
-        dbOfflineUntil = Date.now() + OFFLINE_COOLDOWN;
-        console.error("DB Connection Failed (Circuit Breaker Engaged):", err.message);
+        console.error("DB Connection Attempt Failed:", err.message);
         throw err;
     }
 }

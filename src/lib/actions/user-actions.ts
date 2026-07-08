@@ -33,8 +33,9 @@ async function sendAccessRequestWebhook(username: string) {
 export async function testDatabaseConnection() {
     const startTime = Date.now();
     try {
-        await ensureDbInitialized(true);
-        const connection = await db.getConnection();
+        // We force initialization check to bypass any cached offline states
+        const pool = await ensureDbInitialized(true);
+        const connection = await pool.getConnection();
         try {
             const [rows] = await connection.query('SELECT 1 as ping');
             const latency = Date.now() - startTime;
@@ -91,7 +92,8 @@ export async function getUserByUsername(username: string): Promise<AppUser | nul
 export async function loginUser(credentials: any) {
     try {
         const { username, password } = credentials;
-        const connection = await db.getConnection();
+        const pool = await ensureDbInitialized();
+        const connection = await pool.getConnection();
         try {
             const [rows] = await connection.query('SELECT * FROM users WHERE username = ?', [username]);
             if (!Array.isArray(rows) || rows.length === 0) return { success: false, message: 'Incorrect credentials.' };
@@ -99,12 +101,13 @@ export async function loginUser(credentials: any) {
             if (user.password !== password) return { success: false, message: 'Incorrect credentials.' };
             return { success: true, user: { username: user.username } };
         } finally { connection.release(); }
-    } catch (e) { return { success: false, message: "DB Error" }; }
+    } catch (e) { return { success: false, message: "Could not connect to authentication server." }; }
 }
 
 export async function submitAccessRequest(data: any) {
     const { username, password } = data;
-    const connection = await db.getConnection();
+    const pool = await ensureDbInitialized();
+    const connection = await pool.getConnection();
     try {
         await connection.query(
             'INSERT INTO access_requests (id, requested_username, password, status) VALUES (?, ?, ?, ?)',
@@ -112,21 +115,25 @@ export async function submitAccessRequest(data: any) {
         );
         await sendAccessRequestWebhook(username);
         return { success: true };
-    } catch (e) { return { success: false, message: 'Failed' }; }
+    } catch (e) { return { success: false, message: 'Failed to submit request.' }; }
     finally { connection.release(); }
 }
 
 export async function approveAccessRequest(data: any) {
     const { requestId, username, roles: requestedRoles, adminUser } = data;
-    const connection = await db.getConnection();
+    const pool = await ensureDbInitialized();
+    const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
         const [reqRows]: any = await connection.query('SELECT password FROM access_requests WHERE id = ?', [requestId]);
-        if (reqRows.length === 0) throw new Error('Not found.');
+        if (reqRows.length === 0) throw new Error('Request not found.');
         const password = reqRows[0].password;
+        
+        // Match with Roster if exists
         const [rosterRows]: any = await connection.query('SELECT rank FROM personnel WHERE UPPER(name) = UPPER(?)', [username.trim()]);
         let finalRoles = requestedRoles || ['User'];
         if (rosterRows.length > 0) finalRoles = [...new Set([...finalRoles, rosterRows[0].rank])];
+        
         const userId = crypto.randomUUID();
         await connection.query('INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)', [userId, username, password, JSON.stringify(finalRoles), 'Active']);
         await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Approved', requestId]);
@@ -140,18 +147,20 @@ export async function approveAccessRequest(data: any) {
 }
 
 export async function denyAccessRequest(requestId: string, requestedUsername: string, adminUser: string) {
-    const connection = await db.getConnection();
+    const pool = await ensureDbInitialized();
+    const connection = await pool.getConnection();
     try {
         await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Denied', requestId]);
         await logUserAction(adminUser, 'Deny Access Request', `Denied access for: ${requestedUsername}`, connection);
         revalidatePath('/admin');
         return { success: true, message: 'Denied' };
-    } catch (e) { return { success: false, message: 'Failed' }; }
+    } catch (e) { return { success: false, message: 'Failed to process request.' }; }
     finally { connection.release(); }
 }
 
 export async function getAccessRequests(): Promise<AccessRequest[]> {
     try {
+        await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
             const [rows] = await connection.query("SELECT id, requested_username, status, createdAt FROM access_requests WHERE status = 'Pending' ORDER BY createdAt ASC");
@@ -161,7 +170,8 @@ export async function getAccessRequests(): Promise<AccessRequest[]> {
 }
 
 export async function setUserStatus(data: { userId: string, status: 'Active' | 'Banned', adminUser: string }) {
-    const connection = await db.getConnection();
+    const pool = await ensureDbInitialized();
+    const connection = await pool.getConnection();
     try {
         await connection.query('UPDATE users SET status = ? WHERE id = ?', [data.status, data.userId]);
         await logUserAction(data.adminUser, 'Update User Status', `Set user ${data.userId} to ${data.status}`, connection);
@@ -171,7 +181,8 @@ export async function setUserStatus(data: { userId: string, status: 'Active' | '
 }
 
 export async function deleteUser(userId: string, adminUser: string) {
-    const connection = await db.getConnection();
+    const pool = await ensureDbInitialized();
+    const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
         const [userRows]: any = await connection.query('SELECT username FROM users WHERE id = ?', [userId]);
@@ -182,12 +193,13 @@ export async function deleteUser(userId: string, adminUser: string) {
         await connection.commit();
         revalidatePath('/admin');
         return { success: true, message: 'Deleted' };
-    } catch (e) { await connection.rollback(); return { success: false, message: 'Failed' }; }
+    } catch (e) { await connection.rollback(); return { success: false, message: 'Failed to delete user.' }; }
     finally { connection.release(); }
 }
 
 export async function getReviewedApplicationsCount(userId: string): Promise<number> {
     try {
+        await ensureDbInitialized();
         const [rows] = await db.query('SELECT COUNT(*) as count FROM applications WHERE reviewer_id = ?', [userId]);
         return (rows as any)[0]?.count || 0;
     } catch (e) { return 0; }
@@ -195,7 +207,8 @@ export async function getReviewedApplicationsCount(userId: string): Promise<numb
 
 export async function createUser(data: any) {
   const { username, password, roles: initialRoles, adminUser } = data;
-  const connection = await db.getConnection();
+  const pool = await ensureDbInitialized();
+  const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     const [rosterRows]: any = await connection.query('SELECT rank FROM personnel WHERE UPPER(name) = UPPER(?)', [username.trim()]);
@@ -208,13 +221,14 @@ export async function createUser(data: any) {
     await connection.commit();
     revalidatePath('/admin');
     return { success: true, message: 'Created' };
-  } catch (error) { await connection.rollback(); return { success: false, message: 'Failed' }; }
+  } catch (error) { await connection.rollback(); return { success: false, message: 'Failed to create user.' }; }
   finally { connection.release(); }
 }
 
 export async function updateUser(data: any) {
     const { userId, username, roles, adminUser } = data;
-    const connection = await db.getConnection();
+    const pool = await ensureDbInitialized();
+    const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
         await connection.query('UPDATE users SET username = ?, roles = ? WHERE id = ?', [username, JSON.stringify(roles), userId]);
@@ -223,13 +237,14 @@ export async function updateUser(data: any) {
         await connection.commit();
         revalidatePath('/admin');
         return { success: true };
-    } catch (e) { await connection.rollback(); return { success: false, message: 'Failed' }; }
+    } catch (e) { await connection.rollback(); return { success: false, message: 'Failed to update user.' }; }
     finally { connection.release(); }
 }
 
 export async function resetUserPassword(data: any) {
     const { userId, newPassword, adminUser } = data;
-    const connection = await db.getConnection();
+    const pool = await ensureDbInitialized();
+    const connection = await pool.getConnection();
     try {
         await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
         await logUserAction(adminUser, 'Reset Password', `Reset password for user ${userId}`, connection);
@@ -239,19 +254,21 @@ export async function resetUserPassword(data: any) {
 
 export async function changeUserPassword(data: any) {
     const { userId, currentPassword, newPassword } = data;
-    const connection = await db.getConnection();
+    const pool = await ensureDbInitialized();
+    const connection = await pool.getConnection();
     try {
         const [rows]: any = await connection.query('SELECT password, username FROM users WHERE id = ?', [userId]);
-        if (rows.length === 0 || rows[0].password !== currentPassword) return { success: false, message: 'Incorrect password.' };
+        if (rows.length === 0 || rows[0].password !== currentPassword) return { success: false, message: 'Incorrect current password.' };
         await connection.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, userId]);
-        await logUserAction(rows[0].username, 'Change Password', 'Changed password.');
+        await logUserAction(rows[0].username, 'Change Password', 'Changed password via profile settings.');
         return { success: true, message: 'Changed' };
     } finally { connection.release(); }
 }
 
 export async function updateProfilePicture(data: any) {
     const { userId, url, user } = data;
-    const connection = await db.getConnection();
+    const pool = await ensureDbInitialized();
+    const connection = await pool.getConnection();
     try {
         await connection.query('UPDATE users SET avatarUrl = ? WHERE id = ?', [url, userId]);
         await logUserAction(user, 'Update Avatar', 'Updated profile picture.');
