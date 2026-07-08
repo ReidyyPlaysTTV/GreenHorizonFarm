@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { AppUser } from "@/lib/types";
@@ -6,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { setUserStatus, deleteUser } from "@/lib/actions";
 import { useState, useEffect } from "react";
-import { Loader2, ShieldOff, MoreHorizontal, Trash2 } from "lucide-react";
+import { Loader2, ShieldOff, MoreHorizontal, Trash2, Search } from "lucide-react";
 import { AddUserForm } from "./add-user-form";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "../ui/button";
@@ -20,6 +21,7 @@ import { User } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { Input } from "../ui/input";
 
 interface UserManagementProps {
     users: AppUser[];
@@ -33,6 +35,7 @@ const getRoleClass = (role: string) => {
 export function UserManagement({ users, currentUser }: UserManagementProps) {
     const { toast } = useToast();
     const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
+    const [searchTerm, setSearchTerm] = useState("");
     const { hasPermission } = usePermissions();
     const canManageUsers = hasPermission('MANAGE_USERS');
     const canDeleteUsers = hasPermission('DELETE_USERS');
@@ -84,21 +87,35 @@ export function UserManagement({ users, currentUser }: UserManagementProps) {
     }
 
 
-    const activeUsers = users.filter(u => u.status === 'Active');
+    const filteredUsers = users.filter(u => 
+        u.status === 'Active' && 
+        u.username.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <Card className="bg-black text-white border-white/5">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
+            <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
                 <CardTitle>User Management</CardTitle>
                 <CardDescription className="text-gray-400">Manage user accounts and their status.</CardDescription>
               </div>
-              {canManageUsers && <AddUserForm />}
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="relative flex-1 md:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Filter by name..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9 h-10 bg-white/5 border-white/10"
+                    />
+                </div>
+                {canManageUsers && <AddUserForm />}
+              </div>
             </CardHeader>
             <CardContent>
                 <Accordion type="multiple" className="w-full" defaultValue={roles}>
                     {roles.map(role => {
-                        const usersInRole = activeUsers.filter(u => Array.isArray(u.roles) && u.roles.includes(role));
+                        const usersInRole = filteredUsers.filter(u => Array.isArray(u.roles) && u.roles.includes(role));
                         if (usersInRole.length === 0) return null;
 
                         return (
@@ -194,6 +211,12 @@ export function UserManagement({ users, currentUser }: UserManagementProps) {
                         )
                     })}
                 </Accordion>
+                {filteredUsers.length === 0 && (
+                    <div className="py-20 text-center text-muted-foreground italic border-2 border-dashed border-white/5 rounded-2xl mt-4">
+                        <User className="h-8 w-8 mx-auto mb-4 opacity-20" />
+                        <p className="font-black uppercase tracking-widest text-xs">No users found matching "{searchTerm}"</p>
+                    </div>
+                )}
             </CardContent>
         </Card>
     )
