@@ -133,42 +133,55 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
 const businessOrderSchema = z.object({
     business_name: z.string().min(1, "Company name is required."),
     items: z.array(z.object({
-        product_id: z.string(),
+        product_id: z.string().min(1, "Product selection required"),
         product_name: z.string(),
         quantity: z.number().min(1),
         price_at_sale: z.number()
-    })).min(1, "Items are required.")
+    })).min(1, "At least one item is required.")
 });
 
 export async function submitBusinessOrder(data: unknown) {
     const validation = businessOrderSchema.safeParse(data);
     if (!validation.success) {
-        return { success: false, message: validation.error.errors[0].message };
+        console.error("Validation Error (submitBusinessOrder):", validation.error.format());
+        return { success: false, message: validation.error.errors[0]?.message || "Invalid order data." };
     }
     
     try {
-        await ensureDbInitialized();
-        const connection = await db.getConnection();
-        try {
-            const id = crypto.randomUUID();
-            await connection.query(
-                "INSERT INTO business_orders (id, business_name, items, status) VALUES (?, ?, ?, ?)",
-                [id, validation.data.business_name, JSON.stringify(validation.data.items), 'Pending']
-            );
-            revalidatePath('/farmers');
-            return { success: true, orderId: id };
-        } finally {
-            connection.release();
-        }
-    } catch (e) {
-        console.error("Transmission Error (submitBusinessOrder):", e);
-        return { success: false, message: "Could not establish secure link to database." };
+        // High-resilience race to handle ZAP-Hosting lag
+        const result = await Promise.race([
+            (async () => {
+                await ensureDbInitialized();
+                const connection = await db.getConnection();
+                try {
+                    const id = crypto.randomUUID();
+                    await connection.query(
+                        "INSERT INTO business_orders (id, business_name, items, status) VALUES (?, ?, ?, ?)",
+                        [id, validation.data.business_name, JSON.stringify(validation.data.items), 'Pending']
+                    );
+                    return { success: true, orderId: id };
+                } finally {
+                    connection.release();
+                }
+            })(),
+            new Promise<{ success: false, message: string }>((_, reject) => 
+                setTimeout(() => reject(new Error('ETIMEDOUT')), 5000)
+            )
+        ]);
+
+        revalidatePath('/farmers');
+        return result;
+    } catch (e: any) {
+        console.error("Transmission Failure (submitBusinessOrder):", e.message);
+        return { 
+            success: false, 
+            message: e.message === 'ETIMEDOUT' 
+                ? "Database link is slow. Please click transmit again." 
+                : "Logistics network currently unreachable." 
+        };
     }
 }
 
-/**
- * Checks for and marks business orders as 'Expired' if pending for > 3 hours.
- */
 async function cleanupExpiredOrders(connection: any) {
     const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
     await connection.query(

@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, ShoppingBasket, Plus, Trash2, CheckCircle2, Building2, Receipt, Clock } from "lucide-react";
+import { Loader2, ShoppingBasket, Plus, Trash2, CheckCircle2, Building2, Receipt, Clock, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getManagerData } from "@/lib/actions/manager-actions";
 import { submitBusinessOrder } from "@/lib/actions/order-actions";
@@ -24,7 +24,7 @@ const formSchema = z.object({
   items: z.array(z.object({
       product_id: z.string().min(1, "Select product"),
       product_name: z.string(),
-      quantity: z.coerce.number().min(1),
+      quantity: z.coerce.number().min(1, "Min quantity is 1"),
       price_at_sale: z.number()
   })).min(1, "Must add at least one item.")
 });
@@ -37,7 +37,7 @@ export function BusinessOrderForm() {
   const { toast } = useToast();
 
   useEffect(() => {
-    getManagerData().then(data => setProducts(data.farmProducts));
+    getManagerData().then(data => setProducts(data.farmProducts || []));
     getBusinesses().then(setBusinesses);
   }, []);
 
@@ -65,17 +65,12 @@ export function BusinessOrderForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-        const payload = {
-            business_name: values.business_name,
-            items: values.items
-        };
-        
-        const res = await submitBusinessOrder(payload);
+        const res = await submitBusinessOrder(values);
         if (res.success) {
             setIsSuccess(true);
             toast({ title: "Order Sent!", description: "Green Horizon staff will contact you shortly." });
         } else {
-            toast({ variant: "destructive", title: "Transmission Failed", description: res.message || "Database is currently unreachable." });
+            toast({ variant: "destructive", title: "Transmission Failed", description: res.message });
         }
     } catch (e) {
         toast({ variant: "destructive", title: "System Error", description: "Could not transmit order to logistics network." });
@@ -100,6 +95,8 @@ export function BusinessOrderForm() {
           </div>
       );
   }
+
+  const hasValidationErrors = Object.keys(form.formState.errors).length > 0;
 
   return (
     <Form {...form}>
@@ -196,23 +193,33 @@ export function BusinessOrderForm() {
                 {fields.map((field, index) => (
                     <div key={field.id} className="flex gap-4 items-center bg-white/5 p-5 rounded-2xl border border-white/5 animate-in fade-in slide-in-from-top-2 duration-300">
                         <div className="flex-1">
-                            <Select onValueChange={(val) => {
-                                const p = products.find(x => x.id === val);
-                                if (p) {
-                                    form.setValue(`items.${index}.product_id`, p.id);
-                                    form.setValue(`items.${index}.product_name`, p.name);
-                                    form.setValue(`items.${index}.price_at_sale`, p.price);
-                                }
-                            }}>
-                                <FormControl>
-                                    <SelectTrigger className="bg-transparent border-white/10 h-11">
-                                        <SelectValue placeholder="Select Supply" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name} (${p.price})</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                            <FormField
+                                control={form.control}
+                                name={`items.${index}.product_id`}
+                                render={({ field: selectField }) => (
+                                    <FormItem className="space-y-0">
+                                        <Select onValueChange={(val) => {
+                                            const p = products.find(x => x.id === val);
+                                            if (p) {
+                                                selectField.onChange(val);
+                                                form.setValue(`items.${index}.product_id`, p.id);
+                                                form.setValue(`items.${index}.product_name`, p.name);
+                                                form.setValue(`items.${index}.price_at_sale`, Number(p.price));
+                                            }
+                                        }} value={selectField.value}>
+                                            <FormControl>
+                                                <SelectTrigger className="bg-transparent border-white/10 h-11">
+                                                    <SelectValue placeholder="Select Supply" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name} (${p.price})</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage className="text-[10px]" />
+                                    </FormItem>
+                                )}
+                            />
                         </div>
                         <div className="w-28">
                             <Input 
@@ -255,6 +262,16 @@ export function BusinessOrderForm() {
                 Billing finalized upon secure delivery by GH Logistics.
             </div>
         </div>
+
+        {hasValidationErrors && (
+            <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive animate-in slide-in-from-bottom-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Order Incomplete</AlertTitle>
+                <AlertDescription className="text-xs font-bold uppercase">
+                    Please ensure you have selected a business and added products with valid quantities to all rows.
+                </AlertDescription>
+            </Alert>
+        )}
 
         <div className="space-y-4">
             <Alert className="bg-primary/5 border-primary/20 rounded-2xl py-4">
