@@ -33,12 +33,8 @@ export async function getPersonnel(): Promise<Personnel[]> {
             connection.release();
         }
     } catch (error) {
-        // Mock Data Fallback
-        return [
-            { id: '1', name: 'Leon Green', rank: 'CEO', department: 'Management', badgeNumber: '1000', status: 'Active', is_rehired: false, ordersCompleted: 24 },
-            { id: '2', name: 'John Doe', rank: 'Farm Hand', department: 'Harvesting', badgeNumber: '1001', status: 'Active', is_rehired: false, ordersCompleted: 12 },
-            { id: '3', name: 'Jane Smith', rank: 'Senior Farm Hand', department: 'Harvesting', badgeNumber: '1002', status: 'LOA', loa_until: new Date(Date.now() + 86400000 * 7).toISOString(), is_rehired: true, ordersCompleted: 45 }
-        ];
+        console.error("Failed to fetch personnel from database:", error);
+        return [];
     }
 }
 
@@ -123,9 +119,7 @@ export async function getRecentActivity(): Promise<PersonnelEvent[]> {
             connection.release();
         }
     } catch(error) {
-        return [
-            { id: 'e1', personnel_name: 'Leon Green', event_type: 'Promoted', description: 'Promoted to CEO', date: new Date() },
-            { id: 'e2', personnel_name: 'John Doe', event_type: 'Hired', description: 'Hired as Farm Hand', date: new Date(Date.now() - 86400000) }
-        ];
+        console.error("Failed to fetch recent activity:", error);
+        return [];
     }
 }
