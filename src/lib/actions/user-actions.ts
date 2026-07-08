@@ -52,18 +52,69 @@ export async function testDatabaseConnection() {
 export async function getUsers(): Promise<AppUser[]> {
     try {
         await ensureDbInitialized();
-        const [rows]: any = await db.query(`
-            SELECT 
-                u.id, u.username, u.roles, u.createdAt, u.avatarUrl, u.status,
-                p.rank, p.phone_number, p.bank_account, p.discord_username, p.hire_date
-            FROM users u
-            LEFT JOIN personnel p ON u.id = p.userId OR UPPER(u.username) = UPPER(p.name)
-            ORDER BY u.username ASC
-        `);
-        
-        if (!Array.isArray(rows)) return [];
+        const connection = await db.getConnection();
+        try {
+            // Optimized query using LEFT JOIN to eliminate N+1 fetches
+            const [rows]: any = await connection.query(`
+                SELECT 
+                    u.id, u.username, u.roles, u.createdAt, u.avatarUrl, u.status,
+                    p.rank, p.phone_number, p.bank_account, p.discord_username, p.hire_date
+                FROM users u
+                LEFT JOIN personnel p ON u.id = p.userId OR UPPER(u.username) = UPPER(p.name)
+                ORDER BY u.username ASC
+            `);
+            
+            if (!Array.isArray(rows)) return [];
 
-        return rows.map((row: any) => {
+            return rows.map((row: any) => {
+                let userRoles = [];
+                try { 
+                    userRoles = typeof row.roles === 'string' ? JSON.parse(row.roles) : (Array.isArray(row.roles) ? row.roles : []); 
+                } catch(e) { userRoles = []; }
+
+                return { 
+                    id: row.id,
+                    username: row.username,
+                    status: row.status,
+                    avatarUrl: row.avatarUrl,
+                    roles: Array.isArray(userRoles) ? userRoles : [], 
+                    createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : undefined, 
+                    personnel: row.rank ? {
+                        rank: row.rank,
+                        phoneNumber: row.phone_number,
+                        bankAccount: row.bank_account,
+                        discordUsername: row.discord_username,
+                        hireDate: row.hire_date ? new Date(row.hire_date).toISOString() : null
+                    } : null 
+                };
+            });
+        } finally {
+            connection.release();
+        }
+    } catch (error) { 
+        console.error("Action Error (getUsers):", error);
+        return []; 
+    }
+}
+
+export async function getUserByUsername(username: string): Promise<AppUser | null> {
+    try {
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            const [rows]: any = await connection.query(`
+                SELECT 
+                    u.id, u.username, u.roles, u.createdAt, u.avatarUrl, u.status,
+                    p.rank, p.phone_number, p.bank_account, p.discord_username, p.hire_date
+                FROM users u
+                LEFT JOIN personnel p ON u.id = p.userId OR UPPER(u.username) = UPPER(p.name)
+                WHERE u.username = ?
+                LIMIT 1
+            `, [username]);
+            
+            if (!Array.isArray(rows) || rows.length === 0) return null;
+            const row = rows[0];
+
             let userRoles = [];
             try { 
                 userRoles = typeof row.roles === 'string' ? JSON.parse(row.roles) : (Array.isArray(row.roles) ? row.roles : []); 
@@ -84,49 +135,9 @@ export async function getUsers(): Promise<AppUser[]> {
                     hireDate: row.hire_date ? new Date(row.hire_date).toISOString() : null
                 } : null 
             };
-        });
-    } catch (error) { 
-        console.error("Action Error (getUsers):", error);
-        return []; 
-    }
-}
-
-export async function getUserByUsername(username: string): Promise<AppUser | null> {
-    try {
-        await ensureDbInitialized();
-        const [rows]: any = await db.query(`
-            SELECT 
-                u.id, u.username, u.roles, u.createdAt, u.avatarUrl, u.status,
-                p.rank, p.phone_number, p.bank_account, p.discord_username, p.hire_date
-            FROM users u
-            LEFT JOIN personnel p ON u.id = p.userId OR UPPER(u.username) = UPPER(p.name)
-            WHERE u.username = ?
-            LIMIT 1
-        `, [username]);
-        
-        if (!Array.isArray(rows) || rows.length === 0) return null;
-        const row = rows[0];
-
-        let userRoles = [];
-        try { 
-            userRoles = typeof row.roles === 'string' ? JSON.parse(row.roles) : (Array.isArray(row.roles) ? row.roles : []); 
-        } catch(e) { userRoles = []; }
-
-        return { 
-            id: row.id,
-            username: row.username,
-            status: row.status,
-            avatarUrl: row.avatarUrl,
-            roles: Array.isArray(userRoles) ? userRoles : [], 
-            createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : undefined, 
-            personnel: row.rank ? {
-                rank: row.rank,
-                phoneNumber: row.phone_number,
-                bankAccount: row.bank_account,
-                discordUsername: row.discord_username,
-                hireDate: row.hire_date ? new Date(row.hire_date).toISOString() : null
-            } : null 
-        };
+        } finally {
+            connection.release();
+        }
     } catch (error) { 
         return null; 
     }

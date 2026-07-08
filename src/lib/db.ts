@@ -14,12 +14,12 @@ try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 5, // Reduced limit to prevent server-side exhaustion
+        connectionLimit: 5, 
         maxIdle: 5,
         idleTimeout: 30000,
         queueLimit: 0,
-        connectTimeout: 2000, // Fail fast: 2 seconds
-        acquireTimeout: 2000, // Fail fast: 2 seconds
+        connectTimeout: 5000, // 5 second connection timeout for stability
+        acquireTimeout: 5000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });
@@ -30,9 +30,6 @@ try {
 
 async function createFarmTables(connection: any) {
     try {
-        const [tables]: any = await connection.query("SHOW TABLES LIKE 'users'");
-        if (tables && tables.length > 0) return;
-
         const tableQueries = [
             `CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -279,20 +276,25 @@ export async function ensureDbInitialized(force: boolean = false) {
     if (initPromise && !force) return initPromise;
 
     initPromise = (async () => {
+        let connection;
         try {
-            const connection = await pool.getConnection();
-            try {
+            connection = await pool.getConnection();
+            
+            // Heartbeat/Ready Check: Fast existence check
+            const [tables]: any = await connection.query("SHOW TABLES LIKE 'users'");
+            if (!tables || tables.length === 0) {
                 await createFarmTables(connection);
                 await seedDatabase(pool);
-                isInitialized = true;
-                return pool;
-            } finally {
-                connection.release();
             }
+            
+            isInitialized = true;
+            return pool;
         } catch (err: any) {
             initPromise = null; 
             console.error("DB Readiness Check Failed:", err.message);
             throw err;
+        } finally {
+            if (connection) connection.release();
         }
     })();
 
