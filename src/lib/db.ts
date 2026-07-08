@@ -49,7 +49,7 @@ async function createFarmTables(connection: any) {
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
                 rank VARCHAR(255) NOT NULL,
-                badgeNumber VARCHAR(10) NOT NULL UNIQUE,
+                badgeNumber VARCHAR(10),
                 discord_username VARCHAR(255),
                 phone_number VARCHAR(20),
                 bank_account VARCHAR(50),

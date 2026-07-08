@@ -1,6 +1,6 @@
 
 import { getPersonnel, getRanks } from "@/lib/actions";
-import { divisions } from "@/lib/data";
+import { divisions, staffRoles } from "@/lib/data";
 import type { Personnel, PersonnelStatus, Rank } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,8 @@ import { RefreshButton } from "@/components/layout/refresh-button";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Recycle, Phone, CreditCard, CalendarDays, ClipboardCheck } from "lucide-react";
+import { Recycle, Phone, CreditCard, CalendarDays, ClipboardCheck, User as UserIcon } from "lucide-react";
+import Link from "next/link";
 
 const RosterTable = ({ personnel, ranks }: { personnel: Personnel[], ranks: Rank[] }) => {
   
@@ -49,23 +50,15 @@ const RosterTable = ({ personnel, ranks }: { personnel: Personnel[], ranks: Rank
     }
   }
 
-  const rankInsignias = ranks.reduce((acc, rank) => {
-    if (rank.insignia_url) {
-      acc[rank.name] = rank.insignia_url;
-    }
-    return acc;
-  }, {} as Record<string, string>);
-
   return (
     <TooltipProvider>
       <div className="overflow-x-auto">
         <Table>
             <TableHeader>
             <TableRow>
-                <TableHead className="w-[60px]">Insignia</TableHead>
                 <TableHead>Personnel Details</TableHead>
                 <TableHead>Contact & Finance</TableHead>
-                <TableHead>Rank & Dept</TableHead>
+                <TableHead>Position & Dept</TableHead>
                 <TableHead>Hire Date</TableHead>
                 <TableHead className="text-center">Orders</TableHead>
                 <TableHead>Status</TableHead>
@@ -76,15 +69,16 @@ const RosterTable = ({ personnel, ranks }: { personnel: Personnel[], ranks: Rank
             {personnel.length > 0 ? (
                 personnel.map((p) => (
                 <TableRow key={p.id} className={cn(getStatusRowClass(p))}>
-                    <TableCell>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted p-1 border border-white/5">
-                        <Image src={rankInsignias[p.rank] || "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png"} alt={`${p.rank} insignia`} width={32} height={32} className="rounded-md object-contain" />
-                    </div>
-                    </TableCell>
                     <TableCell className="font-medium">
                         <div className="flex flex-col">
                             <div className="flex items-center gap-2">
-                                <span className="text-lg font-black tracking-tight">{p.name}</span>
+                                <Link 
+                                    href={`/users/${encodeURIComponent(p.name)}`}
+                                    className="text-lg font-black tracking-tight text-primary hover:underline flex items-center gap-2"
+                                >
+                                    <UserIcon className="h-4 w-4 opacity-50" />
+                                    {p.name}
+                                </Link>
                                 {p.is_rehired && (
                                 <Tooltip>
                                     <TooltipTrigger><Recycle className="h-3.5 w-3.5 text-green-500" /></TooltipTrigger>
@@ -92,7 +86,7 @@ const RosterTable = ({ personnel, ranks }: { personnel: Personnel[], ranks: Rank
                                 </Tooltip>
                                 )}
                             </div>
-                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{p.discordUsername || "No Discord"}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest pl-6">{p.discordUsername || "No Discord"}</span>
                         </div>
                     </TableCell>
                     <TableCell>
@@ -138,7 +132,7 @@ const RosterTable = ({ personnel, ranks }: { personnel: Personnel[], ranks: Rank
                 ))
             ) : (
                 <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                     No personnel found in this division.
                 </TableCell>
                 </TableRow>
@@ -157,15 +151,13 @@ export default async function RosterPage() {
   ]);
 
   const sortedPersonnel = [...personnel].sort((a, b) => {
-    const rankA = ranks.find(r => r.name === a.rank);
-    const rankB = ranks.find(r => r.name === b.rank);
-    const rankAOrder = rankA ? rankA.sort_order : Infinity;
-    const rankBOrder = rankB ? rankB.sort_order : Infinity;
+    const rankAIndex = staffRoles.indexOf(a.rank as any);
+    const rankBIndex = staffRoles.indexOf(b.rank as any);
     
-    if (rankAOrder !== rankBOrder) {
-        return rankAOrder - rankBOrder;
+    if (rankAIndex !== rankBIndex) {
+        return (rankAIndex === -1 ? 99 : rankAIndex) - (rankBIndex === -1 ? 99 : rankBIndex);
     }
-    return parseInt(a.badgeNumber) - parseInt(b.badgeNumber);
+    return a.name.localeCompare(b.name);
   });
 
   return (
@@ -175,11 +167,11 @@ export default async function RosterPage() {
                 <div>
                     <h1 className="text-4xl font-black tracking-tighter text-primary">Green Horizon Roster</h1>
                     <p className="text-muted-foreground font-medium mt-1">
-                    Live personnel manifest and performance tracking.
+                    Live personnel manifest and performance tracking. Click a name to view their profile.
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <AddPersonnelForm ranks={ranks} />
+                    <AddPersonnelForm />
                     <RefreshButton />
                 </div>
             </div>

@@ -36,30 +36,22 @@ import {
 } from "@/components/ui/select";
 import { addPersonnel } from "@/lib/actions";
 import { usePermissions } from "@/hooks/use-permissions";
-import type { Rank } from "@/lib/types";
+import { staffRoles } from "@/lib/data";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar } from "../ui/calendar";
 
 const formSchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters."),
-  rank: z.string({ required_error: "Please select a rank." }),
-  callsign: z.coerce
-    .number({ invalid_type_error: "Callsign must be a number." })
-    .min(100, "Callsign must be between 100 and 9999.")
-    .max(9999, "Callsign must be between 100 and 9999."),
+  name: z.string().min(3, "Name must be at least 3 characters.").regex(/^[A-Z][a-z]+ [A-Z][a-z]+$/, "Must be IC Name format (e.g. 'John Doe')"),
+  rank: z.string({ required_error: "Please select a position." }),
   discordUsername: z.string().optional(),
   phoneNumber: z.string().optional(),
   bankAccount: z.string().optional(),
   hireDate: z.date().default(() => new Date()),
 });
 
-interface AddPersonnelFormProps {
-    ranks: Rank[];
-}
-
-export function AddPersonnelForm({ ranks }: AddPersonnelFormProps) {
+export function AddPersonnelForm() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState("System");
@@ -80,7 +72,6 @@ export function AddPersonnelForm({ ranks }: AddPersonnelFormProps) {
       phoneNumber: "",
       bankAccount: "",
       rank: "",
-      callsign: "" as any,
       hireDate: new Date(),
     },
   });
@@ -121,7 +112,7 @@ export function AddPersonnelForm({ ranks }: AddPersonnelFormProps) {
         <DialogHeader>
           <DialogTitle>Add New Personnel</DialogTitle>
           <DialogDescription>
-            Enter the details for the new personnel member.
+            Enter the details for the new personnel member. Use their IC full name.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -132,8 +123,8 @@ export function AddPersonnelForm({ ranks }: AddPersonnelFormProps) {
                 name="name"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl><Input placeholder="John Doe" {...field} /></FormControl>
+                    <FormLabel>Full IC Name</FormLabel>
+                    <FormControl><Input placeholder="Leon Green" {...field} /></FormControl>
                     <FormMessage />
                     </FormItem>
                 )}
@@ -176,45 +167,30 @@ export function AddPersonnelForm({ ranks }: AddPersonnelFormProps) {
                 />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <FormField
-                control={form.control}
-                name="rank"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Rank</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a rank" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {ranks.map((rank) => (
-                            <SelectItem key={rank.id} value={rank.name}>
-                            {rank.name}
-                            </SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="callsign"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Callsign</FormLabel>
+            <FormField
+            control={form.control}
+            name="rank"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Assigned Position</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                        <Input type="number" placeholder="e.g., 1001" {...field} />
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select a position" />
+                    </SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
+                    <SelectContent>
+                    {staffRoles.map((role) => (
+                        <SelectItem key={role} value={role}>
+                        {role}
+                        </SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
 
             <FormField
                 control={form.control}

@@ -19,6 +19,9 @@ export const roles: Role[] = [
     "User"
 ];
 
+// Roles that can be assigned to personnel on the roster
+export const staffRoles = roles.filter(r => r !== 'Administrator' && r !== 'Developer' && r !== 'User');
+
 export const permissionDescriptions: Record<Permission, string> = {
     ACCESS_DASHBOARD: "Access Farm Dashboard",
     ACCESS_FARMERS: "Access Farmers Portal",

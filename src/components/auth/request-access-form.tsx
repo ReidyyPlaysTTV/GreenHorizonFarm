@@ -24,9 +24,9 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { AlertCircle } from "lucide-react";
 
 const formSchema = z.object({
-  username: z.string().min(3, {
-    message: "Username must be at least 3 characters.",
-  }),
+  username: z.string()
+    .min(3, { message: "Username must be at least 3 characters." })
+    .regex(/^[A-Z][a-z]+ [A-Z][a-z]+$/, "Username must be your IC Name (e.g. 'Leon Green')"),
   password: z.string().min(8, { message: "Password must be at least 8 characters."}),
 });
 
@@ -67,9 +67,10 @@ export function RequestAccessForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Alert variant="destructive" className="border-red-500/50 bg-red-950 text-red-400 [&>svg]:text-red-400">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle className="font-bold">Security Warning</AlertTitle>
-          <AlertDescription className="text-red-400/80">
-            Do not use a password you use for any other service. This is for roleplay use only. Use a unique password.
+          <AlertTitle className="font-bold">Identity Verification</AlertTitle>
+          <AlertDescription className="text-red-400/80 text-xs">
+            Your username must be your In-Character (IC) Name in "First Last" format. 
+            Do not use your OOC name or a random nickname.
           </AlertDescription>
         </Alert>
         <FormField
@@ -77,9 +78,9 @@ export function RequestAccessForm() {
           name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Desired Username</FormLabel>
+              <FormLabel>IC Full Name</FormLabel>
               <FormControl>
-                <Input placeholder="Enter a username" {...field} />
+                <Input placeholder="e.g. Leon Green" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -90,7 +91,7 @@ export function RequestAccessForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Secure Password</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
@@ -102,7 +103,7 @@ export function RequestAccessForm() {
           {isLoading ? (
             <Loader2 className="animate-spin" />
           ) : (
-            "Submit Request"
+            "Request Account Access"
           )}
         </Button>
       </form>

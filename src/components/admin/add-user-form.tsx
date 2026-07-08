@@ -37,7 +37,9 @@ import { Check } from "lucide-react";
 import { Badge } from "../ui/badge";
 
 const formSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters."),
+  username: z.string()
+    .min(3, "Username must be at least 3 characters.")
+    .regex(/^[A-Z][a-z]+ [A-Z][a-z]+$/, "Username must be IC Name format (e.g. 'Leon Green')"),
   password: z.string().min(8, "Password must be at least 8 characters."),
   roles: z.array(z.string()).min(1, "At least one role must be selected."),
 });
@@ -102,7 +104,7 @@ export function AddUserForm() {
         <DialogHeader>
           <DialogTitle>Create New User</DialogTitle>
           <DialogDescription>
-            Create a new user account and assign them roles.
+            Account usernames must follow the IC Name format.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -112,9 +114,9 @@ export function AddUserForm() {
                     name="username"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Username</FormLabel>
+                            <FormLabel>Full IC Name</FormLabel>
                             <FormControl>
-                                <Input placeholder="Enter username" {...field} />
+                                <Input placeholder="e.g. John Doe" {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -127,7 +129,7 @@ export function AddUserForm() {
                         <FormItem>
                             <FormLabel>Password</FormLabel>
                             <FormControl>
-                                <Input type="password" placeholder="Enter temporary password" {...field} />
+                                <Input type="password" placeholder="••••••••" {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

@@ -49,6 +49,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "../ui/form";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/use-permissions";
+import { staffRoles } from "@/lib/data";
 
 
 interface PersonnelActionsProps {
@@ -61,8 +62,7 @@ const fireFormSchema = z.object({
 });
 
 const editFormSchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters."),
-  badgeNumber: z.string().min(3, "Callsign must be 3-4 digits.").max(4, "Callsign must be 3-4 digits."),
+  name: z.string().min(3, "Name must be at least 3 characters.").regex(/^[A-Z][a-z]+ [A-Z][a-z]+$/, "Must be IC Name format"),
   rank: z.string(),
   discordUsername: z.string().optional(),
   phoneNumber: z.string().optional(),
@@ -81,7 +81,7 @@ const statusFormSchema = z.object({
 
 const statusOptions: PersonnelStatus[] = ['Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended'];
 
-export function PersonnelActions({ personnel, ranks }: PersonnelActionsProps) {
+export function PersonnelActions({ personnel }: PersonnelActionsProps) {
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const [isPromoting, setIsPromoting] = useState(false);
@@ -110,7 +110,6 @@ export function PersonnelActions({ personnel, ranks }: PersonnelActionsProps) {
     resolver: zodResolver(editFormSchema),
     defaultValues: {
       name: personnel.name,
-      badgeNumber: personnel.badgeNumber,
       rank: personnel.rank,
       discordUsername: personnel.discordUsername || "",
       phoneNumber: personnel.phoneNumber || "",
@@ -192,9 +191,9 @@ export function PersonnelActions({ personnel, ranks }: PersonnelActionsProps) {
   }
 
 
-  const currentRank = ranks.find(r => r.name === personnel.rank);
-  const canPromote = currentRank && currentRank.sort_order > 1;
-  const canDemote = currentRank && currentRank.sort_order < ranks.length;
+  const currentRankIndex = staffRoles.indexOf(personnel.rank as any);
+  const canPromote = currentRankIndex > 0;
+  const canDemote = currentRankIndex !== -1 && currentRankIndex < staffRoles.length - 1;
 
   const canManagePersonnel = hasPermission('MANAGE_PERSONNEL');
 
@@ -289,7 +288,7 @@ export function PersonnelActions({ personnel, ranks }: PersonnelActionsProps) {
                     <div className="grid grid-cols-2 gap-4">
                         <FormField control={editForm.control} name="name" render={({field}) => (
                             <FormItem>
-                                <Label>Name</Label>
+                                <Label>Full Name</Label>
                                 <FormControl><Input {...field} /></FormControl>
                                 <FormMessage/>
                             </FormItem>
@@ -320,27 +319,18 @@ export function PersonnelActions({ personnel, ranks }: PersonnelActionsProps) {
                         )}/>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField control={editForm.control} name="badgeNumber" render={({field}) => (
-                            <FormItem>
-                                <Label>Callsign</Label>
-                                <FormControl><Input {...field} /></FormControl>
-                                <FormMessage/>
-                            </FormItem>
-                        )}/>
-                        <FormField control={editForm.control} name="rank" render={({field}) => (
-                            <FormItem>
-                                <Label>Rank</Label>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        {ranks.map(r => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage/>
-                            </FormItem>
-                        )}/>
-                    </div>
+                    <FormField control={editForm.control} name="rank" render={({field}) => (
+                        <FormItem>
+                            <Label>Position</Label>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    {staffRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage/>
+                        </FormItem>
+                    )}/>
 
                     <FormField
                         control={editForm.control}
