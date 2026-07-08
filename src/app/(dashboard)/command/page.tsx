@@ -1,4 +1,3 @@
-
 import { getBlacklistedPersonnel, getCallsignLogs } from "@/lib/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,7 +16,7 @@ export default async function CommandPage() {
     <div className="container mx-auto p-4 md:p-8 space-y-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-            <h1 className="text-3xl font-bold tracking-tight">DOC Command Center</h1>
+            <h1 className="text-3xl font-bold tracking-tight">GH Command Center</h1>
             <p className="text-muted-foreground">
             High-level management and security tools.
             </p>
@@ -30,7 +29,7 @@ export default async function CommandPage() {
           <div>
             <CardTitle>Blacklist</CardTitle>
             <CardDescription>
-              Individuals barred from DOC premises and activities.
+              Individuals barred from Green Horizon premises and activities.
             </CardDescription>
           </div>
           <AddToBlacklistForm />

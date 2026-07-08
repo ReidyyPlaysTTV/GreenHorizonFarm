@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,7 +23,7 @@ import { Badge } from "../ui/badge";
 import { format } from "date-fns";
 
 const formSchema = z.object({
-  applicationId: z.string().regex(/^DOC\d{8}$/, "Please enter a valid Application ID (e.g., DOC12345678)."),
+  applicationId: z.string().regex(/^GH\d{8}$/, "Please enter a valid Application ID (e.g., GH12345678)."),
 });
 
 export function CheckStatusForm() {
@@ -79,7 +77,7 @@ export function CheckStatusForm() {
                 <FormItem>
                 <FormLabel>Application ID</FormLabel>
                 <FormControl>
-                    <Input placeholder="DOC12345678" {...field} />
+                    <Input placeholder="GH12345678" {...field} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
