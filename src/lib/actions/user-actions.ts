@@ -1,4 +1,3 @@
-
 'use server';
 
 import db, { ensureDbInitialized } from '../db';
@@ -8,9 +7,10 @@ import { revalidatePath } from 'next/cache';
 import { logUserAction } from './audit-log-actions';
 import { checkPermissions } from '../permissions';
 
-const ACCESS_REQUEST_WEBHOOK = "https://discord.com/api/webhooks/1524267210560897199/dZfn4POVJsuCkscKcfCTlH_CnNUysdLIM-zxI9JebU3NAu3pJyEDBow_P4q1FqtueiNj";
+const ACCESS_REQUEST_WEBHOOK = process.env.DISCORD_ACCESS_REQUEST_WEBHOOK;
 
 async function sendAccessRequestWebhook(username: string) {
+    if (!ACCESS_REQUEST_WEBHOOK) return;
     try {
         const payload = {
             embeds: [{

@@ -1,4 +1,3 @@
-
 'use server';
 
 import { z } from 'zod';
@@ -9,10 +8,11 @@ import { logUserAction } from './audit-log-actions';
 import { checkPermissions } from '../permissions';
 import { staffRoles } from '../data';
 
-const HIRE_WEBHOOK_URL = "https://discord.com/api/webhooks/1524266697429745924/nUbmFaFnoQDRhiIYgaQWwH17-ZiVvcB-YQkJEG5_lZSqythcym0Cut7xrIfldlvJLAA_";
-const FIRE_WEBHOOK_URL = "https://discord.com/api/webhooks/1524266890606809120/MObep79VDBE2CMcVvHgPGIRme7pTNtVEZbvgrwvRiNGHzwxCqJ4dZ9kOp3wxOHugTxuY";
+const HIRE_WEBHOOK_URL = process.env.DISCORD_HIRE_WEBHOOK;
+const FIRE_WEBHOOK_URL = process.env.DISCORD_FIRE_WEBHOOK;
 
 async function sendHireWebhook(data: any, isRehire: boolean = false) {
+    if (!HIRE_WEBHOOK_URL) return;
     try {
         const payload = {
             embeds: [{
@@ -34,6 +34,7 @@ async function sendHireWebhook(data: any, isRehire: boolean = false) {
 }
 
 async function sendFireWebhook(data: any) {
+    if (!FIRE_WEBHOOK_URL) return;
     try {
         const payload = {
             embeds: [{

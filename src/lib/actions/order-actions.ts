@@ -1,4 +1,3 @@
-
 'use server';
 
 import { z } from 'zod';
@@ -25,10 +24,14 @@ const orderSchema = z.object({
   businessOrderId: z.string().optional(),
 });
 
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1523878492029194361/gqg_zA8_TQo10FUQBeX2dsecgcKtHQKC2aWyZyx9_t1bHqFu9jtjoSw2G-L7HLRGfTzo";
-const BUSINESS_ORDER_WEBHOOK = "https://discord.com/api/webhooks/1524549716086620350/cxbJXVKSN3_kIijCMMIeNamsOQ6tXzRHARgh78N-xlS-rpHBjQkN_OrUaJ2JzYXWjOou";
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_ORDER_LEDGER_WEBHOOK;
+const BUSINESS_ORDER_WEBHOOK = process.env.DISCORD_BUSINESS_ORDER_WEBHOOK;
 
 async function sendOrderWebhook(order: any) {
+    if (!DISCORD_WEBHOOK_URL) {
+        console.warn("Order Ledger Webhook URL not configured.");
+        return;
+    }
     try {
         const itemsList = order.items_sold.map((i: any) => `- ${i.quantity}x ${i.product_name}`).join('\n');
         const staffList = [order.user, ...order.collaborators].join(', ');
@@ -61,6 +64,10 @@ async function sendOrderWebhook(order: any) {
 }
 
 async function sendBusinessOrderWebhook(order: any) {
+    if (!BUSINESS_ORDER_WEBHOOK) {
+        console.warn("Business Order Webhook URL not configured.");
+        return;
+    }
     try {
         const itemsList = order.items.map((i: any) => `- ${i.quantity}x ${i.product_name}`).join('\n');
         

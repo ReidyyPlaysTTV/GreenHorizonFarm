@@ -1,4 +1,3 @@
-
 'use server';
 
 import { z } from 'zod';
@@ -9,9 +8,13 @@ import { logUserAction } from './audit-log-actions';
 import { checkPermissions } from '../permissions';
 import { DISCORD_ROLES } from '../discord';
 
-const APPLICATION_WEBHOOK = "https://discord.com/api/webhooks/1524267349790953555/DwBC-uHUqKjTeSMA93auUq6lUNwpz6H_UEsYEd98K2vSEN7PDgnCqhK3K0BEv985AOLC";
+const APPLICATION_WEBHOOK = process.env.DISCORD_APPLICATION_WEBHOOK;
 
 async function sendApplicationWebhook(name: string, id: string) {
+    if (!APPLICATION_WEBHOOK) {
+        console.warn("Application Webhook URL not configured in .env.local");
+        return;
+    }
     try {
         const payload = {
             content: `<@&${DISCORD_ROLES.MANAGER}> <@&${DISCORD_ROLES.CEO}> <@&${DISCORD_ROLES.CO_CEO}>`,
