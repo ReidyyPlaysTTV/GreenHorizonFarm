@@ -1,4 +1,3 @@
-
 'use server';
 
 import { z } from 'zod';
@@ -304,10 +303,10 @@ export async function cancelBusinessOrder(orderId: string, user: string) {
 }
 
 async function cleanupExpiredOrders(connection: any) {
-    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000);
     await connection.query(
         "UPDATE business_orders SET status = 'Expired' WHERE status = 'Pending' AND created_at < ?",
-        [threeHoursAgo]
+        [fiveHoursAgo]
     );
 }
 

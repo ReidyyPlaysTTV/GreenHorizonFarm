@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -287,7 +286,7 @@ export function BusinessOrderForm() {
                 <Clock className="h-4 w-4 text-orange-500" />
                 <AlertTitle className="text-xs font-black uppercase tracking-widest text-orange-500">Logistics Response Window</AlertTitle>
                 <AlertDescription className="text-[10px] text-orange-200/60 font-medium leading-relaxed">
-                    If an order has not been claimed or fulfilled within **3 hours**, it indicates a capacity limit in our current network. 
+                    If an order has not been claimed or fulfilled within **5 hours**, it indicates a capacity limit in our current network. 
                     Please monitor the Roster status if delay persists.
                 </AlertDescription>
             </Alert>

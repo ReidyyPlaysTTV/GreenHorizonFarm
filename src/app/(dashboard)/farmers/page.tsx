@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -269,7 +268,7 @@ export default function FarmersPortal() {
                         <AlertTriangle className="h-5 w-5" />
                         Lost Opportunities (Timed Out)
                     </CardTitle>
-                    <CardDescription>Business orders that were not fulfilled within the 3-hour requirement.</CardDescription>
+                    <CardDescription>Business orders that were not fulfilled within the 5-hour requirement.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {expiredOrders.length > 0 ? (
