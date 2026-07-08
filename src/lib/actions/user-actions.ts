@@ -68,7 +68,8 @@ export async function getUsers(): Promise<AppUser[]> {
             return rows.map((row: any) => {
                 let userRoles = [];
                 try { 
-                    userRoles = typeof row.roles === 'string' ? JSON.parse(row.roles) : (Array.isArray(row.roles) ? row.roles : []); 
+                    const rolesRaw = row.roles;
+                    userRoles = typeof rolesRaw === 'string' ? JSON.parse(rolesRaw) : (Array.isArray(rolesRaw) ? rolesRaw : []); 
                 } catch(e) { userRoles = []; }
 
                 return { 
@@ -116,8 +117,8 @@ export async function getUserByUsername(username: string): Promise<AppUser | nul
 
             let userRoles = [];
             try { 
-                userRoles = typeof row.roles === 'string' ? JSON.parse(row.roles) : (Array.isArray(row.roles) ? row.roles : []); 
-                if (typeof userRoles === 'string') userRoles = JSON.parse(userRoles);
+                const rolesRaw = row.roles;
+                userRoles = typeof rolesRaw === 'string' ? JSON.parse(rolesRaw) : (Array.isArray(rolesRaw) ? rolesRaw : []); 
             } catch(e) { userRoles = []; }
 
             return { 
@@ -185,7 +186,7 @@ export async function approveAccessRequest(data: any) {
             const password = reqRows[0].password;
             
             const userId = crypto.randomUUID();
-            let finalRoles = requestedRoles || ['User'];
+            let finalRoles = Array.isArray(requestedRoles) ? requestedRoles : ['User'];
             if (rank) finalRoles = [...new Set([...finalRoles, rank])];
             
             // Create User Account
@@ -285,7 +286,7 @@ export async function createUser(data: any) {
     try {
         await connection.beginTransaction();
         const [rosterRows]: any = await connection.query('SELECT rank FROM personnel WHERE UPPER(name) = UPPER(?)', [username.trim()]);
-        let finalRoles = initialRoles;
+        let finalRoles = Array.isArray(initialRoles) ? initialRoles : ['User'];
         if (rosterRows.length > 0) finalRoles = [...new Set([...finalRoles, rosterRows[0].rank])];
         const userId = crypto.randomUUID();
         await connection.query('INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)', [userId, username, password, JSON.stringify(finalRoles), 'Active']);
