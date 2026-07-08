@@ -26,6 +26,7 @@ const orderSchema = z.object({
 });
 
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1523878492029194361/gqg_zA8_TQo10FUQBeX2dsecgcKtHQKC2aWyZyx9_t1bHqFu9jtjoSw2G-L7HLRGfTzo";
+const BUSINESS_ORDER_WEBHOOK = "https://discord.com/api/webhooks/1524549716086620350/cxbJXVKSN3_kIijCMMIeNamsOQ6tXzRHARgh78N-xlS-rpHBjQkN_OrUaJ2JzYXWjOou";
 
 async function sendOrderWebhook(order: any) {
     try {
@@ -56,6 +57,35 @@ async function sendOrderWebhook(order: any) {
         });
     } catch (error) {
         console.error("Failed to send Discord webhook:", error);
+    }
+}
+
+async function sendBusinessOrderWebhook(order: any) {
+    try {
+        const itemsList = order.items.map((i: any) => `- ${i.quantity}x ${i.product_name}`).join('\n');
+        
+        const payload = {
+            embeds: [{
+                title: "🚜 New Business Requisition Received",
+                color: 3447003, // Blue-ish for awareness
+                description: `A new supply request has been submitted to the logistics network.`,
+                fields: [
+                    { name: "Business Name", value: `**${order.business_name}**`, inline: true },
+                    { name: "Items Requested", value: itemsList || "No items listed" },
+                    { name: "Portal Link", value: "[Farmers Portal](https://green-horizon-farm.web.app/farmers)" }
+                ],
+                footer: { text: "Green Horizon Logistics Engine" },
+                timestamp: new Date().toISOString()
+            }]
+        };
+
+        await fetch(BUSINESS_ORDER_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+    } catch (error) {
+        console.error("Failed to send business order webhook:", error);
     }
 }
 
@@ -151,13 +181,17 @@ export async function submitBusinessOrder(data: unknown) {
         const result = await Promise.race([
             (async () => {
                 await ensureDbInitialized();
-                const connection = await pool.getConnection();
+                const connection = await db.getConnection();
                 try {
                     const id = crypto.randomUUID();
                     await connection.query(
                         "INSERT INTO business_orders (id, business_name, items, status) VALUES (?, ?, ?, ?)",
                         [id, validation.data.business_name, JSON.stringify(validation.data.items), 'Pending']
                     );
+                    
+                    // Alert logistics via Discord
+                    await sendBusinessOrderWebhook(validation.data);
+                    
                     return { success: true, orderId: id };
                 } finally {
                     connection.release();
