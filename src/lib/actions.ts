@@ -1,8 +1,7 @@
 
-'use server';
-
 // This file serves as a central hub for re-exporting all server actions.
-// We use explicit exports to ensure stable module resolution during build.
+// We DO NOT use 'use server' here to avoid build errors with barrel re-exports.
+// The underlying action files contain the 'use server' directive.
 
 export {
     promotePersonnel,

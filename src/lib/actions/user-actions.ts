@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { logUserAction } from './audit-log-actions';
 import { checkPermissions } from '../permissions';
+import { staffRoles } from '../data';
 
 /**
  * Tests the connection to the MariaDB database.
@@ -175,10 +176,13 @@ export async function approveAccessRequest(data: any) {
         if (reqRows.length === 0) throw new Error('Request not found.');
         const password = reqRows[0].password;
 
-        const [rosterRows]: any = await connection.query('SELECT rank FROM personnel WHERE name = ?', [username]);
+        // Auto-detect Roster Rank
+        const [rosterRows]: any = await connection.query('SELECT rank FROM personnel WHERE UPPER(name) = UPPER(?)', [username.trim()]);
         let finalRoles = requestedRoles || ['User'];
+        
         if (rosterRows.length > 0) {
             const rosterRank = rosterRows[0].rank;
+            // Add the roster rank to roles, keeping 'User' or any other requested roles
             finalRoles = [...new Set([...finalRoles, rosterRank])];
         }
 
@@ -190,7 +194,8 @@ export async function approveAccessRequest(data: any) {
 
         await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Approved', requestId]);
 
-        await connection.query('UPDATE personnel SET userId = ? WHERE name = ?', [userId, username]);
+        // Link the roster entry to this new user
+        await connection.query('UPDATE personnel SET userId = ? WHERE UPPER(name) = UPPER(?)', [userId, username.trim()]);
 
         await logUserAction(adminUser, 'Approve Access Request', `Approved and created account for: ${username} with roles: ${finalRoles.join(', ')}`, connection);
         
@@ -298,7 +303,7 @@ export async function createUser(data: unknown) {
   if (!validation.success) {
     return { success: false, message: validation.error.errors[0].message };
   }
-  const { username, password, roles, adminUser } = validation.data;
+  const { username, password, roles: initialRoles, adminUser } = validation.data;
 
   const hasPermission = await checkPermissions(adminUser, 'MANAGE_USERS');
   if (!hasPermission) {
@@ -314,13 +319,20 @@ export async function createUser(data: unknown) {
       return { success: false, message: 'Username already exists.' };
     }
 
+    // Auto-detect Roster Rank
+    const [rosterRows]: any = await connection.query('SELECT rank FROM personnel WHERE UPPER(name) = UPPER(?)', [username.trim()]);
+    let finalRoles = initialRoles;
+    if (rosterRows.length > 0) {
+        finalRoles = [...new Set([...finalRoles, rosterRows[0].rank])];
+    }
+
     const userId = crypto.randomUUID();
     await connection.query(
       'INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)',
-      [userId, username, password, JSON.stringify(roles), 'Active']
+      [userId, username, password, JSON.stringify(finalRoles), 'Active']
     );
 
-    await connection.query('UPDATE personnel SET userId = ? WHERE name = ?', [userId, username]);
+    await connection.query('UPDATE personnel SET userId = ? WHERE UPPER(name) = UPPER(?)', [userId, username.trim()]);
 
     await logUserAction(adminUser, 'Create User', `Manually created user account for: ${username}`, connection);
     
@@ -345,10 +357,15 @@ export async function updateUser(data: any) {
     try {
         await connection.beginTransaction();
         await connection.query('UPDATE users SET username = ?, roles = ? WHERE id = ?', [username, JSON.stringify(roles), userId]);
+        
+        // Also update roster name if matched
+        await connection.query('UPDATE personnel SET name = ? WHERE userId = ?', [username, userId]);
+
         await logUserAction(adminUser, 'Update User', `Updated account for: ${username}`, connection);
         await connection.commit();
         revalidatePath('/admin');
         revalidatePath('/users');
+        revalidatePath('/roster');
         return { success: true };
     } catch (e) {
         await connection.rollback();

@@ -9,6 +9,49 @@ import { logUserAction } from './audit-log-actions';
 import { checkPermissions } from '../permissions';
 import { staffRoles } from '../data';
 
+/**
+ * Internal helper to sync user roles with roster rank.
+ * This is now more robust, checking for users by both ID and case-insensitive username.
+ */
+async function syncUserRoles(connection: any, name: string, rank: string) {
+    // 1. Try to find the user
+    const [userRows]: any = await connection.query(
+        'SELECT id, roles FROM users WHERE UPPER(username) = UPPER(?)', 
+        [name.trim()]
+    );
+
+    if (userRows.length > 0) {
+        const user = userRows[0];
+        let currentRoles: string[] = [];
+        
+        try {
+            // Handle both string and object/array return types from different drivers
+            const rolesRaw = user.roles;
+            currentRoles = typeof rolesRaw === 'string' ? JSON.parse(rolesRaw) : (Array.isArray(rolesRaw) ? rolesRaw : []);
+        } catch(e) {
+            currentRoles = [];
+        }
+        
+        // Remove any existing staff ranks, but preserve system roles (Admin, Dev, User)
+        const filteredRoles = currentRoles.filter(r => !staffRoles.includes(r as any));
+        
+        // Add the new rank
+        const newRoles = [...new Set([...filteredRoles, rank])];
+        
+        // Update user roles
+        await connection.query('UPDATE users SET roles = ? WHERE id = ?', [JSON.stringify(newRoles), user.id]);
+        
+        // Ensure personnel record is linked to this userId
+        await connection.query('UPDATE personnel SET userId = ? WHERE name = ?', [user.id, name]);
+        
+        console.log(`Sync complete: ${name} assigned role ${rank}`);
+        return user.id;
+    }
+    
+    console.log(`Sync skipped: No user account found for ${name} yet.`);
+    return null;
+}
+
 async function getPersonnelById(id: string, connection?: any): Promise<Personnel | null> {
     const conn = connection || await db.getConnection();
     try {
@@ -35,30 +78,6 @@ async function logEvent(personnelName: string, eventType: 'Hired' | 'Fired' | 'P
         if (!dbConnection) {
             connection.release();
         }
-    }
-}
-
-// Helper to sync user roles with roster rank
-async function syncUserRoles(connection: any, name: string, rank: string) {
-    const [userRows]: any = await connection.query('SELECT id, roles FROM users WHERE username = ?', [name]);
-    if (userRows.length > 0) {
-        const user = userRows[0];
-        let currentRoles: string[] = [];
-        try {
-            currentRoles = typeof user.roles === 'string' ? JSON.parse(user.roles) : (user.roles || []);
-        } catch(e) {
-            currentRoles = [];
-        }
-        
-        // Remove any existing staff roles to avoid duplicates, but keep Admin/Dev/User
-        const filteredRoles = currentRoles.filter(r => !staffRoles.includes(r as any));
-        // Add the new rank as a role
-        const newRoles = [...new Set([...filteredRoles, rank])];
-        
-        await connection.query('UPDATE users SET roles = ? WHERE id = ?', [JSON.stringify(newRoles), user.id]);
-        
-        // Also update the personnel record with the userId if it's missing
-        await connection.query('UPDATE personnel SET userId = ? WHERE name = ?', [user.id, name]);
     }
 }
 
@@ -241,7 +260,7 @@ export async function updatePersonnel(personnelId: string, data: unknown) {
         [name, rank, department, discordUsername || null, phoneNumber || null, bankAccount || null, hireDate || null, personnelId]
     );
 
-    // Sync User Permissions if rank changed or name changed
+    // Sync User Permissions
     await syncUserRoles(connection, name, rank);
 
     await logUserAction(user, "Update Personnel", `Updated details for ${name}.`, connection);
@@ -289,18 +308,15 @@ export async function addPersonnel(data: unknown) {
     try {
         await connection.beginTransaction();
         
-        const [userRows]: any = await connection.query('SELECT id FROM users WHERE username = ?', [name]);
-        const userId = userRows[0]?.id || null;
-
         const personnelId = crypto.randomUUID();
+
+        // Perform the sync immediately to see if user already exists
+        const matchedUserId = await syncUserRoles(connection, name, rank);
 
         await connection.query(
             'INSERT INTO personnel (id, name, rank, department, discord_username, phone_number, bank_account, hire_date, status, loa_until, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [personnelId, name, rank, department, discordUsername || null, phoneNumber || null, bankAccount || null, hireDate, 'Active', null, userId]
+            [personnelId, name, rank, department, discordUsername || null, phoneNumber || null, bankAccount || null, hireDate, 'Active', null, matchedUserId]
         );
-        
-        // Sync User Permissions
-        await syncUserRoles(connection, name, rank);
 
         await logEvent(name, 'Hired', `Hired as ${rank} in ${department}`, connection);
         
@@ -342,18 +358,15 @@ export async function rehirePersonnel(data: any) {
         // 1. Remove from archive
         await connection.query('DELETE FROM archived_personnel WHERE id = ?', [archivedId]);
 
-        // 2. Add back to active personnel
-        const [userRows]: any = await connection.query('SELECT id FROM users WHERE username = ?', [name]);
-        const userId = userRows[0]?.id || null;
+        // 2. Try to sync and get matched user
+        const matchedUserId = await syncUserRoles(connection, name, rank);
         
+        // 3. Add back to active personnel
         const personnelId = crypto.randomUUID();
         await connection.query(
             'INSERT INTO personnel (id, name, rank, department, discord_username, hire_date, status, is_rehired, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [personnelId, name, rank, 'Management', discordUsername || null, new Date(), 'Active', true, userId]
+            [personnelId, name, rank, 'Management', discordUsername || null, new Date(), 'Active', true, matchedUserId]
         );
-
-        // 3. Sync permissions
-        await syncUserRoles(connection, name, rank);
 
         await logEvent(name, 'Rehired', `Rehired as ${rank}`, connection);
         await logUserAction(user, "Rehire Personnel", `Rehired ${name} to the active roster.`, connection);
