@@ -5,18 +5,18 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Sprout, Truck, DollarSign, Clock, Tag, Users, AlertTriangle, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Sprout, Truck, DollarSign, Clock, Tag, Users, AlertTriangle, CheckCircle2, XCircle, Loader2, Wallet, Eye } from "lucide-react";
 import { AddOrderForm } from "@/components/farmers/add-order-form";
 import { getDetailedOrders, getExpiredBusinessOrders, getActiveOrders, completeDetailedOrder, cancelDetailedOrder } from "@/lib/actions";
 import type { DetailedFarmOrder, BusinessOrder } from "@/lib/types";
 import { formatDistanceToNow, subDays, isAfter, format } from "date-fns";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PendingOrders } from "@/components/farmers/pending-orders";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { OrderDetailsDialog } from "@/components/farmers/order-details-dialog";
 
 export default function FarmersPortal() {
   const [orders, setOrders] = useState<DetailedFarmOrder[]>([]);
@@ -48,7 +48,7 @@ export default function FarmersPortal() {
       const user = localStorage.getItem('loggedInUser') || "System";
       const res = await completeDetailedOrder(id, user);
       if (res.success) {
-          toast({ title: "Operation Completed", description: "Billed and recorded in ledger." });
+          toast({ title: "Operation Completed", description: "Ledger updated and security alert cleared." });
           fetchData();
       }
       setIsProcessing(prev => ({ ...prev, [id]: false }));
@@ -117,6 +117,16 @@ export default function FarmersPortal() {
                                   </div>
                               ))}
                           </div>
+                          
+                          {(ao as any).business_bank && (
+                                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center gap-3">
+                                    <Wallet className="h-4 w-4 text-blue-400" />
+                                    <div className="text-[10px] font-black uppercase text-blue-400">
+                                        Bill Account: {(ao as any).business_bank}
+                                    </div>
+                                </div>
+                          )}
+
                           <div className="flex gap-2">
                               <Button 
                                 onClick={() => handleFinalize(ao.id)} 
@@ -124,7 +134,7 @@ export default function FarmersPortal() {
                                 className="flex-1 bg-emerald-600 hover:bg-emerald-700 font-bold h-10 gap-2"
                               >
                                   {isProcessing[ao.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                                  Finalize & Bill
+                                  Finalize & Ledger
                               </Button>
                               <Button 
                                 variant="outline" 
@@ -195,7 +205,7 @@ export default function FarmersPortal() {
                         <Sprout className="h-5 w-5 text-primary" />
                         Successful Operations Ledger
                     </CardTitle>
-                    <CardDescription>A list of recently fulfilled orders and staff splits.</CardDescription>
+                    <CardDescription>A list of recently fulfilled orders and staff splits. Click any row for deep metrics.</CardDescription>
                 </CardHeader>
                 <CardContent>
                 {loading ? (
@@ -210,49 +220,44 @@ export default function FarmersPortal() {
                             <TableHeader>
                             <TableRow>
                                 <TableHead>Client</TableHead>
-                                <TableHead>Items</TableHead>
-                                <TableHead>Total</TableHead>
-                                <TableHead>Business (40%)</TableHead>
-                                <TableHead>Staff Pool (60%)</TableHead>
-                                <TableHead>Team</TableHead>
+                                <TableHead>Total Value</TableHead>
+                                <TableHead>Pool Split</TableHead>
+                                <TableHead>Lead Personnel</TableHead>
                                 <TableHead className="text-right">Timeline</TableHead>
+                                <TableHead className="w-[100px] text-right">Details</TableHead>
                             </TableRow>
                             </TableHeader>
                             <TableBody>
                             {orders.map((o) => (
-                                <TableRow key={o.id}>
+                                <TableRow key={o.id} className="group hover:bg-white/5 transition-all">
                                 <TableCell className="font-black text-primary">{o.business_name}</TableCell>
-                                <TableCell className="text-[10px] text-muted-foreground max-w-[200px]">
-                                    <div className="flex flex-wrap gap-1">
-                                        {(o.items_sold || []).map((item, idx) => (
-                                            <Badge key={idx} variant="outline" className="text-[8px] bg-muted/20">
-                                                {item.quantity}x {item.product_name}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </TableCell>
                                 <TableCell className="font-black text-emerald-500">${Number(o.total_price).toLocaleString()}</TableCell>
-                                <TableCell className="text-muted-foreground font-medium">${(Number(o.total_price) * 0.4).toLocaleString()}</TableCell>
                                 <TableCell>
                                     <div className="flex flex-col">
                                         <span className="font-black text-emerald-400">${Number(o.employee_cut_value).toLocaleString()}</span>
-                                        <span className="text-[9px] uppercase font-bold text-muted-foreground opacity-60">Total Split</span>
+                                        <span className="text-[9px] uppercase font-bold text-muted-foreground opacity-60">To Team Pool</span>
                                     </div>
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-1.5">
                                         <Users className="h-3 w-3 opacity-40" />
                                         <div className="text-[10px] font-bold">
-                                            {o.completed_by} {o.collaborators.length > 0 && `+ ${o.collaborators.length} others`}
+                                            {o.completed_by} {o.collaborators.length > 0 && `+ ${o.collaborators.length}`}
                                         </div>
                                     </div>
                                 </TableCell>
                                 <TableCell className="text-right whitespace-nowrap">
                                     <div className="flex flex-col items-end">
-                                        <span className="text-[10px] font-black uppercase text-primary">Start: {format(new Date(o.created_at), 'HH:mm')}</span>
                                         <span className="text-[10px] font-black uppercase text-emerald-500">Done: {o.completed_at ? format(new Date(o.completed_at), 'HH:mm') : '---'}</span>
                                         <span className="text-[8px] text-muted-foreground font-bold">{format(new Date(o.created_at), 'MMM dd')}</span>
                                     </div>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <OrderDetailsDialog order={o}>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/20 hover:text-primary">
+                                            <Eye className="h-4 w-4" />
+                                        </Button>
+                                    </OrderDetailsDialog>
                                 </TableCell>
                                 </TableRow>
                             ))}

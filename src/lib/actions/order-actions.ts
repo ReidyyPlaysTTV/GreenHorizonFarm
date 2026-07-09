@@ -1,4 +1,3 @@
-
 'use server';
 
 import { z } from 'zod';
@@ -6,6 +5,7 @@ import db, { ensureDbInitialized } from '../db';
 import { revalidatePath } from 'next/cache';
 import type { DetailedFarmOrder, BusinessOrder } from '../types';
 import { logUserAction } from './audit-log-actions';
+import { getProductEmoji } from '../order-utils';
 
 const orderSchema = z.object({
   business_name: z.string().min(1, "Business name is required."),
@@ -28,38 +28,7 @@ const orderSchema = z.object({
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_ORDER_LEDGER_WEBHOOK;
 const BUSINESS_ORDER_WEBHOOK = process.env.DISCORD_BUSINESS_ORDER_WEBHOOK;
 
-const PRODUCT_EMOJIS: Record<string, string> = {
-    'milk': '🥛',
-    'egg': '🥚',
-    'bread': '🍞',
-    'carrot': '🥕',
-    'tomato': '🍅',
-    'lettuce': '🥬',
-    'potato': '🥔',
-    'wheat': '🌾',
-    'meat': '🥩',
-    'chicken': '🍗',
-    'beef': '🥩',
-    'pork': '🥓',
-    'seed': '🌱',
-    'flower': '🌸',
-    'water': '💧',
-    'fertilizer': '🧪',
-    'logistics': '🚚',
-    'delivery': '📦',
-    'hay': '🌾',
-    'orange': '🍊',
-    'lemon': '🍋',
-    'honey': '🍯',
-};
-
-function getProductEmoji(name: string) {
-    const n = name.toLowerCase();
-    for (const [key, emoji] of Object.entries(PRODUCT_EMOJIS)) {
-        if (n.includes(key)) return emoji;
-    }
-    return '📦';
-}
+const PORTAL_URL = "https://green-horizon-farm.vercel.app";
 
 async function sendOrderWebhook(order: any) {
     if (!DISCORD_WEBHOOK_URL) {
@@ -75,8 +44,6 @@ async function sendOrderWebhook(order: any) {
             `${getProductEmoji(i.product_name)} **${i.quantity}x** ${i.product_name}`
         ).join('\n');
         
-        const teamList = [order.user, ...order.collaborators].join(', ');
-        
         const payload = {
             embeds: [{
                 title: "🚜 Farm Operation Finalized",
@@ -85,7 +52,7 @@ async function sendOrderWebhook(order: any) {
                 fields: [
                     { 
                         name: "💰 Financial Breakdown", 
-                        value: `**Order Total:** \`$${total.toLocaleString()}\`\n**Business Profit (40%):** \`$${businessProfit.toLocaleString()}\`\n**Staff Pool (60%):** \`$${staffCut.toLocaleString()}\``,
+                        value: `**Order Total:** \`$${total.toLocaleString()}\`\n**Business Profit:** \`$${businessProfit.toLocaleString()}\`\n**Staff Pool:** \`$${staffCut.toLocaleString()}\``,
                         inline: false 
                     },
                     { 
@@ -97,11 +64,6 @@ async function sendOrderWebhook(order: any) {
                         name: "👥 Field Team", 
                         value: `**Lead:** ${order.user}\n**Support:** ${order.collaborators.length > 0 ? order.collaborators.join(', ') : 'Solo Operation'}`, 
                         inline: true 
-                    },
-                    {
-                        name: "🕒 Timeline",
-                        value: `**Started:** ${new Date(order.created_at).toLocaleTimeString()}\n**Finished:** ${new Date().toLocaleTimeString()}`,
-                        inline: false
                     }
                 ],
                 footer: { text: "Green Horizon Logistics Engine • Ledger Update" },
@@ -138,7 +100,7 @@ async function sendBusinessOrderWebhook(order: any) {
                     { name: "Client", value: `**${order.business_name}**`, inline: true },
                     { name: "Required Yield", value: itemsList || "No items listed" },
                     { name: "Status", value: "🔴 Awaiting Acceptance", inline: true },
-                    { name: "Portal Link", value: "[Process Requisition](https://green-horizon-farm.vercel.app/farmers)" }
+                    { name: "Portal Link", value: `[Process Requisition](${PORTAL_URL}/farmers)` }
                 ],
                 footer: { text: "Green Horizon Logistics Hub" },
                 timestamp: new Date().toISOString()
@@ -211,13 +173,25 @@ export async function completeDetailedOrder(orderId: string, user: string) {
         if (rows.length === 0) throw new Error("Order not found.");
         const order = rows[0];
 
+        // 1. Update order status
         await connection.query("UPDATE detailed_farm_orders SET status = 'Completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?", [orderId]);
         
-        await logUserAction(user, "Complete Operation", `Finalized supply run for ${order.business_name}. Billing recorded.`, connection);
+        // 2. Log income in ledger
+        await connection.query(
+            'INSERT INTO farm_transactions (id, amount, category, description) VALUES (?, ?, ?, ?)',
+            [crypto.randomUUID(), Number(order.total_price), 'Income', `Fulfilled Order: ${order.business_name}`]
+        );
+
+        // 3. Log staff cut as expenditure
+        await connection.query(
+            'INSERT INTO farm_transactions (id, amount, category, description) VALUES (?, ?, ?, ?)',
+            [crypto.randomUUID(), Number(order.employee_cut_value), 'Expenditure', `Staff Cut Payout: ${order.completed_by} (${order.business_name})`]
+        );
+
+        await logUserAction(user, "Complete Operation", `Finalized supply run for ${order.business_name}. Billing and staff cuts recorded.`, connection);
         
         await connection.commit();
         
-        // Notify Discord only on completion
         const formattedOrder = {
             ...order,
             items_sold: typeof order.items_sold === 'string' ? JSON.parse(order.items_sold) : order.items_sold,
@@ -229,9 +203,7 @@ export async function completeDetailedOrder(orderId: string, user: string) {
         revalidatePath('/farmers');
         revalidatePath('/security');
         revalidatePath('/finances');
-        revalidatePath('/ceo');
-        revalidatePath('/manager');
-        return { success: true, message: 'Operation completed and billed.' };
+        return { success: true, message: 'Operation completed and ledger updated.' };
     } catch (e) {
         await connection.rollback();
         return { success: false, message: 'Update failed.' };
@@ -260,7 +232,17 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
-            const [rows] = await connection.query('SELECT * FROM detailed_farm_orders WHERE status = "Completed" ORDER BY created_at DESC LIMIT 50');
+            const [rows] = await connection.query(`
+                SELECT o.*, 
+                       u.username as lead_username, u.avatarUrl as lead_avatar,
+                       p.phone_number as lead_phone, p.bank_account as lead_bank
+                FROM detailed_farm_orders o
+                LEFT JOIN users u ON o.completed_by = u.username
+                LEFT JOIN personnel p ON u.id = p.userId
+                WHERE o.status = "Completed" 
+                ORDER BY o.created_at DESC 
+                LIMIT 50
+            `);
             if (!Array.isArray(rows)) return [];
             return (rows as any[]).map(row => ({
                 ...row,
@@ -268,7 +250,12 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
                 collaborators: typeof row.collaborators === 'string' ? JSON.parse(row.collaborators) : (row.collaborators || []),
                 logistics_used: !!row.logistics_used,
                 created_at: new Date(row.created_at),
-                completed_at: row.completed_at ? new Date(row.completed_at) : null
+                completed_at: row.completed_at ? new Date(row.completed_at) : null,
+                lead_info: {
+                    phone: row.lead_phone,
+                    bank: row.lead_bank,
+                    avatar: row.lead_avatar
+                }
             }));
         } finally {
             connection.release();
@@ -283,14 +270,21 @@ export async function getActiveOrders(): Promise<DetailedFarmOrder[]> {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
-            const [rows] = await connection.query('SELECT * FROM detailed_farm_orders WHERE status = "Active" ORDER BY created_at DESC');
+            const [rows] = await connection.query(`
+                SELECT o.*, b.bank_account as business_bank
+                FROM detailed_farm_orders o
+                LEFT JOIN businesses b ON o.business_name = b.name
+                WHERE o.status = "Active" 
+                ORDER BY o.created_at DESC
+            `);
             if (!Array.isArray(rows)) return [];
             return (rows as any[]).map(row => ({
                 ...row,
                 items_sold: typeof row.items_sold === 'string' ? JSON.parse(row.items_sold) : (row.items_sold || []),
                 collaborators: typeof row.collaborators === 'string' ? JSON.parse(row.collaborators) : (row.collaborators || []),
                 logistics_used: !!row.logistics_used,
-                created_at: new Date(row.created_at)
+                created_at: new Date(row.created_at),
+                business_bank: row.business_bank
             }));
         } finally {
             connection.release();
@@ -300,7 +294,32 @@ export async function getActiveOrders(): Promise<DetailedFarmOrder[]> {
     }
 }
 
-// Business Order Actions
+export async function submitBusinessOrder(data: unknown) {
+    const validation = businessOrderSchema.safeParse(data);
+    if (!validation.success) {
+        return { success: false, message: validation.error.errors[0]?.message || "Invalid order data." };
+    }
+    
+    try {
+        await ensureDbInitialized();
+        const connection = await db.getConnection();
+        try {
+            const id = crypto.randomUUID();
+            await connection.query(
+                "INSERT INTO business_orders (id, business_name, items, status) VALUES (?, ?, ?, ?)",
+                [id, validation.data.business_name, JSON.stringify(validation.data.items), 'Pending']
+            );
+            await sendBusinessOrderWebhook(validation.data);
+            revalidatePath('/farmers');
+            return { success: true, orderId: id };
+        } finally {
+            connection.release();
+        }
+    } catch (e: any) {
+        return { success: false, message: "Logistics network currently unreachable." };
+    }
+}
+
 const businessOrderSchema = z.object({
     business_name: z.string().min(1, "Company name is required."),
     items: z.array(z.object({
@@ -310,50 +329,6 @@ const businessOrderSchema = z.object({
         price_at_sale: z.number()
     })).min(1, "At least one item is required.")
 });
-
-export async function submitBusinessOrder(data: unknown) {
-    const validation = businessOrderSchema.safeParse(data);
-    if (!validation.success) {
-        console.error("Validation Error (submitBusinessOrder):", validation.error.format());
-        return { success: false, message: validation.error.errors[0]?.message || "Invalid order data." };
-    }
-    
-    try {
-        const result = await Promise.race([
-            (async () => {
-                await ensureDbInitialized();
-                const connection = await db.getConnection();
-                try {
-                    const id = crypto.randomUUID();
-                    await connection.query(
-                        "INSERT INTO business_orders (id, business_name, items, status) VALUES (?, ?, ?, ?)",
-                        [id, validation.data.business_name, JSON.stringify(validation.data.items), 'Pending']
-                    );
-                    
-                    await sendBusinessOrderWebhook(validation.data);
-                    
-                    return { success: true, orderId: id };
-                } finally {
-                    connection.release();
-                }
-            })(),
-            new Promise<{ success: false, message: string }>((_, reject) => 
-                setTimeout(() => reject(new Error('ETIMEDOUT')), 5000)
-            )
-        ]);
-
-        revalidatePath('/farmers');
-        return result;
-    } catch (e: any) {
-        console.error("Transmission Failure (submitBusinessOrder):", e.message);
-        return { 
-            success: false, 
-            message: e.message === 'ETIMEDOUT' 
-                ? "Database link is slow. Please click transmit again." 
-                : "Logistics network currently unreachable." 
-        };
-    }
-}
 
 export async function cancelBusinessOrder(orderId: string, user: string) {
     const connection = await db.getConnection();

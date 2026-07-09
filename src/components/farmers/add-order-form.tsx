@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, PlusCircle, ShoppingCart, Trash2, Tag, Percent, Users, UserPlus, Building2, PlayCircle } from "lucide-react";
+import { Loader2, PlusCircle, ShoppingCart, Trash2, Tag, Percent, Users, UserPlus, Building2, PlayCircle, Receipt, DollarSign, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -103,6 +103,15 @@ export function AddOrderForm({ businessOrder, onOrderStarted, children }: AddOrd
   const watchedBusiness = useWatch({ control: form.control, name: "business_name" });
   const watchedTotalPrice = useWatch({ control: form.control, name: "total_price" });
 
+  // 15% rule for Local Farmer (Staff get 85%)
+  useEffect(() => {
+    if (watchedBusiness === 'Local Farmer') {
+        form.setValue('employee_cut_percentage', 85);
+    } else {
+        form.setValue('employee_cut_percentage', 60);
+    }
+  }, [watchedBusiness, form]);
+
   const selectedBusinessData = useMemo(() => 
     businesses.find(b => b.name === watchedBusiness)
   , [businesses, watchedBusiness]);
@@ -131,7 +140,8 @@ export function AddOrderForm({ businessOrder, onOrderStarted, children }: AddOrd
   }, [watchedCutPercentage, watchedTotalPrice, form]);
 
   const totalWorkers = (watchedCollaborators || []).length + 1;
-  const cutPerPerson = (Number(form.getValues("employee_cut_value")) || 0) / totalWorkers;
+  const cutPerPerson = (Number(watchedTotalPrice) * (Number(watchedCutPercentage) / 100)) / totalWorkers;
+  const companyShare = Number(watchedTotalPrice) - (Number(watchedTotalPrice) * (Number(watchedCutPercentage) / 100));
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -186,7 +196,7 @@ export function AddOrderForm({ businessOrder, onOrderStarted, children }: AddOrd
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Select Client" /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                    <SelectItem value="Local Farmer">Local Farmer (Public)</SelectItem>
+                                    <SelectItem value="Local Farmer">Local Farmer (Public - 15% Share)</SelectItem>
                                     {businesses.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
                                     <SelectItem value="Manual Entry">Manual Entry / Other</SelectItem>
                                 </SelectContent>
@@ -206,6 +216,14 @@ export function AddOrderForm({ businessOrder, onOrderStarted, children }: AddOrd
                                     </FormItem>
                                 )}
                             />
+                        )}
+                        {selectedBusinessData?.bank_account && (
+                            <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center gap-3">
+                                <Wallet className="h-4 w-4 text-blue-400" />
+                                <div className="text-[10px] font-black uppercase text-blue-400 tracking-widest">
+                                    Billing Account: {selectedBusinessData.bank_account}
+                                </div>
+                            </div>
                         )}
                     </div>
 
@@ -288,6 +306,31 @@ export function AddOrderForm({ businessOrder, onOrderStarted, children }: AddOrd
                 </div>
             </div>
 
+            {/* FINANCIAL BREAKDOWN PREVIEW */}
+            <div className="bg-primary/5 p-6 rounded-[2rem] border border-primary/10 space-y-4">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-primary/60 flex items-center gap-2">
+                    <Receipt className="h-3 w-3" /> Operation Value Breakdown
+                </h3>
+                <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                        <p className="text-[9px] font-black uppercase text-muted-foreground">Order Total</p>
+                        <p className="text-2xl font-black tracking-tighter">${Number(watchedTotalPrice).toLocaleString()}</p>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-[9px] font-black uppercase text-emerald-500">Staff Pool ({watchedCutPercentage}%)</p>
+                        <p className="text-2xl font-black tracking-tighter text-emerald-500">${(Number(watchedTotalPrice) * (watchedCutPercentage/100)).toLocaleString()}</p>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-[9px] font-black uppercase text-orange-400">GH Share ({100 - watchedCutPercentage}%)</p>
+                        <p className="text-2xl font-black tracking-tighter text-orange-400">${companyShare.toLocaleString()}</p>
+                    </div>
+                </div>
+                <div className="pt-3 border-t border-white/5 flex items-center justify-between text-[10px] font-bold text-muted-foreground uppercase">
+                    <span>Distribution per Worker ({totalWorkers} total)</span>
+                    <span className="text-emerald-400 font-black text-xs">${cutPerPerson.toLocaleString()} each</span>
+                </div>
+            </div>
+
             <div className="bg-muted/10 p-6 rounded-3xl space-y-6 border border-white/5">
                 <div className="grid grid-cols-2 gap-8">
                     <FormField
@@ -295,7 +338,7 @@ export function AddOrderForm({ businessOrder, onOrderStarted, children }: AddOrd
                         name="discount_amount"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="flex items-center gap-2">
+                            <FormLabel className="flex items-center gap-2 text-xs font-bold">
                                 <Percent className="h-4 w-4 text-orange-500" />
                                 Applied Discount (%)
                             </FormLabel>
@@ -310,7 +353,7 @@ export function AddOrderForm({ businessOrder, onOrderStarted, children }: AddOrd
                         name="total_price"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="font-black text-primary">Final Customer Total ($)</FormLabel>
+                            <FormLabel className="font-black text-primary text-xs">Final Customer Total ($)</FormLabel>
                             <FormControl><Input className="text-2xl h-12 font-black border-primary/30" type="number" step="0.01" {...field} /></FormControl>
                             <FormMessage />
                         </FormItem>
