@@ -98,3 +98,58 @@ export async function getFarmTransactions(): Promise<FarmTransaction[]> {
         connection.release();
     }
 }
+
+/**
+ * Calculates total earnings owed to each staff member based on historical orders.
+ */
+export async function getPayrollSummary() {
+    await ensureDbInitialized();
+    const connection = await db.getConnection();
+    try {
+        // 1. Get all personnel contact/bank info
+        const [personnel]: any = await connection.query('SELECT name, phone_number, bank_account, rank FROM personnel');
+        
+        // 2. Get all completed orders to calculate debt
+        const [orders]: any = await connection.query('SELECT completed_by, collaborators, employee_cut_value FROM detailed_farm_orders WHERE status = "Completed"');
+        
+        const summary: Record<string, { earned: number, phone: string, bank: string, rank: string }> = {};
+        
+        personnel.forEach((p: any) => {
+            summary[p.name] = { 
+                earned: 0, 
+                phone: p.phone_number || 'NOT LISTED', 
+                bank: p.bank_account || 'NO ACCOUNT',
+                rank: p.rank
+            };
+        });
+
+        orders.forEach((o: any) => {
+            const totalCut = Number(o.employee_cut_value);
+            let collaborators = [];
+            try {
+                collaborators = typeof o.collaborators === 'string' ? JSON.parse(o.collaborators) : (o.collaborators || []);
+            } catch (e) {
+                collaborators = [];
+            }
+            
+            const share = totalCut / (collaborators.length + 1);
+            const team = [o.completed_by, ...collaborators];
+            
+            team.forEach((member: string) => {
+                if (summary[member]) {
+                    summary[member].earned += share;
+                }
+            });
+        });
+
+        return Object.entries(summary).map(([name, data]) => ({
+            name,
+            ...data
+        })).sort((a, b) => b.earned - a.earned);
+    } catch (error) {
+        console.error("Payroll calculation failed:", error);
+        return [];
+    } finally {
+        connection.release();
+    }
+}

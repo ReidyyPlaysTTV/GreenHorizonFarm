@@ -143,7 +143,8 @@ export {
     getBaseBalance,
     updateBaseBalance,
     addFarmTransaction,
-    getFarmTransactions
+    getFarmTransactions,
+    getPayrollSummary
 } from './actions/finance-actions';
 
 export {
