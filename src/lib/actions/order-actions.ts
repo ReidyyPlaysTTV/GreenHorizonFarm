@@ -137,7 +137,7 @@ async function sendBusinessOrderWebhook(order: any) {
                     { name: "Client", value: `**${order.business_name}**`, inline: true },
                     { name: "Required Yield", value: itemsList || "No items listed" },
                     { name: "Status", value: "🔴 Awaiting Acceptance", inline: true },
-                    { name: "Portal Link", value: "[Process Requisition](https://green-horizon-farm.web.app/farmers)" }
+                    { name: "Portal Link", value: "[Process Requisition](https://green-horizon-farm.vercel.app/farmers)" }
                 ],
                 footer: { text: "Green Horizon Logistics Hub" },
                 timestamp: new Date().toISOString()

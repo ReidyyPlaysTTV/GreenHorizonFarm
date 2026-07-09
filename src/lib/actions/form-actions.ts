@@ -25,7 +25,7 @@ async function sendApplicationWebhook(name: string, id: string) {
                 fields: [
                     { name: "Applicant Name", value: `**${name}**`, inline: true },
                     { name: "Reference ID", value: `\`${id}\``, inline: true },
-                    { name: "Portal Link", value: "[Recruitment Center](https://green-horizon-farm.web.app/applications)" }
+                    { name: "Portal Link", value: "[Recruitment Center](https://green-horizon-farm.vercel.app/applications)" }
                 ],
                 footer: { text: "Green Horizon Recruitment Hub" },
                 timestamp: new Date().toISOString()
