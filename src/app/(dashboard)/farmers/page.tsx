@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Sprout, Truck, DollarSign, Clock, Tag, Users, AlertTriangle, CheckCircle2, XCircle, Loader2, Wallet, Eye } from "lucide-react";
+import { Sprout, Truck, DollarSign, Clock, Tag, Users, AlertTriangle, CheckCircle2, XCircle, Loader2, Wallet, Eye, Phone, CreditCard, User } from "lucide-react";
 import { AddOrderForm } from "@/components/farmers/add-order-form";
 import { getDetailedOrders, getExpiredBusinessOrders, getActiveOrders, completeDetailedOrder, cancelDetailedOrder } from "@/lib/actions";
 import type { DetailedFarmOrder, BusinessOrder } from "@/lib/types";
@@ -92,7 +92,6 @@ export default function FarmersPortal() {
         </div>
       </div>
 
-      {/* Active Operations Section */}
       <div className="space-y-6">
           <h2 className="text-xl font-black uppercase tracking-widest text-orange-500 flex items-center gap-3">
               <Truck className="h-5 w-5 animate-bounce" />
@@ -106,7 +105,16 @@ export default function FarmersPortal() {
                       </div>
                       <CardHeader className="pb-3">
                           <CardTitle className="text-lg font-black text-white">{ao.business_name}</CardTitle>
-                          <CardDescription className="text-[10px] uppercase font-bold text-orange-200/60">Started by {ao.completed_by}</CardDescription>
+                          <div className="flex flex-col gap-1 mt-1">
+                             <div className="flex items-center gap-2 text-[10px] font-black uppercase text-orange-200/80">
+                                <User className="h-3 w-3" /> Started by {ao.completed_by}
+                             </div>
+                             {(ao as any).lead_info?.phone && (
+                                <div className="flex items-center gap-2 text-[8px] font-bold text-blue-300 opacity-60">
+                                    <Phone className="h-2.5 w-2.5" /> {(ao as any).lead_info.phone}
+                                </div>
+                             )}
+                          </div>
                       </CardHeader>
                       <CardContent className="space-y-6">
                           <div className="space-y-1.5">
@@ -269,61 +277,6 @@ export default function FarmersPortal() {
                         <p className="text-muted-foreground font-medium">No historical orders found.</p>
                     </div>
                 )}
-                </CardContent>
-            </Card>
-
-            <Card className="border-destructive/20 bg-destructive/5">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-destructive">
-                        <AlertTriangle className="h-5 w-5" />
-                        Lost Opportunities (Timed Out)
-                    </CardTitle>
-                    <CardDescription>Business orders that were not fulfilled within the 5-hour requirement.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {expiredOrders.length > 0 ? (
-                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Business Name</TableHead>
-                                    <TableHead>Requested Items</TableHead>
-                                    <TableHead>Estimated Loss</TableHead>
-                                    <TableHead>Reason</TableHead>
-                                    <TableHead className="text-right">Original Request</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {expiredOrders.map((eo) => {
-                                    const loss = eo.items.reduce((acc, i) => acc + (i.quantity * i.price_at_sale), 0);
-                                    return (
-                                        <TableRow key={eo.id}>
-                                            <TableCell className="font-bold text-destructive/80">{eo.business_name}</TableCell>
-                                            <TableCell>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {eo.items.map((item, idx) => (
-                                                        <Badge key={idx} variant="outline" className="text-[8px] opacity-60">
-                                                            {item.quantity}x {item.product_name}
-                                                        </Badge>
-                                                    ))}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="font-black text-destructive">-${loss.toLocaleString()}</TableCell>
-                                            <TableCell className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground italic">
-                                                not completed in required time
-                                            </TableCell>
-                                            <TableCell className="text-right text-[10px] text-muted-foreground">
-                                                {format(new Date(eo.created_at), 'MM/dd HH:mm')}
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                         </Table>
-                    ) : (
-                        <div className="text-center py-10 opacity-20">
-                            <p className="font-black text-xs uppercase tracking-widest">No recently failed orders</p>
-                        </div>
-                    )}
                 </CardContent>
             </Card>
           </TabsContent>

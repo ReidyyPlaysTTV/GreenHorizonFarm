@@ -141,7 +141,7 @@ export async function submitDetailedOrder(data: unknown) {
                     id, business_name, items_sold, discount_amount, total_price, logistics_used, 
                     employee_cut_value, employee_cut_percentage, completed_by, collaborators, status
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [id, business_name, JSON.stringify(items_sold), discount_amount, total_price, logistics_used, employee_cut_value, employee_cut_percentage, user, JSON.stringify(collaborators), 'Active']
+                [id, business_name.trim(), JSON.stringify(items_sold), discount_amount, total_price, logistics_used, employee_cut_value, employee_cut_percentage, user.trim(), JSON.stringify(collaborators), 'Active']
             );
 
             if (businessOrderId) {
@@ -190,7 +190,7 @@ export async function completeDetailedOrder(orderId: string, user: string) {
             collaborators = typeof order.collaborators === 'string' ? JSON.parse(order.collaborators) : (order.collaborators || []);
         } catch(e) {}
         
-        const team = [order.completed_by, ...collaborators];
+        const team = [order.completed_by.trim(), ...collaborators.map((c: string) => c.trim())];
         const individualShare = totalCut / team.length;
 
         for (const member of team) {
@@ -278,14 +278,11 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
-            // Updated query to handle case-insensitive joins and ensure results even if lead data is missing
             const [rows] = await connection.query(`
                 SELECT o.*, 
-                       u.username as lead_username, u.avatarUrl as lead_avatar,
                        p.phone_number as lead_phone, p.bank_account as lead_bank
                 FROM detailed_farm_orders o
-                LEFT JOIN users u ON UPPER(o.completed_by) = UPPER(u.username)
-                LEFT JOIN personnel p ON u.id = p.userId OR UPPER(o.completed_by) = UPPER(p.name)
+                LEFT JOIN personnel p ON UPPER(TRIM(o.completed_by)) = UPPER(TRIM(p.name))
                 WHERE o.status = "Completed" 
                 ORDER BY o.created_at DESC 
                 LIMIT 50
@@ -301,23 +298,20 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
                 completed_at: row.completed_at ? new Date(row.completed_at) : null,
                 lead_info: {
                     phone: row.lead_phone,
-                    bank: row.lead_bank,
-                    avatar: row.lead_avatar
+                    bank: row.lead_bank
                 }
             }));
 
-            // Fetch payouts for all orders with safe handling
             const ordersWithPayouts = await Promise.all(orders.map(async (o) => {
                 try {
                     const [pRows]: any = await connection.query(`
                         SELECT op.*, p.phone_number as phone, p.bank_account as bank
                         FROM order_payouts op
-                        LEFT JOIN personnel p ON UPPER(op.personnel_name) = UPPER(p.name)
+                        LEFT JOIN personnel p ON UPPER(TRIM(op.personnel_name)) = UPPER(TRIM(p.name))
                         WHERE op.order_id = ?
                     `, [o.id]);
                     return { ...o, payouts: pRows || [] };
                 } catch (e) {
-                    console.warn(`Could not fetch payouts for order ${o.id}:`, e);
                     return { ...o, payouts: [] };
                 }
             }));
@@ -327,7 +321,6 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
             connection.release();
         }
     } catch (error) {
-        console.error("Failed to fetch detailed orders:", error);
         return [];
     }
 }
@@ -338,9 +331,13 @@ export async function getActiveOrders(): Promise<DetailedFarmOrder[]> {
         const connection = await db.getConnection();
         try {
             const [rows] = await connection.query(`
-                SELECT o.*, b.bank_account as business_bank
+                SELECT o.*, 
+                       b.bank_account as business_bank,
+                       p.phone_number as lead_phone,
+                       p.bank_account as lead_bank
                 FROM detailed_farm_orders o
-                LEFT JOIN businesses b ON UPPER(o.business_name) = UPPER(b.name)
+                LEFT JOIN businesses b ON UPPER(TRIM(o.business_name)) = UPPER(TRIM(b.name))
+                LEFT JOIN personnel p ON UPPER(TRIM(o.completed_by)) = UPPER(TRIM(p.name))
                 WHERE o.status = "Active" 
                 ORDER BY o.created_at DESC
             `);
@@ -351,7 +348,11 @@ export async function getActiveOrders(): Promise<DetailedFarmOrder[]> {
                 collaborators: typeof row.collaborators === 'string' ? JSON.parse(row.collaborators) : (row.collaborators || []),
                 logistics_used: !!row.logistics_used,
                 created_at: new Date(row.created_at),
-                business_bank: row.business_bank
+                business_bank: row.business_bank,
+                lead_info: {
+                    phone: row.lead_phone,
+                    bank: row.lead_bank
+                }
             }));
         } finally {
             connection.release();
@@ -374,7 +375,7 @@ export async function submitBusinessOrder(data: unknown) {
             const id = crypto.randomUUID();
             await connection.query(
                 "INSERT INTO business_orders (id, business_name, items, status) VALUES (?, ?, ?, ?)",
-                [id, validation.data.business_name, JSON.stringify(validation.data.items), 'Pending']
+                [id, validation.data.business_name.trim(), JSON.stringify(validation.data.items), 'Pending']
             );
             await sendBusinessOrderWebhook(validation.data);
             revalidatePath('/farmers');
@@ -383,7 +384,7 @@ export async function submitBusinessOrder(data: unknown) {
             connection.release();
         }
     } catch (e: any) {
-        return { success: false, message: "Logistics network currently unreachable." };
+        return { success: false, message: "Logistics network unreachable." };
     }
 }
 
@@ -405,7 +406,7 @@ export async function cancelBusinessOrder(orderId: string, user: string) {
         await logUserAction(user, "Cancel Business Order", `Rejected business request ID: ${orderId}`, connection);
         await connection.commit();
         revalidatePath('/farmers');
-        return { success: true, message: 'Order rejected and removed from queue.' };
+        return { success: true, message: 'Order rejected.' };
     } catch (e) {
         await connection.rollback();
         return { success: false, message: 'Failed to update order status.' };
@@ -414,19 +415,10 @@ export async function cancelBusinessOrder(orderId: string, user: string) {
     }
 }
 
-async function cleanupExpiredOrders(connection: any) {
-    const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000);
-    await connection.query(
-        "UPDATE business_orders SET status = 'Expired' WHERE status = 'Pending' AND created_at < ?",
-        [fiveHoursAgo]
-    );
-}
-
 export async function getPendingBusinessOrders(): Promise<BusinessOrder[]> {
     await ensureDbInitialized();
     const connection = await db.getConnection();
     try {
-        await cleanupExpiredOrders(connection);
         const [rows] = await connection.query("SELECT * FROM business_orders WHERE status = 'Pending' ORDER BY created_at DESC");
         return (rows as any[]).map(r => ({
             ...r,
@@ -459,8 +451,8 @@ export async function getOrdersByStaff(name: string): Promise<DetailedFarmOrder[
         const connection = await db.getConnection();
         try {
             const [rows] = await connection.query(
-                "SELECT * FROM detailed_farm_orders WHERE (UPPER(completed_by) = UPPER(?) OR JSON_CONTAINS(collaborators, JSON_QUOTE(?))) AND status = 'Completed' ORDER BY created_at DESC LIMIT 20",
-                [name.trim(), name.trim()]
+                "SELECT * FROM detailed_farm_orders WHERE (UPPER(TRIM(completed_by)) = UPPER(TRIM(?)) OR JSON_CONTAINS(collaborators, JSON_QUOTE(?))) AND status = 'Completed' ORDER BY created_at DESC LIMIT 20",
+                [name, name]
             );
             if (!Array.isArray(rows)) return [];
             return (rows as any[]).map(row => ({

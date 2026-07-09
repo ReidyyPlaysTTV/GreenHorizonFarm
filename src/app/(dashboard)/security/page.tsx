@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Clock, ShieldAlert, History, MapPin, User, Siren, Activity, Truck, AlertTriangle } from "lucide-react";
+import { Shield, Clock, ShieldAlert, History, MapPin, User, Siren, Activity, Truck, AlertTriangle, Users, Phone } from "lucide-react";
 import { ClockHoursForm } from "@/components/security/clock-hours-form";
 import { ReportIncidentForm } from "@/components/security/report-incident-form";
 import { getSecurityIncidents, getSecurityTimeLogs, getActiveOrders } from "@/lib/actions";
@@ -102,7 +102,6 @@ export default function SecurityPortal() {
         </Card>
       </div>
 
-      {/* Live Operations Alert for Security */}
       <Card className="border-orange-500/30 bg-orange-500/10 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-500">
           <CardHeader className="flex flex-row items-center justify-between">
               <div>
@@ -122,12 +121,19 @@ export default function SecurityPortal() {
                               <Badge className="bg-orange-500 text-black font-black text-[8px]">IN FIELD</Badge>
                           </div>
                           <div className="space-y-1">
-                              <div className="flex items-center gap-2 text-[10px] font-bold text-orange-200/80">
-                                  <User className="h-3 w-3" />
-                                  Lead: {op.completed_by}
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-2 text-[10px] font-bold text-orange-200/80">
+                                    <User className="h-3 w-3" />
+                                    Lead: {op.completed_by}
+                                </div>
+                                {(op as any).lead_info?.phone && (
+                                    <div className="flex items-center gap-2 text-[8px] font-bold text-blue-300 opacity-60 ml-5">
+                                        <Phone className="h-2.5 w-2.5" /> {(op as any).lead_info.phone}
+                                    </div>
+                                )}
                               </div>
                               {op.collaborators.length > 0 && (
-                                  <div className="flex items-center gap-2 text-[10px] font-bold text-orange-200/60">
+                                  <div className="flex items-center gap-2 text-[10px] font-bold text-orange-200/60 mt-1">
                                       <Users className="h-3 w-3" />
                                       Team: {op.collaborators.join(", ")}
                                   </div>
