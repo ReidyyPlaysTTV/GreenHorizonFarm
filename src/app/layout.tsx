@@ -6,6 +6,11 @@ import { FirebaseClientProvider } from "@/firebase";
 export const metadata: Metadata = {
   title: "Green Horizon Farm",
   description: "Sustainable Agriculture Management System",
+  icons: {
+    icon: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png",
+    shortcut: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png",
+    apple: "https://r2.fivemanage.com/4AF89ztbnR3tjjy8HcUAp/ChatGPTImage2jul202600_03_13.png",
+  },
 };
 
 export default function RootLayout({
