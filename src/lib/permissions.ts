@@ -6,7 +6,7 @@ import { initialPermissionsMap } from './data';
 
 let permissionsCache: Record<Role, Permission[]> | null = null;
 let lastCacheUpdate = 0;
-const CACHE_TTL = 60000; // Increased to 60s for better performance
+const CACHE_TTL = 120000; // Increased to 120s (2 minutes) for peak production performance
 
 async function getInternalPermissionsMap(): Promise<Record<Role, Permission[]>> {
     const now = Date.now();
@@ -32,9 +32,9 @@ async function getInternalPermissionsMap(): Promise<Record<Role, Permission[]>> 
             return map;
         })();
 
-        // Aggressive timeout: if DB is slow, use defaults to keep app responsive
+        // Aggressive fail-over: keep UI interactive even if DB is sluggish
         const timeoutPromise = new Promise<Record<Role, Permission[]>>((resolve) => 
-            setTimeout(() => resolve(initialPermissionsMap), 1500)
+            setTimeout(() => resolve(initialPermissionsMap), 1000)
         );
 
         const map = await Promise.race([fetchPromise, timeoutPromise]);
@@ -61,6 +61,7 @@ export async function checkPermissions(username: string, permission: Permission)
 
     const decodedUsername = decodeURIComponent(username);
 
+    // Instant Bypass for High-Level Accounts (No DB Handshake Required)
     if (decodedUsername === 'Leon Green' || decodedUsername === 'admin') {
         return true;
     }
@@ -83,7 +84,7 @@ export async function checkPermissions(username: string, permission: Permission)
         })();
 
         const timeoutPromise = new Promise<boolean>((resolve) => 
-            setTimeout(() => resolve(false), 2000)
+            setTimeout(() => resolve(false), 1500)
         );
 
         return await Promise.race([checkPromise, timeoutPromise]);

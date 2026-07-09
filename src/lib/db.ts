@@ -13,11 +13,11 @@ try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 30,
+        connectionLimit: 50, // Increased for concurrent users
         maxIdle: 20,
-        idleTimeout: 60000, 
+        idleTimeout: 30000, // Recycle idle connections faster
         queueLimit: 0,
-        connectTimeout: 10000, // Increased for stability
+        connectTimeout: 5000, // Faster failure for snappy UI response
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });
@@ -52,7 +52,9 @@ async function createFarmTables(connection: any) {
                 status ENUM('Active', 'LOA', 'Inactive', 'Low Activity', 'Medical Leave', 'Suspended') NOT NULL DEFAULT 'Active',
                 loa_until DATE,
                 is_rehired BOOLEAN NOT NULL DEFAULT FALSE,
-                userId VARCHAR(36)
+                userId VARCHAR(36),
+                INDEX (name),
+                INDEX (userId)
             )`,
             `CREATE TABLE IF NOT EXISTS businesses (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -65,7 +67,8 @@ async function createFarmTables(connection: any) {
                 personnel_name VARCHAR(255) NOT NULL,
                 event_type ENUM('Hired', 'Fired', 'Promoted', 'Demoted', 'Rehired') NOT NULL,
                 description TEXT,
-                date DATETIME DEFAULT CURRENT_TIMESTAMP
+                date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX (date)
             )`,
             `CREATE TABLE IF NOT EXISTS detailed_farm_orders (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -80,7 +83,9 @@ async function createFarmTables(connection: any) {
                 collaborators JSON,
                 status ENUM('Active', 'Completed', 'Cancelled') DEFAULT 'Completed',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                completed_at DATETIME
+                completed_at DATETIME,
+                INDEX (status),
+                INDEX (completed_by)
             )`,
             `CREATE TABLE IF NOT EXISTS business_orders (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -88,7 +93,8 @@ async function createFarmTables(connection: any) {
                 contact_info VARCHAR(255),
                 items JSON NOT NULL,
                 status ENUM('Pending', 'Accepted', 'Completed', 'Cancelled', 'Expired') NOT NULL DEFAULT 'Pending',
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX (status)
             )`,
             `CREATE TABLE IF NOT EXISTS app_settings (
                 setting_key VARCHAR(255) NOT NULL PRIMARY KEY,
@@ -114,7 +120,9 @@ async function createFarmTables(connection: any) {
                 user VARCHAR(255) NOT NULL,
                 actionType VARCHAR(255) NOT NULL,
                 description TEXT NOT NULL,
-                timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX (user),
+                INDEX (timestamp)
             )`,
             `CREATE TABLE IF NOT EXISTS announcements (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -231,14 +239,16 @@ async function createFarmTables(connection: any) {
                 reviewer_comment TEXT,
                 reviewer_id VARCHAR(36),
                 reviewedAt DATETIME,
-                submittedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+                submittedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX (status)
             )`,
             `CREATE TABLE IF NOT EXISTS access_requests (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 requested_username VARCHAR(255) NOT NULL,
                 password VARCHAR(255) NOT NULL,
                 status ENUM('Pending', 'Approved', 'Denied') DEFAULT 'Pending',
-                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX (status)
             )`,
             `CREATE TABLE IF NOT EXISTS archived_personnel (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -290,18 +300,13 @@ export async function ensureDbInitialized(force: boolean = false) {
             
             const [tables]: any = await connection.query({
                 sql: "SHOW TABLES LIKE 'users'",
-                timeout: 5000 
+                timeout: 3000 
             });
 
             if (!tables || tables.length === 0) {
                 console.log("Database empty. Seeding initial schema...");
                 await createFarmTables(connection);
                 await seedDatabase(pool);
-            } else {
-                try {
-                    await connection.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS lastLogin DATETIME");
-                    await connection.query("ALTER TABLE detailed_farm_orders ADD COLUMN IF NOT EXISTS completed_at DATETIME");
-                } catch (e) {}
             }
             
             isInitialized = true;
@@ -309,7 +314,6 @@ export async function ensureDbInitialized(force: boolean = false) {
         } catch (err: any) {
             initPromise = null; 
             console.error("DB Readiness Check Failed:", err.message);
-            // If forced (e.g. diagnostics), throw the error so UI knows
             if (force) throw err;
             return pool; 
         } finally {

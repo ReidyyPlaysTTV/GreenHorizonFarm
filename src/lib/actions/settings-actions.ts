@@ -11,9 +11,9 @@ const APPLICATIONS_OPEN_KEY = 'applications_open';
 const LOGIN_BACKGROUND_IMAGE_KEY = 'login_background_image';
 const MAINTENANCE_MODE_KEY = 'maintenance_mode';
 
-// Centralized High-Performance Cache for Production
+// High-Speed Production Cache
 const settingsCache: Record<string, { value: any, timestamp: number }> = {};
-const CACHE_TTL = 30000; // 30 seconds
+const CACHE_TTL = 60000; // Increased to 60 seconds for production efficiency
 
 async function getCachedSetting(key: string, fetcher: () => Promise<any>): Promise<any> {
     const now = Date.now();
@@ -41,7 +41,7 @@ export async function getSopLink(): Promise<string | null> {
             const connection = await db.getConnection();
             try {
                 await createSettingsTableIfNeeded(connection);
-                const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [SOP_LINK_KEY]);
+                const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ? LIMIT 1', [SOP_LINK_KEY]);
                 if (Array.isArray(rows) && rows.length > 0) return (rows[0] as any).setting_value;
                 const defaultUrl = "https://docs.google.com/presentation/d/1jjUe1Jx2odazolqiyGnuCiEVEE3NPrHQVMn3_cw9A2s/embed?start=false&loop=false&delayms=3000";
                 await connection.query('INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = setting_value', [SOP_LINK_KEY, defaultUrl]);
@@ -51,37 +51,30 @@ export async function getSopLink(): Promise<string | null> {
     });
 }
 
-export async function updateSopLink(newLink: string, user: string) {
-    const hasPermission = await checkPermissions(user, 'MANAGE_APP_SETTINGS');
-    if (!hasPermission) return { success: false, message: 'Unauthorized' };
-
-    try {
-        const connection = await db.getConnection();
-        try {
-            await connection.beginTransaction();
-            await createSettingsTableIfNeeded(connection);
-            await connection.query(`INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?`, [SOP_LINK_KEY, newLink, newLink]);
-            await logUserAction(user, 'Update Settings', 'Updated the SOP link.', connection);
-            await connection.commit();
-            delete settingsCache[SOP_LINK_KEY];
-            revalidatePath('/sops');
-            return { success: true };
-        } catch (error) { await connection.rollback(); throw error; }
-        finally { connection.release(); }
-    } catch (error) { return { success: false, message: 'DB Error' }; }
-}
-
 export async function getApplicationStatus(): Promise<boolean> {
     return getCachedSetting(APPLICATIONS_OPEN_KEY, async () => {
         try {
             await ensureDbInitialized();
             const connection = await db.getConnection();
             try {
-                const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [APPLICATIONS_OPEN_KEY]);
+                const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ? LIMIT 1', [APPLICATIONS_OPEN_KEY]);
                 if (Array.isArray(rows) && rows.length > 0) return (rows[0] as any).setting_value === 'true';
                 return true;
             } finally { connection.release(); }
         } catch (error) { return true; }
+    });
+}
+
+export async function getMaintenanceMode(): Promise<boolean> {
+    return getCachedSetting(MAINTENANCE_MODE_KEY, async () => {
+        try {
+            await ensureDbInitialized();
+            const connection = await db.getConnection();
+            try {
+                const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ? LIMIT 1', [MAINTENANCE_MODE_KEY]);
+                return Array.isArray(rows) && rows.length > 0 ? (rows[0] as any).setting_value === 'true' : false;
+            } finally { connection.release(); }
+        } catch (error) { return false; }
     });
 }
 
@@ -103,19 +96,6 @@ export async function updateApplicationStatusSetting(isOpen: boolean, user: stri
         } catch (error) { await connection.rollback(); throw error; }
         finally { connection.release(); }
     } catch (error) { return { success: false, message: 'DB Error' }; }
-}
-
-export async function getMaintenanceMode(): Promise<boolean> {
-    return getCachedSetting(MAINTENANCE_MODE_KEY, async () => {
-        try {
-            await ensureDbInitialized();
-            const connection = await db.getConnection();
-            try {
-                const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [MAINTENANCE_MODE_KEY]);
-                return Array.isArray(rows) && rows.length > 0 ? (rows[0] as any).setting_value === 'true' : false;
-            } finally { connection.release(); }
-        } catch (error) { return false; }
-    });
 }
 
 export async function updateMaintenanceMode(isMaintenance: boolean, user: string) {
@@ -144,7 +124,7 @@ export async function getLoginBackgroundImage(): Promise<string> {
             await ensureDbInitialized();
             const connection = await db.getConnection();
             try {
-                const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ?', [LOGIN_BACKGROUND_IMAGE_KEY]);
+                const [rows] = await connection.query('SELECT setting_value FROM app_settings WHERE setting_key = ? LIMIT 1', [LOGIN_BACKGROUND_IMAGE_KEY]);
                 return Array.isArray(rows) && rows.length > 0 ? (rows[0] as any).setting_value : defaultUrl;
             } finally { connection.release(); }
         } catch (error) { return defaultUrl; }
@@ -164,6 +144,26 @@ export async function updateLoginBackgroundImage(newUrl: string, user: string) {
             await connection.commit();
             delete settingsCache[LOGIN_BACKGROUND_IMAGE_KEY];
             revalidatePath('/');
+            return { success: true };
+        } catch (error) { await connection.rollback(); throw error; }
+        finally { connection.release(); }
+    } catch (error) { return { success: false, message: 'DB Error' }; }
+}
+
+export async function updateSopLink(newLink: string, user: string) {
+    const hasPermission = await checkPermissions(user, 'MANAGE_APP_SETTINGS');
+    if (!hasPermission) return { success: false, message: 'Unauthorized' };
+
+    try {
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+            await createSettingsTableIfNeeded(connection);
+            await connection.query(`INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?`, [SOP_LINK_KEY, newLink, newLink]);
+            await logUserAction(user, 'Update Settings', 'Updated the SOP link.', connection);
+            await connection.commit();
+            delete settingsCache[SOP_LINK_KEY];
+            revalidatePath('/sops');
             return { success: true };
         } catch (error) { await connection.rollback(); throw error; }
         finally { connection.release(); }
