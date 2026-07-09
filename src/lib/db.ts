@@ -3,7 +3,7 @@ import mysql from 'mysql2/promise';
 import type { Pool } from 'mysql2/promise';
 import { seedDatabase } from './db-seed';
 
-const dbUri = process.env.DATABASE_URL || 'mysql://zap1311701-1:gFtXgwwIs09GtYtx@mysql-mariadb-20-104.zap-srv.com:3306/zap1311701-1';
+const dbUri = process.env.DATABASE_URL || 'mysql://zap1311701-1:UZXQgiIsbIlQmVkU@mysql-mariadb-can01-6-101.zap-srv.com:3306/zap1311701-1';
 
 let pool: Pool;
 let isInitialized = false;
