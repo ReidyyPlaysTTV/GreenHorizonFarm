@@ -67,12 +67,14 @@ export async function getUsers(): Promise<AppUser[]> {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
+            // Collation casts added for JOINS and name comparisons
             const [rows]: any = await connection.query(`
                 SELECT 
                     u.id, u.username, u.roles, u.createdAt, u.avatarUrl, u.status, u.lastLogin,
                     p.rank, p.phone_number, p.bank_account, p.discord_username, p.hire_date
                 FROM users u
-                LEFT JOIN personnel p ON u.id = p.userId OR UPPER(u.username) = UPPER(p.name)
+                LEFT JOIN personnel p ON (u.id COLLATE utf8mb4_unicode_ci = p.userId COLLATE utf8mb4_unicode_ci) 
+                    OR (UPPER(u.username COLLATE utf8mb4_unicode_ci) = UPPER(p.name COLLATE utf8mb4_unicode_ci))
                 ORDER BY u.username ASC
             `);
             
@@ -116,12 +118,14 @@ export async function getUserByUsername(username: string): Promise<AppUser | nul
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
+            // Collation casts added for JOINS and name comparisons
             const [rows]: any = await connection.query(`
                 SELECT 
                     u.id, u.username, u.roles, u.createdAt, u.avatarUrl, u.status, u.lastLogin,
                     p.rank, p.phone_number, p.bank_account, p.discord_username, p.hire_date
                 FROM users u
-                LEFT JOIN personnel p ON u.id = p.userId OR UPPER(u.username) = UPPER(p.name)
+                LEFT JOIN personnel p ON (u.id COLLATE utf8mb4_unicode_ci = p.userId COLLATE utf8mb4_unicode_ci) 
+                    OR (UPPER(u.username COLLATE utf8mb4_unicode_ci) = UPPER(p.name COLLATE utf8mb4_unicode_ci))
                 WHERE u.username = ?
                 LIMIT 1
             `, [username]);
@@ -225,7 +229,7 @@ export async function approveAccessRequest(data: any) {
             await connection.query('UPDATE access_requests SET status = ? WHERE id = ?', ['Approved', requestId]);
             
             // Onboard to Roster
-            const [rosterRows]: any = await connection.query('SELECT id FROM personnel WHERE UPPER(name) = UPPER(?)', [username.trim()]);
+            const [rosterRows]: any = await connection.query('SELECT id FROM personnel WHERE UPPER(name COLLATE utf8mb4_unicode_ci) = UPPER(?)', [username.trim()]);
             if (rosterRows.length > 0) {
                 await connection.query('UPDATE personnel SET userId = ?, rank = ?, status = "Active" WHERE id = ?', [userId, rank, rosterRows[0].id]);
             } else {
@@ -311,12 +315,12 @@ export async function createUser(data: any) {
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
-        const [rosterRows]: any = await connection.query('SELECT rank FROM personnel WHERE UPPER(name) = UPPER(?)', [username.trim()]);
+        const [rosterRows]: any = await connection.query('SELECT rank FROM personnel WHERE UPPER(name COLLATE utf8mb4_unicode_ci) = UPPER(?)', [username.trim()]);
         let finalRoles = Array.isArray(initialRoles) ? initialRoles : ['User'];
         if (rosterRows.length > 0) finalRoles = [...new Set([...finalRoles, rosterRows[0].rank])];
         const userId = crypto.randomUUID();
         await connection.query('INSERT INTO users (id, username, password, roles, status) VALUES (?, ?, ?, ?, ?)', [userId, username, password, JSON.stringify(finalRoles), 'Active']);
-        await connection.query('UPDATE personnel SET userId = ? WHERE UPPER(name) = UPPER(?)', [userId, username.trim()]);
+        await connection.query('UPDATE personnel SET userId = ? WHERE UPPER(name COLLATE utf8mb4_unicode_ci) = UPPER(?)', [userId, username.trim()]);
         await logUserAction(adminUser, 'Create User', `Manually created user: ${username}`, connection);
         await connection.commit();
         revalidatePath('/admin');

@@ -278,11 +278,12 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
+            // Collation cast added to the JOIN comparison
             const [rows] = await connection.query(`
                 SELECT o.*, 
                        p.phone_number as lead_phone, p.bank_account as lead_bank
                 FROM detailed_farm_orders o
-                LEFT JOIN personnel p ON UPPER(TRIM(o.completed_by)) = UPPER(TRIM(p.name))
+                LEFT JOIN personnel p ON UPPER(TRIM(o.completed_by COLLATE utf8mb4_unicode_ci)) = UPPER(TRIM(p.name COLLATE utf8mb4_unicode_ci))
                 WHERE o.status = "Completed" 
                 ORDER BY o.created_at DESC 
                 LIMIT 50
@@ -304,10 +305,11 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
 
             const ordersWithPayouts = await Promise.all(orders.map(async (o) => {
                 try {
+                    // Collation cast added here too
                     const [pRows]: any = await connection.query(`
                         SELECT op.*, p.phone_number as phone, p.bank_account as bank
                         FROM order_payouts op
-                        LEFT JOIN personnel p ON UPPER(TRIM(op.personnel_name)) = UPPER(TRIM(p.name))
+                        LEFT JOIN personnel p ON UPPER(TRIM(op.personnel_name COLLATE utf8mb4_unicode_ci)) = UPPER(TRIM(p.name COLLATE utf8mb4_unicode_ci))
                         WHERE op.order_id = ?
                     `, [o.id]);
                     return { ...o, payouts: pRows || [] };
@@ -330,14 +332,15 @@ export async function getActiveOrders(): Promise<DetailedFarmOrder[]> {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
+            // Collation casts added to both JOINS
             const [rows] = await connection.query(`
                 SELECT o.*, 
                        b.bank_account as business_bank,
                        p.phone_number as lead_phone,
                        p.bank_account as lead_bank
                 FROM detailed_farm_orders o
-                LEFT JOIN businesses b ON UPPER(TRIM(o.business_name)) = UPPER(TRIM(b.name))
-                LEFT JOIN personnel p ON UPPER(TRIM(o.completed_by)) = UPPER(TRIM(p.name))
+                LEFT JOIN businesses b ON UPPER(TRIM(o.business_name COLLATE utf8mb4_unicode_ci)) = UPPER(TRIM(b.name COLLATE utf8mb4_unicode_ci))
+                LEFT JOIN personnel p ON UPPER(TRIM(o.completed_by COLLATE utf8mb4_unicode_ci)) = UPPER(TRIM(p.name COLLATE utf8mb4_unicode_ci))
                 WHERE o.status = "Active" 
                 ORDER BY o.created_at DESC
             `);
@@ -451,7 +454,7 @@ export async function getOrdersByStaff(name: string): Promise<DetailedFarmOrder[
         const connection = await db.getConnection();
         try {
             const [rows] = await connection.query(
-                "SELECT * FROM detailed_farm_orders WHERE (UPPER(TRIM(completed_by)) = UPPER(TRIM(?)) OR JSON_CONTAINS(collaborators, JSON_QUOTE(?))) AND status = 'Completed' ORDER BY created_at DESC LIMIT 20",
+                "SELECT * FROM detailed_farm_orders WHERE (UPPER(TRIM(completed_by COLLATE utf8mb4_unicode_ci)) = UPPER(TRIM(?)) OR JSON_CONTAINS(collaborators, JSON_QUOTE(?))) AND status = 'Completed' ORDER BY created_at DESC LIMIT 20",
                 [name, name]
             );
             if (!Array.isArray(rows)) return [];

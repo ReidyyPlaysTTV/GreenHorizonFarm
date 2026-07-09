@@ -9,10 +9,14 @@ export async function getPersonnel(): Promise<Personnel[]> {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
+            // Explicit collation casting to prevent "Illegal mix of collations" errors
             const [rows] = await connection.query(`
                 SELECT 
                     p.*,
-                    (SELECT COUNT(*) FROM detailed_farm_orders o WHERE o.completed_by = p.name) as ordersCompleted
+                    (SELECT COUNT(*) 
+                     FROM detailed_farm_orders o 
+                     WHERE o.completed_by COLLATE utf8mb4_unicode_ci = p.name COLLATE utf8mb4_unicode_ci
+                    ) as ordersCompleted
                 FROM personnel p
             `);
 
@@ -80,9 +84,12 @@ export async function getApplications(): Promise<Application[]> {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
+            // Added collation cast for the JOIN
             const [rows] = await connection.query(`
               SELECT a.*, u.id as reviewerId, u.username as reviewerUsername, u.avatarUrl as reviewerAvatarUrl
-              FROM applications a LEFT JOIN users u ON a.reviewer_id = u.id ORDER BY a.submittedAt DESC
+              FROM applications a 
+              LEFT JOIN users u ON a.reviewer_id COLLATE utf8mb4_unicode_ci = u.id COLLATE utf8mb4_unicode_ci 
+              ORDER BY a.submittedAt DESC
             `);
             
             if (!Array.isArray(rows)) return [];
