@@ -183,7 +183,7 @@ export async function completeDetailedOrder(orderId: string, user: string) {
             [crypto.randomUUID(), Number(order.total_price), 'Income', `Fulfilled Order: ${order.business_name}`]
         );
 
-        // 3. Initialize Individual Payouts instead of one big expenditure
+        // 3. Initialize Individual Payouts
         const totalCut = Number(order.employee_cut_value);
         let collaborators = [];
         try {
@@ -278,13 +278,14 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
+            // Updated query to handle case-insensitive joins and ensure results even if lead data is missing
             const [rows] = await connection.query(`
                 SELECT o.*, 
                        u.username as lead_username, u.avatarUrl as lead_avatar,
                        p.phone_number as lead_phone, p.bank_account as lead_bank
                 FROM detailed_farm_orders o
-                LEFT JOIN users u ON o.completed_by = u.username
-                LEFT JOIN personnel p ON u.id = p.userId
+                LEFT JOIN users u ON UPPER(o.completed_by) = UPPER(u.username)
+                LEFT JOIN personnel p ON u.id = p.userId OR UPPER(o.completed_by) = UPPER(p.name)
                 WHERE o.status = "Completed" 
                 ORDER BY o.created_at DESC 
                 LIMIT 50
@@ -305,15 +306,20 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
                 }
             }));
 
-            // Fetch payouts for all orders in parallel
+            // Fetch payouts for all orders with safe handling
             const ordersWithPayouts = await Promise.all(orders.map(async (o) => {
-                const [pRows]: any = await connection.query(`
-                    SELECT op.*, p.phone_number as phone, p.bank_account as bank
-                    FROM order_payouts op
-                    LEFT JOIN personnel p ON op.personnel_name = p.name
-                    WHERE op.order_id = ?
-                `, [o.id]);
-                return { ...o, payouts: pRows };
+                try {
+                    const [pRows]: any = await connection.query(`
+                        SELECT op.*, p.phone_number as phone, p.bank_account as bank
+                        FROM order_payouts op
+                        LEFT JOIN personnel p ON UPPER(op.personnel_name) = UPPER(p.name)
+                        WHERE op.order_id = ?
+                    `, [o.id]);
+                    return { ...o, payouts: pRows || [] };
+                } catch (e) {
+                    console.warn(`Could not fetch payouts for order ${o.id}:`, e);
+                    return { ...o, payouts: [] };
+                }
             }));
 
             return ordersWithPayouts;
@@ -321,6 +327,7 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
             connection.release();
         }
     } catch (error) {
+        console.error("Failed to fetch detailed orders:", error);
         return [];
     }
 }
@@ -333,7 +340,7 @@ export async function getActiveOrders(): Promise<DetailedFarmOrder[]> {
             const [rows] = await connection.query(`
                 SELECT o.*, b.bank_account as business_bank
                 FROM detailed_farm_orders o
-                LEFT JOIN businesses b ON o.business_name = b.name
+                LEFT JOIN businesses b ON UPPER(o.business_name) = UPPER(b.name)
                 WHERE o.status = "Active" 
                 ORDER BY o.created_at DESC
             `);
@@ -452,8 +459,8 @@ export async function getOrdersByStaff(name: string): Promise<DetailedFarmOrder[
         const connection = await db.getConnection();
         try {
             const [rows] = await connection.query(
-                "SELECT * FROM detailed_farm_orders WHERE (completed_by = ? OR JSON_CONTAINS(collaborators, JSON_QUOTE(?))) AND status = 'Completed' ORDER BY created_at DESC LIMIT 20",
-                [name, name]
+                "SELECT * FROM detailed_farm_orders WHERE (UPPER(completed_by) = UPPER(?) OR JSON_CONTAINS(collaborators, JSON_QUOTE(?))) AND status = 'Completed' ORDER BY created_at DESC LIMIT 20",
+                [name.trim(), name.trim()]
             );
             if (!Array.isArray(rows)) return [];
             return (rows as any[]).map(row => ({
