@@ -3,25 +3,40 @@
 
 This is a specialized management portal for the **Green Horizon Farm** roleplay business.
 
-## Repository
-Current GitHub Project: [https://github.com/YOUR_USERNAME/YOUR_REPO_NAME](https://github.com/YOUR_USERNAME/YOUR_REPO_NAME)
+## Deployment & Repository Management
+
+### Changing the GitHub Repository
+If you need to move this project to a different GitHub account or repository, follow these steps:
+
+1. **Update Local Git Remote:**
+   ```bash
+   git remote set-url origin https://github.com/YOUR_USERNAME/YOUR_NEW_REPO_NAME.git
+   git push -u origin main
+   ```
+
+2. **Update Firebase App Hosting Connection:**
+   - Go to the [Firebase Console](https://console.firebase.google.com/).
+   - Select **App Hosting** from the Build menu.
+   - Select your existing backend.
+   - Go to **Settings** > **Deployment**.
+   - Click **Change Repository** and link the new GitHub project.
 
 ## Features
-- **Farmers Portal**: For Harvesters and Farm Hands.
-- **Security Portal**: Perimeter and asset protection.
-- **Events Portal**: Community engagement tracking.
-- **Finances Portal**: Ledger and accounting.
-- **Manager Portal**: Operations oversight.
-- **CEO Executive Portal**: Strategic control.
-- **Admin Panel**: Technical system configuration (Ranks, Users, Forms).
+- **Farmers Portal**: Logistics control and real-time operation alerts.
+- **Security Portal**: Perimeter protection and incident logging.
+- **Events Portal**: Community engagement and market planning.
+- **Finances Portal**: Real-time ledger and 60/40 profit split tracking.
+- **Manager Portal**: Operational oversight and product catalog management.
+- **CEO Executive Portal**: Strategic control and high-level decision making.
+- **Admin Panel**: Technical configuration, User Search, and Diagnostics.
 
 ## Authentication
-The application uses a secure staff login. 
-To request an account, use the "Request Login" link on the landing page.
+The application uses a secure IC (In-Character) login. 
+- New staff must use the **Request Access** link on the landing page.
+- Management approves requests and onboards users directly to the roster.
 
-## Deployment
-This project is configured for **Firebase App Hosting**. To change the connected GitHub project:
-1. Go to the [Firebase Console](https://console.firebase.google.com/).
-2. Select your project.
-3. Navigate to **App Hosting**.
-4. Update the backend settings to point to your new GitHub repository.
+## Technology Stack
+- **Framework**: Next.js 15 (App Router)
+- **Database**: MariaDB (External Hosting)
+- **Styling**: Tailwind CSS + ShadCN UI (RGB Animated Groups)
+- **Hosting**: Firebase App Hosting
