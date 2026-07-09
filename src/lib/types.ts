@@ -220,6 +220,7 @@ export interface FarmProduct {
     name: string;
     category: string;
     price: number;
+    local_price: number;
 }
 
 export interface ManagerPlan {

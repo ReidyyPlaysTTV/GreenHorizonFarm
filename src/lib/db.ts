@@ -113,7 +113,8 @@ async function createFarmTables(connection: any) {
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
                 category VARCHAR(100) NOT NULL,
-                price DECIMAL(10, 2) DEFAULT 0
+                price DECIMAL(10, 2) DEFAULT 0,
+                local_price DECIMAL(10, 2) DEFAULT 0
             )`,
             `CREATE TABLE IF NOT EXISTS audit_logs (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
@@ -283,6 +284,13 @@ async function createFarmTables(connection: any) {
         for (const query of tableQueries) {
             await connection.query(query);
         }
+
+        // Schema Migrations: Ensure local_price exists in farm_products
+        try {
+            await connection.query("ALTER TABLE farm_products ADD COLUMN IF NOT EXISTS local_price DECIMAL(10, 2) DEFAULT 0 AFTER price");
+        } catch (e) {
+            // Already exists or ignore
+        }
         
     } catch (error) {
         console.error("SQL Schema execution failed:", error);
@@ -307,6 +315,9 @@ export async function ensureDbInitialized(force: boolean = false) {
                 console.log("Database empty. Seeding initial schema...");
                 await createFarmTables(connection);
                 await seedDatabase(pool);
+            } else {
+                // Run schema updates even if tables exist
+                await createFarmTables(connection);
             }
             
             isInitialized = true;

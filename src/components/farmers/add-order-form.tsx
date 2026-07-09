@@ -103,14 +103,32 @@ export function AddOrderForm({ businessOrder, onOrderStarted, children }: AddOrd
   const watchedBusiness = useWatch({ control: form.control, name: "business_name" });
   const watchedTotalPrice = useWatch({ control: form.control, name: "total_price" });
 
+  const isLocalFarmer = watchedBusiness === 'Local Farmer';
+
   // 15% rule for Local Farmer (Staff get 85%)
   useEffect(() => {
-    if (watchedBusiness === 'Local Farmer') {
+    if (isLocalFarmer) {
         form.setValue('employee_cut_percentage', 85);
+        // Recalculate prices for existing items if they switch to Local Farmer
+        const currentItems = form.getValues('items');
+        currentItems.forEach((item, idx) => {
+            const prod = products.find(p => p.id === item.product_id);
+            if (prod) {
+                form.setValue(`items.${idx}.price_at_sale`, Number(prod.local_price || prod.price));
+            }
+        });
     } else {
         form.setValue('employee_cut_percentage', 60);
+        // Recalculate prices to standard if they switch back
+        const currentItems = form.getValues('items');
+        currentItems.forEach((item, idx) => {
+            const prod = products.find(p => p.id === item.product_id);
+            if (prod) {
+                form.setValue(`items.${idx}.price_at_sale`, Number(prod.price));
+            }
+        });
     }
-  }, [watchedBusiness, form]);
+  }, [isLocalFarmer, products, form]);
 
   const selectedBusinessData = useMemo(() => 
     businesses.find(b => b.name === watchedBusiness)
@@ -225,6 +243,14 @@ export function AddOrderForm({ businessOrder, onOrderStarted, children }: AddOrd
                                 </div>
                             </div>
                         )}
+                        {isLocalFarmer && (
+                            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3">
+                                <Tag className="h-4 w-4 text-emerald-400" />
+                                <div className="text-[10px] font-black uppercase text-emerald-400 tracking-widest">
+                                    Applying Local Rates (Public Sale)
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-4">
@@ -243,16 +269,21 @@ export function AddOrderForm({ businessOrder, onOrderStarted, children }: AddOrd
                                             onValueChange={(val) => {
                                                 const prod = products.find(p => p.id === val);
                                                 if (prod) {
+                                                    const priceToUse = isLocalFarmer ? (prod.local_price || prod.price) : prod.price;
                                                     form.setValue(`items.${index}.product_id`, prod.id);
                                                     form.setValue(`items.${index}.product_name`, prod.name);
-                                                    form.setValue(`items.${index}.price_at_sale`, Number(prod.price));
+                                                    form.setValue(`items.${index}.price_at_sale`, Number(priceToUse));
                                                 }
                                             }}
                                             defaultValue={field.product_id}
                                         >
                                             <FormControl><SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select Product" /></SelectTrigger></FormControl>
                                             <SelectContent>
-                                                {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name} (${p.price})</SelectItem>)}
+                                                {products.map(p => (
+                                                    <SelectItem key={p.id} value={p.id}>
+                                                        {p.name} (${isLocalFarmer ? (p.local_price || p.price) : p.price})
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                     </div>

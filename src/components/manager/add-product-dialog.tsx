@@ -28,12 +28,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Sprout } from "lucide-react";
+import { Loader2, Sprout, Building2, User } from "lucide-react";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required."),
   category: z.string().min(1, "Category is required."),
   price: z.coerce.number().min(0),
+  local_price: z.coerce.number().min(0),
 });
 
 export function AddProductDialog() {
@@ -48,7 +49,7 @@ export function AddProductDialog() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: "", category: "Produce", price: 0 },
+    defaultValues: { name: "", category: "Produce", price: 0, local_price: 0 },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -72,10 +73,10 @@ export function AddProductDialog() {
             Add Catalog Product
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>New Catalog Product</DialogTitle>
-          <DialogDescription>Define a new item that can be harvested or sold.</DialogDescription>
+          <DialogDescription>Define a new item with distinct prices for businesses and local sales.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
@@ -109,17 +110,36 @@ export function AddProductDialog() {
                         </FormItem>
                     )}
                 />
-                 <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Reference Price ($)</FormLabel>
-                            <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="price"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center gap-2">
+                                    <Building2 className="h-3 w-3" /> Biz Price ($)
+                                </FormLabel>
+                                <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="local_price"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center gap-2">
+                                    <User className="h-3 w-3" /> Local Price ($)
+                                </FormLabel>
+                                <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
                 <DialogFooter>
                     <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
                     <Button type="submit" disabled={isLoading}>

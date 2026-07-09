@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Trash2, Building2, User } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +46,7 @@ const formSchema = z.object({
   name: z.string().min(1, "Name is required."),
   category: z.string().min(1, "Category is required."),
   price: z.coerce.number().min(0),
+  local_price: z.coerce.number().min(0),
 });
 
 interface EditProductDialogProps {
@@ -68,7 +70,8 @@ export function EditProductDialog({ product, children }: EditProductDialogProps)
     defaultValues: { 
         name: product.name, 
         category: product.category, 
-        price: Number(product.price) 
+        price: Number(product.price),
+        local_price: Number(product.local_price || 0)
     },
   });
 
@@ -105,7 +108,7 @@ export function EditProductDialog({ product, children }: EditProductDialogProps)
             </Button>
         )}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Catalog Item</DialogTitle>
           <DialogDescription>Modify supply details and adjust pricing across the network.</DialogDescription>
@@ -142,18 +145,37 @@ export function EditProductDialog({ product, children }: EditProductDialogProps)
                         </FormItem>
                     )}
                 />
-                 <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Reference Price ($)</FormLabel>
-                            <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <DialogFooter className="gap-2 sm:gap-0">
+                
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="price"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center gap-2">
+                                    <Building2 className="h-3 w-3" /> Biz Price ($)
+                                </FormLabel>
+                                <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="local_price"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center gap-2">
+                                    <User className="h-3 w-3" /> Local Price ($)
+                                </FormLabel>
+                                <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
+                <DialogFooter className="gap-2 sm:gap-0 pt-4">
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button type="button" variant="destructive" size="icon" className="mr-auto">

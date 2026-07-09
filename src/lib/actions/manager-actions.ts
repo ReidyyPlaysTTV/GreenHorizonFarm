@@ -1,3 +1,4 @@
+
 'use server';
 
 import { z } from 'zod';
@@ -43,21 +44,22 @@ const productSchema = z.object({
     name: z.string().min(1),
     category: z.string().min(1),
     price: z.coerce.number().min(0),
+    local_price: z.coerce.number().min(0),
 });
 
 export async function addFarmProduct(data: unknown, user: string) {
     const validation = productSchema.safeParse(data);
     if (!validation.success) return { success: false, message: validation.error.errors[0].message };
-    const { name, category, price } = validation.data;
+    const { name, category, price, local_price } = validation.data;
 
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
         await connection.query(
-            'INSERT INTO farm_products (id, name, category, price) VALUES (?, ?, ?, ?)',
-            [crypto.randomUUID(), name, category, price]
+            'INSERT INTO farm_products (id, name, category, price, local_price) VALUES (?, ?, ?, ?, ?)',
+            [crypto.randomUUID(), name, category, price, local_price]
         );
-        await logUserAction(user, "Manage Products", `Added product: ${name}`, connection);
+        await logUserAction(user, "Manage Products", `Added product: ${name} (Biz: $${price}, Local: $${local_price})`, connection);
         await connection.commit();
         revalidatePath('/manager');
         revalidatePath('/ceo');
@@ -75,16 +77,16 @@ export async function addFarmProduct(data: unknown, user: string) {
 export async function updateFarmProduct(id: string, data: unknown, user: string) {
     const validation = productSchema.safeParse(data);
     if (!validation.success) return { success: false, message: validation.error.errors[0].message };
-    const { name, category, price } = validation.data;
+    const { name, category, price, local_price } = validation.data;
 
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
         await connection.query(
-            'UPDATE farm_products SET name = ?, category = ?, price = ? WHERE id = ?',
-            [name, category, price, id]
+            'UPDATE farm_products SET name = ?, category = ?, price = ?, local_price = ? WHERE id = ?',
+            [name, category, price, local_price, id]
         );
-        await logUserAction(user, "Manage Products", `Updated product: ${name} (Price: $${price})`, connection);
+        await logUserAction(user, "Manage Products", `Updated product: ${name} (Biz: $${price}, Local: $${local_price})`, connection);
         await connection.commit();
         revalidatePath('/manager');
         revalidatePath('/ceo');
