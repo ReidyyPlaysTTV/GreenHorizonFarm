@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { getProductEmoji } from "@/lib/order-utils";
 import { format } from "date-fns";
-import { User, Phone, CreditCard, Building2, ClipboardList, Receipt, Users, ShieldCheck, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { User, Phone, CreditCard, Building2, ClipboardList, Receipt, Users, ShieldCheck, Clock, CheckCircle2, Loader2, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { markPayoutAsPaid } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
@@ -54,9 +54,12 @@ export function OrderDetailsDialog({ order, children }: OrderDetailsDialogProps)
             </div>
             <div>
                 <DialogTitle className="text-2xl font-black text-white uppercase tracking-tighter">Operation Manifest</DialogTitle>
-                <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                    Record ID: {order.id}
-                </DialogDescription>
+                <div className="flex items-center gap-2 mt-0.5">
+                    <Badge variant="outline" className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest flex items-center gap-1 px-2 py-0">
+                        <Hash className="h-2.5 w-2.5" />
+                        ORDER: {order.id.substring(0, 8).toUpperCase()}
+                    </Badge>
+                </div>
             </div>
           </div>
         </DialogHeader>

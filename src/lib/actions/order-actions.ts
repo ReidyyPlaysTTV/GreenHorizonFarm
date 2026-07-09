@@ -51,6 +51,7 @@ async function sendOrderWebhook(order: any) {
                 description: `A supply requisition has been successfully fulfilled for **${order.business_name}**.`,
                 color: 3066993, // Green Horizon Emerald
                 fields: [
+                    { name: "📋 Reference", value: `**Order ID:** \`${order.id.substring(0, 8).toUpperCase()}\``, inline: false },
                     { 
                         name: "💰 Financial Breakdown", 
                         value: `**Order Total:** \`$${total.toLocaleString()}\`\n**Business Profit:** \`$${businessProfit.toLocaleString()}\`\n**Staff Pool:** \`$${staffCut.toLocaleString()}\``,
@@ -178,9 +179,10 @@ export async function completeDetailedOrder(orderId: string, user: string) {
         await connection.query("UPDATE detailed_farm_orders SET status = 'Completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?", [orderId]);
         
         // 2. Log Gross income in ledger
+        const orderRef = orderId.substring(0, 8).toUpperCase();
         await connection.query(
             'INSERT INTO farm_transactions (id, amount, category, description) VALUES (?, ?, ?, ?)',
-            [crypto.randomUUID(), Number(order.total_price), 'Income', `Fulfilled Order: ${order.business_name}`]
+            [crypto.randomUUID(), Number(order.total_price), 'Income', `Fulfilled Order: ${order.business_name} (Ref: ${orderRef})`]
         );
 
         // 3. Initialize Individual Payouts
@@ -200,7 +202,7 @@ export async function completeDetailedOrder(orderId: string, user: string) {
             );
         }
 
-        await logUserAction(user, "Complete Operation", `Finalized supply run for ${order.business_name}. Debt records created for ${team.length} staff.`, connection);
+        await logUserAction(user, "Complete Operation", `Finalized supply run for ${order.business_name} (Ref: ${orderRef}). Debt records created for ${team.length} staff.`, connection);
         
         await connection.commit();
         
@@ -235,16 +237,18 @@ export async function markPayoutAsPaid(payoutId: string, user: string) {
 
         if (payout.status === 'Paid') return { success: true };
 
+        const orderRef = payout.order_id.substring(0, 8).toUpperCase();
+
         // 1. Mark as Paid
         await connection.query("UPDATE order_payouts SET status = 'Paid', paid_at = CURRENT_TIMESTAMP WHERE id = ?", [payoutId]);
         
         // 2. Log Deduction from finances
         await connection.query(
             'INSERT INTO farm_transactions (id, amount, category, description) VALUES (?, ?, ?, ?)',
-            [crypto.randomUUID(), Number(payout.amount), 'Expenditure', `Staff Disbursement: ${payout.personnel_name}`]
+            [crypto.randomUUID(), Number(payout.amount), 'Expenditure', `Staff Disbursement: ${payout.personnel_name} (Order: ${orderRef})`]
         );
 
-        await logUserAction(user, "Process Payout", `Disbursed $${Number(payout.amount).toLocaleString()} to ${payout.personnel_name}.`, connection);
+        await logUserAction(user, "Process Payout", `Disbursed $${Number(payout.amount).toLocaleString()} to ${payout.personnel_name} for order ${orderRef}.`, connection);
         
         await connection.commit();
         revalidatePath('/farmers');
@@ -278,7 +282,6 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
-            // Collation cast added to the JOIN comparison
             const [rows] = await connection.query(`
                 SELECT o.*, 
                        p.phone_number as lead_phone, p.bank_account as lead_bank
@@ -305,7 +308,6 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
 
             const ordersWithPayouts = await Promise.all(orders.map(async (o) => {
                 try {
-                    // Collation cast added here too
                     const [pRows]: any = await connection.query(`
                         SELECT op.*, p.phone_number as phone, p.bank_account as bank
                         FROM order_payouts op
@@ -332,7 +334,6 @@ export async function getActiveOrders(): Promise<DetailedFarmOrder[]> {
         await ensureDbInitialized();
         const connection = await db.getConnection();
         try {
-            // Collation casts added to both JOINS
             const [rows] = await connection.query(`
                 SELECT o.*, 
                        b.bank_account as business_bank,

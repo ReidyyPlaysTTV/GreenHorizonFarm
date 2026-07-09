@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Sprout, Truck, DollarSign, Clock, Tag, Users, AlertTriangle, CheckCircle2, XCircle, Loader2, Wallet, Eye, Phone, CreditCard, User } from "lucide-react";
+import { Sprout, Truck, DollarSign, Clock, Tag, Users, AlertTriangle, CheckCircle2, XCircle, Loader2, Wallet, Eye, Phone, CreditCard, User, Hash, AlertCircle } from "lucide-react";
 import { AddOrderForm } from "@/components/farmers/add-order-form";
 import { getDetailedOrders, getExpiredBusinessOrders, getActiveOrders, completeDetailedOrder, cancelDetailedOrder } from "@/lib/actions";
 import type { DetailedFarmOrder, BusinessOrder } from "@/lib/types";
@@ -227,24 +227,40 @@ export default function FarmersPortal() {
                         <Table>
                             <TableHeader>
                             <TableRow>
+                                <TableHead className="w-[100px]">Order #</TableHead>
                                 <TableHead>Client</TableHead>
                                 <TableHead>Total Value</TableHead>
-                                <TableHead>Pool Split</TableHead>
+                                <TableHead>Payout Status</TableHead>
                                 <TableHead>Lead Personnel</TableHead>
                                 <TableHead className="text-right">Timeline</TableHead>
                                 <TableHead className="w-[100px] text-right">Details</TableHead>
                             </TableRow>
                             </TableHeader>
                             <TableBody>
-                            {orders.map((o) => (
+                            {orders.map((o) => {
+                                const needsPayment = o.payouts?.some(p => p.status === 'Pending');
+                                return (
                                 <TableRow key={o.id} className="group hover:bg-white/5 transition-all">
+                                <TableCell>
+                                    <div className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                                        <Hash className="h-3 w-3 opacity-40" />
+                                        {o.id.substring(0, 8).toUpperCase()}
+                                    </div>
+                                </TableCell>
                                 <TableCell className="font-black text-primary">{o.business_name}</TableCell>
                                 <TableCell className="font-black text-emerald-500">${Number(o.total_price).toLocaleString()}</TableCell>
                                 <TableCell>
-                                    <div className="flex flex-col">
-                                        <span className="font-black text-emerald-400">${Number(o.employee_cut_value).toLocaleString()}</span>
-                                        <span className="text-[9px] uppercase font-bold text-muted-foreground opacity-60">To Team Pool</span>
-                                    </div>
+                                    {needsPayment ? (
+                                        <Badge variant="outline" className="bg-orange-500/10 text-orange-400 border-orange-500/20 gap-1.5 animate-pulse uppercase text-[9px] font-black">
+                                            <AlertCircle className="h-3 w-3" />
+                                            Unpaid Shares
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 gap-1.5 uppercase text-[9px] font-black">
+                                            <CheckCircle2 className="h-3 w-3" />
+                                            All Paid
+                                        </Badge>
+                                    )}
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-1.5">
@@ -268,7 +284,7 @@ export default function FarmersPortal() {
                                     </OrderDetailsDialog>
                                 </TableCell>
                                 </TableRow>
-                            ))}
+                            )})}
                             </TableBody>
                         </Table>
                     </div>
