@@ -120,7 +120,8 @@ export {
     cancelBusinessOrder,
     getActiveOrders,
     completeDetailedOrder,
-    cancelDetailedOrder
+    cancelDetailedOrder,
+    markPayoutAsPaid
 } from './actions/order-actions';
 
 export {

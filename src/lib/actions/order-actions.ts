@@ -1,9 +1,10 @@
+
 'use server';
 
 import { z } from 'zod';
 import db, { ensureDbInitialized } from '../db';
 import { revalidatePath } from 'next/cache';
-import type { DetailedFarmOrder, BusinessOrder } from '../types';
+import type { DetailedFarmOrder, BusinessOrder, OrderPayout } from '../types';
 import { logUserAction } from './audit-log-actions';
 import { getProductEmoji } from '../order-utils';
 
@@ -176,26 +177,37 @@ export async function completeDetailedOrder(orderId: string, user: string) {
         // 1. Update order status
         await connection.query("UPDATE detailed_farm_orders SET status = 'Completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?", [orderId]);
         
-        // 2. Log income in ledger
+        // 2. Log Gross income in ledger
         await connection.query(
             'INSERT INTO farm_transactions (id, amount, category, description) VALUES (?, ?, ?, ?)',
             [crypto.randomUUID(), Number(order.total_price), 'Income', `Fulfilled Order: ${order.business_name}`]
         );
 
-        // 3. Log staff cut as expenditure
-        await connection.query(
-            'INSERT INTO farm_transactions (id, amount, category, description) VALUES (?, ?, ?, ?)',
-            [crypto.randomUUID(), Number(order.employee_cut_value), 'Expenditure', `Staff Cut Payout: ${order.completed_by} (${order.business_name})`]
-        );
+        // 3. Initialize Individual Payouts instead of one big expenditure
+        const totalCut = Number(order.employee_cut_value);
+        let collaborators = [];
+        try {
+            collaborators = typeof order.collaborators === 'string' ? JSON.parse(order.collaborators) : (order.collaborators || []);
+        } catch(e) {}
+        
+        const team = [order.completed_by, ...collaborators];
+        const individualShare = totalCut / team.length;
 
-        await logUserAction(user, "Complete Operation", `Finalized supply run for ${order.business_name}. Billing and staff cuts recorded.`, connection);
+        for (const member of team) {
+            await connection.query(
+                'INSERT INTO order_payouts (id, order_id, personnel_name, amount, status) VALUES (?, ?, ?, ?, ?)',
+                [crypto.randomUUID(), orderId, member, individualShare, 'Pending']
+            );
+        }
+
+        await logUserAction(user, "Complete Operation", `Finalized supply run for ${order.business_name}. Debt records created for ${team.length} staff.`, connection);
         
         await connection.commit();
         
         const formattedOrder = {
             ...order,
             items_sold: typeof order.items_sold === 'string' ? JSON.parse(order.items_sold) : order.items_sold,
-            collaborators: typeof order.collaborators === 'string' ? JSON.parse(order.collaborators) : order.collaborators,
+            collaborators,
             user: order.completed_by
         };
         await sendOrderWebhook(formattedOrder);
@@ -203,10 +215,44 @@ export async function completeDetailedOrder(orderId: string, user: string) {
         revalidatePath('/farmers');
         revalidatePath('/security');
         revalidatePath('/finances');
-        return { success: true, message: 'Operation completed and ledger updated.' };
+        return { success: true, message: 'Operation completed. Debt entries generated.' };
     } catch (e) {
         await connection.rollback();
         return { success: false, message: 'Update failed.' };
+    } finally {
+        connection.release();
+    }
+}
+
+export async function markPayoutAsPaid(payoutId: string, user: string) {
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+        
+        const [rows]: any = await connection.query("SELECT * FROM order_payouts WHERE id = ?", [payoutId]);
+        if (rows.length === 0) throw new Error("Record not found.");
+        const payout = rows[0];
+
+        if (payout.status === 'Paid') return { success: true };
+
+        // 1. Mark as Paid
+        await connection.query("UPDATE order_payouts SET status = 'Paid', paid_at = CURRENT_TIMESTAMP WHERE id = ?", [payoutId]);
+        
+        // 2. Log Deduction from finances
+        await connection.query(
+            'INSERT INTO farm_transactions (id, amount, category, description) VALUES (?, ?, ?, ?)',
+            [crypto.randomUUID(), Number(payout.amount), 'Expenditure', `Staff Disbursement: ${payout.personnel_name}`]
+        );
+
+        await logUserAction(user, "Process Payout", `Disbursed $${Number(payout.amount).toLocaleString()} to ${payout.personnel_name}.`, connection);
+        
+        await connection.commit();
+        revalidatePath('/farmers');
+        revalidatePath('/finances');
+        return { success: true };
+    } catch (e) {
+        await connection.rollback();
+        return { success: false, message: 'Payout failed.' };
     } finally {
         connection.release();
     }
@@ -244,7 +290,8 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
                 LIMIT 50
             `);
             if (!Array.isArray(rows)) return [];
-            return (rows as any[]).map(row => ({
+            
+            const orders = (rows as any[]).map(row => ({
                 ...row,
                 items_sold: typeof row.items_sold === 'string' ? JSON.parse(row.items_sold) : (row.items_sold || []),
                 collaborators: typeof row.collaborators === 'string' ? JSON.parse(row.collaborators) : (row.collaborators || []),
@@ -257,6 +304,19 @@ export async function getDetailedOrders(): Promise<DetailedFarmOrder[]> {
                     avatar: row.lead_avatar
                 }
             }));
+
+            // Fetch payouts for all orders in parallel
+            const ordersWithPayouts = await Promise.all(orders.map(async (o) => {
+                const [pRows]: any = await connection.query(`
+                    SELECT op.*, p.phone_number as phone, p.bank_account as bank
+                    FROM order_payouts op
+                    LEFT JOIN personnel p ON op.personnel_name = p.name
+                    WHERE op.order_id = ?
+                `, [o.id]);
+                return { ...o, payouts: pRows };
+            }));
+
+            return ordersWithPayouts;
         } finally {
             connection.release();
         }

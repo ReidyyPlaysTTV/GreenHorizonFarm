@@ -87,6 +87,16 @@ async function createFarmTables(connection: any) {
                 INDEX (status),
                 INDEX (completed_by)
             )`,
+            `CREATE TABLE IF NOT EXISTS order_payouts (
+                id VARCHAR(36) NOT NULL PRIMARY KEY,
+                order_id VARCHAR(36) NOT NULL,
+                personnel_name VARCHAR(255) NOT NULL,
+                amount DECIMAL(10, 2) NOT NULL,
+                status ENUM('Pending', 'Paid') NOT NULL DEFAULT 'Pending',
+                paid_at DATETIME,
+                INDEX (order_id),
+                INDEX (status)
+            )`,
             `CREATE TABLE IF NOT EXISTS business_orders (
                 id VARCHAR(36) NOT NULL PRIMARY KEY,
                 business_name VARCHAR(255) NOT NULL,

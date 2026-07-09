@@ -74,6 +74,18 @@ export interface OrderItem {
     price_at_sale: number;
 }
 
+export interface OrderPayout {
+    id: string;
+    order_id: string;
+    personnel_name: string;
+    amount: number;
+    status: 'Pending' | 'Paid';
+    paid_at?: Date | null;
+    // Joined data
+    phone?: string;
+    bank?: string;
+}
+
 export interface DetailedFarmOrder {
     id: string;
     business_name: string;
@@ -88,6 +100,7 @@ export interface DetailedFarmOrder {
     status: 'Active' | 'Completed' | 'Cancelled';
     created_at: Date;
     completed_at?: Date | null;
+    payouts?: OrderPayout[];
 }
 
 export interface BusinessOrder {
