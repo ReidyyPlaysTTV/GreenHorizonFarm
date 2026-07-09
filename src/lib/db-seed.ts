@@ -6,6 +6,7 @@ import type { Pool } from 'mysql2/promise';
 /**
  * Seeds the initial users into the database.
  * Ensures Leon Green (Developer) and Admin accounts exist.
+ * Also performs standard maintenance like removing obsolete test records.
  */
 export async function seedDatabase(pool: Pool) {
     const connection = await pool.getConnection();
@@ -47,6 +48,25 @@ export async function seedDatabase(pool: Pool) {
                 ]
             );
         }
+
+        // 3. Maintenance: Remove stale personnel (Katarina Green & Rick)
+        // These names were identified as obsolete test data stuck in the DB.
+        const [cleanupRows]: any = await connection.query(
+            "SELECT id FROM personnel WHERE name IN ('Katarina Green', 'Rick')"
+        );
+        
+        if (cleanupRows.length > 0) {
+            console.log("Database Maintenance: Purging stale records for Katarina Green and Rick.");
+            await connection.query("DELETE FROM personnel WHERE name IN ('Katarina Green', 'Rick')");
+            await connection.query("DELETE FROM users WHERE username IN ('Katarina Green', 'Rick')");
+            
+            // Log the cleanup for transparency
+            await connection.query(
+                'INSERT INTO audit_logs (id, user, actionType, description) VALUES (?, ?, ?, ?)',
+                [crypto.randomUUID(), 'System', 'Database Cleanup', 'Automatically purged stale personnel: Katarina Green, Rick']
+            );
+        }
+
     } catch (error) {
         console.error("Error during database seeding:", error);
     } finally {
