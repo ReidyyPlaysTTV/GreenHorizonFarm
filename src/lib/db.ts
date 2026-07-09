@@ -3,6 +3,7 @@ import mysql from 'mysql2/promise';
 import type { Pool } from 'mysql2/promise';
 import { seedDatabase } from './db-seed';
 
+// Priority: Env Var > Fallback String
 const dbUri = process.env.DATABASE_URL || 'mysql://zap1311701-1:UZXQgiIsbIlQmVkU@mysql-mariadb-can01-6-101.zap-srv.com:3306/zap1311701-1';
 
 let pool: Pool;
@@ -13,17 +14,16 @@ try {
     pool = mysql.createPool({
         uri: dbUri,
         waitForConnections: true,
-        connectionLimit: 50, // Increased for concurrent users
-        maxIdle: 20,
-        idleTimeout: 30000, // Recycle idle connections faster
+        connectionLimit: 10,
+        maxIdle: 10,
+        idleTimeout: 60000,
         queueLimit: 0,
-        connectTimeout: 5000, // Faster failure for snappy UI response
+        connectTimeout: 5000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
     });
 } catch (err) {
-    console.error("Critical: Pool creation failed:", err);
-    throw err;
+    console.error("Critical: Database Pool creation failed:", err);
 }
 
 async function createFarmTables(connection: any) {
@@ -313,8 +313,9 @@ export async function ensureDbInitialized(force: boolean = false) {
             return pool;
         } catch (err: any) {
             initPromise = null; 
-            console.error("DB Readiness Check Failed:", err.message);
-            if (force) throw err;
+            console.error("DB Handshake Failure:", err.message);
+            // If it's an access denied error, we want to propagate it so diagnostics can catch it
+            if (force || err.code === 'ER_ACCESS_DENIED_ERROR') throw err;
             return pool; 
         } finally {
             if (connection) connection.release();

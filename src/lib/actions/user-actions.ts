@@ -1,3 +1,4 @@
+
 'use server';
 
 import db, { ensureDbInitialized } from '../db';
@@ -45,7 +46,19 @@ export async function testDatabaseConnection() {
             connection.release(); 
         }
     } catch (error: any) { 
-        return { success: false, message: `Connection Error: ${error.message}.` }; 
+        console.error("Diagnostic Connection Error:", error);
+        
+        // Specific handling for host permissions error
+        if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+            const match = error.message.match(/'(.*?)'@'(.*?)'/);
+            const host = match ? match[2] : "unknown IP";
+            return { 
+                success: false, 
+                message: `ACCESS DENIED: Your database server rejected the connection from ${host}. You MUST whitelist this IP in your ZAP-Hosting 'Remote MySQL' settings.` 
+            };
+        }
+
+        return { success: false, message: `Connection Error: ${error.message}. Code: ${error.code || 'UNKNOWN'}` }; 
     }
 }
 

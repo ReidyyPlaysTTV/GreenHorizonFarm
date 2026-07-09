@@ -6,7 +6,7 @@ import { UserManagement } from "@/components/admin/user-management";
 import { PermissionManagement } from "@/components/admin/permission-management";
 import { DeveloperPanel } from "@/components/admin/developer-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getUsers, getBugReports, getSuggestions, getAccessRequests, getApplicationStatus, getMaintenanceMode } from "@/lib/actions";
+import { getUsers, getBugReports, getSuggestions, getAccessRequests, getApplicationStatus, getMaintenanceMode, testDatabaseConnection } from "@/lib/actions";
 import { RefreshButton } from "@/components/layout/refresh-button";
 import { AccessRequestManagement } from "@/components/admin/access-request-management";
 import { SettingsManagement } from "@/components/admin/settings-management";
@@ -14,7 +14,7 @@ import { BannedUsersManagement } from "@/components/admin/banned-users-managemen
 import { usePermissions } from "@/hooks/use-permissions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { ShieldAlert, Loader2, Clock, Database } from "lucide-react";
+import { ShieldAlert, Loader2, Clock, Database, ServerCrash } from "lucide-react";
 import Link from "next/link";
 import type { AppUser, BugReport, Suggestion, AccessRequest } from '@/lib/types';
 
@@ -22,6 +22,7 @@ export default function AdminPage() {
   const { hasPermission, userRoles } = usePermissions();
   const [isLoading, setIsLoading] = useState(true);
   const [isTimedOut, setIsTimedOut] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
   const [data, setData] = useState<{
     users: AppUser[];
     bugReports: BugReport[];
@@ -41,8 +42,8 @@ export default function AdminPage() {
   const fetchData = async () => {
     setIsLoading(true);
     setIsTimedOut(false);
+    setDbError(null);
     
-    // Set a safety timer but don't block the whole page if it fires
     const timeoutTimer = setTimeout(() => {
         if (isLoading) {
             setIsTimedOut(true);
@@ -50,6 +51,15 @@ export default function AdminPage() {
     }, 8000);
 
     try {
+        // Run a quick ping first
+        const ping = await testDatabaseConnection();
+        if (!ping.success) {
+            setDbError(ping.message);
+            setIsLoading(false);
+            clearTimeout(timeoutTimer);
+            return;
+        }
+
         const fetchPromise = Promise.all([
           getUsers(),
           getBugReports(),
@@ -63,8 +73,9 @@ export default function AdminPage() {
         
         setData({ users, bugReports, suggestions, accessRequests, applicationsOpen, isMaintenanceMode });
         clearTimeout(timeoutTimer);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to load admin data:", error);
+        setDbError(error.message || "A fatal database connection error occurred.");
     } finally {
         setIsLoading(false);
     }
@@ -126,7 +137,22 @@ export default function AdminPage() {
         </TabsList>
 
         <div className="mt-6">
-            {isTimedOut && !data && (
+            {dbError && (
+                 <Alert variant="destructive" className="mb-6 bg-black border-red-500 text-red-500 shadow-2xl animate-pulse">
+                    <ServerCrash className="h-6 w-6" />
+                    <AlertTitle className="text-lg font-black uppercase tracking-tighter">Database Access Restricted</AlertTitle>
+                    <AlertDescription className="mt-2 font-medium">
+                        {dbError}
+                        <div className="mt-4 pt-4 border-t border-red-500/20">
+                            <p className="text-xs uppercase font-black text-white/60">Helpful Tip:</p>
+                            <p className="text-sm text-white/90">Go to your **ZAP-Hosting Database Panel**, find **'Remote MySQL'** or **'External Access'**, and ensure the IP shown above is whitelisted or set to `%` for global access.</p>
+                        </div>
+                        <Button variant="outline" size="sm" className="mt-4 h-8 bg-red-500/10 border-red-500 text-red-500 hover:bg-red-500 hover:text-white" onClick={fetchData}>Retry Handshake</Button>
+                    </AlertDescription>
+                </Alert>
+            )}
+
+            {isTimedOut && !data && !dbError && (
                 <Alert variant="destructive" className="mb-6 bg-black/40 border-white/10 text-white">
                     <Clock className="h-4 w-4 text-orange-400" />
                     <AlertTitle>Data Link Latency</AlertTitle>
@@ -138,13 +164,13 @@ export default function AdminPage() {
             )}
 
             <TabsContent value="users">
-                {data ? <UserManagement users={data.users} currentUser={currentUser || ''} /> : <LoadingPlaceholder />}
+                {data ? <UserManagement users={data.users} currentUser={currentUser || ''} /> : (dbError ? <div className="text-center py-20 opacity-40 italic">Waiting for connection...</div> : <LoadingPlaceholder />)}
             </TabsContent>
             <TabsContent value="banned">
-                {data ? <BannedUsersManagement users={data.users} /> : <LoadingPlaceholder />}
+                {data ? <BannedUsersManagement users={data.users} /> : (dbError ? <div className="text-center py-20 opacity-40 italic">Waiting for connection...</div> : <LoadingPlaceholder />)}
             </TabsContent>
             <TabsContent value="access_requests">
-                {data ? <AccessRequestManagement requests={data.accessRequests} /> : <LoadingPlaceholder />}
+                {data ? <AccessRequestManagement requests={data.accessRequests} /> : (dbError ? <div className="text-center py-20 opacity-40 italic">Waiting for connection...</div> : <LoadingPlaceholder />)}
             </TabsContent>
             <TabsContent value="permissions">
                 <PermissionManagement />
@@ -155,7 +181,7 @@ export default function AdminPage() {
                         applicationsOpen={data.applicationsOpen}
                         isMaintenanceMode={data.isMaintenanceMode}
                     />
-                ) : <LoadingPlaceholder />}
+                ) : (dbError ? <div className="text-center py-20 opacity-40 italic">Waiting for connection...</div> : <LoadingPlaceholder />)}
             </TabsContent>
             <TabsContent value="developer">
                 <DeveloperPanel 
